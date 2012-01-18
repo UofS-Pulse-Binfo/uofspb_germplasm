@@ -6,41 +6,64 @@
 
 
 /**
- * This form is the main form for the Germplasm manage pedigree. It takes a organism-id, 
- * stock name and a level to render a pedigree diagram, enabling users to see the lineage
- * traced back to the level ammount
+ * Main form that
+ *   1. Allows the user to submit and organism_id, stock name and other criteria
+ *      for generating a pedigree
+ *   2. Displays the generated pedigree
  *
- *  @param &$form_state
- *    The form state that is NULL and can be updated at any point
+ * Simply add "print drupal_get_form('germplasm_manage_generate_pedigree_form');" into your
+ * tpl where ever you would like this form displayed
+ *
+ * @param $form_state
+ *   The current state of the form
+ * @return
+ *   A Drupal FAPI form array
  *
  */
 function germplasm_manage_generate_pedigree_form (&$form_state=NULL) {
-  
-   //Creating Fieldset for multiple fields in form
-  $form['pedigree_render'] = array(
+  $form = array();
+
+  // Form element containing the pedigree generated from the below information
+  if (!empty($form_state['storage']['pedigree'])) {
+    $text  = '<div id="tripal_stock-germplasm_pedigree-box" class="germplasm_manage-info-box tripal-info-box">'; 
+    $text .= '<div class="germplasm_manage-info-box-title tripal-info-box-title">Pedigree</div>';
+		$text  .= '<div class="tripal_germplasm_manage-info-box-desc tripal-info-box-desc">The pedigree that is depicted 
+							below is a representation of the lineage or genealogical descent of the selected stock.
+							The lineage has been traced to '.$form_state['values']['level'].' generations. </div>';	
+		$text .= '<table class="tripal_germplasm_manage-table tripal-table tripal-table-horz">';
+		$text .=	'<tr><th>Pedigree</th></tr>';					
+		$text	.= '<tr><td class="tripal_germplasm_manage-table-even-row tripal-table-even-row">'.$form_state['storage']['pedigree_string']."</td></tr>";
+		$text .=	'</table>';
+		$text .= theme('germplasm_manage_pedigree_drawing', $form_state['storage']['pedigree']);
+		$text .=	'</div>';
+	}
+	
+	$form['pedigree']=array(
+		'#type' => (empty($form_state['storage']['pedigree_string'])) ?'hidden' : 'item',
+		'#value' => $text,
+	);
+   
+  $form['pedigree_options'] = array(
     '#type' => 'fieldset',
     '#title' => t(''),
   );
   
-  //selecting 
+  //Organism
 	$results = tripal_core_chado_select('organism',array('organism_id','common_name'),array());
-	
 	$organism_options = array(); 
-	
 	foreach ($results as $r) {
 		$organism_options[$r->organism_id] = $r->common_name;
 	}
-	
-	$form['pedigree_render']['organism_id'] = array(
+	$form['pedigree_options']['organism_id'] = array(
 		'#type' => 'select',
-		'#title' => t('Source Organism'),
+		'#title' => t('Organism'),
 		'#options' => $organism_options,
 		'#required'   => TRUE,
 		'#default_value' => $form_state['storage']['organism_id'],
 	); 
     
   //Stock Name
-  $form['pedigree_render']['stock_name'] = array(
+  $form['pedigree_options']['stock_name'] = array(
     '#type' => 'textfield',
     '#title' => t('Stock'),
     '#description' => t('Stock Name.'),
@@ -48,7 +71,10 @@ function germplasm_manage_generate_pedigree_form (&$form_state=NULL) {
 		'#default_value' => $form_state['storage']['stock_name'],
   );
   
-  $form['pedigree_render']['pedigree_type'] = array(
+  // Pedigree Type
+  // A parental pedigree shows the parents of the current stock
+  // whereas an offspring pedigree shows the offspring of the current stock
+  $form['pedigree_options']['pedigree_type'] = array(
       '#type' => 'radios', 
       '#title' => t('Find Parents or Children'), 
       '#required'   => TRUE,
@@ -56,8 +82,8 @@ function germplasm_manage_generate_pedigree_form (&$form_state=NULL) {
       '#default_value' => $form_state['storage']['pedigree_type'],
   );
   
-  //Levels of Prodigney Tree
-  $form['pedigree_render']['level'] = array(
+  //Levels of the pedigree to show
+  $form['pedigree_options']['level'] = array(
     '#type' => 'textfield',
     '#title' => t('Generations'),
     '#options' => $items,
@@ -66,29 +92,10 @@ function germplasm_manage_generate_pedigree_form (&$form_state=NULL) {
 		'#default_value' => (empty($form_state['storage']['level'])) ?3 : $form_state['storage']['level'],
   );
            
-  $form['pedigree_render']['submit'] = array(
+  $form['pedigree_options']['submit'] = array(
    '#type' => 'submit', 
    '#weight' => 10,
    '#value' => t('Submit')
-   );
-   
-  if (!empty($form_state['storage']['pedigree'])) {
-    $text  = '<div id="tripal_stock-germplasm_pedigree-box" class="germplasm_manage-info-box tripal-info-box">'; 
-    $text .= '<div class="germplasm_manage-info-box-title tripal-info-box-title">Pedigree</div>';
-     $text  .= '<div class="tripal_germplasm_manage-info-box-desc tripal-info-box-desc">The pedigree that is depicted 
-                below is a representation of the lineage or genealogical descent of the selected stock.
-                The lineage has been traced to '.$form_state['values']['level'].' generations. </div>';	
-     $text .= '<table class="tripal_germplasm_manage-table tripal-table tripal-table-horz">';
-     $text .=	'<tr><th>Pedigree</th></tr>';					
-     $text	.= '<tr><td class="tripal_germplasm_manage-table-even-row tripal-table-even-row">'.$form_state['storage']['pedigree_string']."</td></tr>";
-     $text .=	'</table>';
-     $text .= theme('germplasm_manage_pedigree_drawing', $form_state['storage']['pedigree']);
-     $text .=	'</div>';
-   }
-   
-   $form['pedigree']=array(
-     '#type' => (empty($form_state['storage']['pedigree_string'])) ?'hidden' : 'item',
-     '#value' => $text,
    );
      
   return $form;
@@ -97,9 +104,7 @@ function germplasm_manage_generate_pedigree_form (&$form_state=NULL) {
 
 
 /**
- * This function's purpose is to validate that the user entered the required information
- * and that the information is in the correct format: the stocks entered are valid and present,
- * to many lines of the stock name match more that one stock name 
+ * Validate user input
  *
  *  @param $form
  *    the form that is to be validated
@@ -109,9 +114,12 @@ function germplasm_manage_generate_pedigree_form (&$form_state=NULL) {
  */
 function germplasm_manage_generate_pedigree_form_validate ($form, &$form_state) {
 
-
+	// Find stock_id of user entered stock name/organism_id
+	// tripal_stock_get_stock_by_name_identifier finds stocks where the user input is one of the name, uniquename, dbxref accession, or property synonym
   $results = tripal_stock_get_stock_by_name_identifier($form_state['values']['stock_name'], $form_state['values']['organism_id']);
-  
+
+	// Too many stocks resturned
+	// ie: user input name was not unique
   if (sizeof($results) > 1) {
       $links= array();       
       for ($i=0; $i<sizeof($results); $i++) { $links[] = l($i+1, "node/".$results[$i]->nid); }
@@ -119,9 +127,14 @@ function germplasm_manage_generate_pedigree_form_validate ($form, &$form_state) 
                  . "Please refine your input to match ONLY ONE line. <br>"              
                  . "To aid in this process, here are the lines that match your initial input: "
                  .join(', ',$links);                                                            
-      form_set_error('stock_id', $message);                                                    
+      form_set_error('stock_id', $message);     
+      
+  // no stocks returned
   } elseif (sizeof($results) < 1) {                                                    
       form_set_error('stock_id', "There are no stocks matching your input. Please check your input for typos and/or search the germplasm ".l('here', 'stocks'));
+
+	// a single stock was returned
+	// set the stock_id in the form_state to be used in the submit
   } elseif (sizeof($results) == 1) { 
   		
       $form_state['values']['stock_name'] = $results[0]->stock->name;
@@ -142,14 +155,20 @@ function germplasm_manage_generate_pedigree_form_validate ($form, &$form_state) 
  */
 function germplasm_manage_generate_pedigree_form_submit($form, &$form_state){
 
+	// set all the user entered values into storage so they're remembered
 	$form_state['storage']['stock_name'] = $form_state['values']['stock_name'];
 	$form_state['storage']['stock_id'] = $form_state['values']['stock_id'];
 	$form_state['storage']['organism_id'] = $form_state['values']['organism_id'];
 	$form_state['storage']['pedigree_type'] = $form_state['values']['pedigree_type'];
 	$form_state['storage']['level'] = $form_state['values']['level'];
 
+	// Generate the pedigree
+	// Result put in storage to rendered when form is refreshed
+	// If Offspring Pedigree
   if ($form_state['storage']['pedigree_type'] == 'object') {
     $form_state['storage']['pedigree'] = germplasm_manage_generate_object_pedigree_array($form_state['storage']['stock_id'], $form_state['storage']['level']);
+
+	// if Parental Pedigree
   } else {
     $form_state['storage']['pedigree'] = germplasm_manage_generate_subject_pedigree_array($form_state['storage']['stock_id'], $form_state['storage']['level']);
     $form_state['storage']['pedigree_string'] = germplasm_manage_generate_textual_pedigree_string($form_state['storage']['pedigree'], $form_state['storage']['level']);
@@ -169,7 +188,7 @@ function germplasm_manage_generate_pedigree_form_submit($form, &$form_state){
  * @return
  *   An array (following conventions of the drupal form API) describing the form
  */
-function germplasm_manage_generate_pedigree_on_node_form(){
+function germplasm_manage_generate_pedigree_on_node_form (){
 
   if(!empty($_GET['generation'])){
     $default_generation = $_GET['generation'];
@@ -183,7 +202,7 @@ function germplasm_manage_generate_pedigree_on_node_form(){
  	   $default_pedigreetype = 'subject';
  	}  
   
-  //Levels of Prodigney Tree
+  //Levels to display pedigree
   $form['level'] = array(
     '#type' => 'textfield',
     //'#title' => t('Generations'),
@@ -196,6 +215,7 @@ function germplasm_manage_generate_pedigree_on_node_form(){
 		  .'also the relationship Lukey is_maternal_parent_of Maria and Peppers is_maternal_parent_of Maria).'
   );
   
+  // Pedigree Type
   $form['familyselect'] = array(
       '#type' => 'radios', 
       //'#title' => t('Find Parents or Children'), 
@@ -225,6 +245,9 @@ function germplasm_manage_generate_pedigree_on_node_form(){
 
 /**
  * Implements hook_form_submit
+ *
+ * NOTE: Simply puts the options into the array. 
+ *   The pedigree will be generated at the theme level
  */
 function germplasm_manage_generate_pedigree_on_node_form_submit($form, &$form_state){
 
@@ -233,8 +256,6 @@ function germplasm_manage_generate_pedigree_on_node_form_submit($form, &$form_st
     'block' => 'germplasm_pedigree',
     'pedigree_type'=> $form_state['values']['familyselect'],
   );
-  
-  //dpm($generation_array,'arrayin form submit');
   
  drupal_goto($_GET['q'], $generation_array);
 
@@ -279,6 +300,8 @@ function theme_germplasm_manage_generate_pedigree_on_node_form ($form) {
  * Specifically, the passed in pedigree array (PHP) needs to be printed out as a javascript
  * array in order to pass it into the pedigree_tree.js constructor. Also the javascript calls
  * building the tree and the HTML to build the canvas need to be generated.
+ *
+ * This function is called in the pedigree template file.
  *
  * @param $pedigree_array
  *   The PHP form of the rawtree array needed for the pedigree_tree.js constructor
@@ -341,6 +364,11 @@ function germplasm_manage_generate_javascript_pedigree_array ($pedigree_array, $
  *
  * @param $current_stock_id
  *   The stock_id which is equal to the subject_id of all stock_relationships to be pulled out
+ * @param total_levels
+ *   The total levels to show the pedigree for
+ * @param $cur_level
+ *   The current level -needed to keep track of the levels of recursion
+ *
  * @return
  *   A pedigree array describing a number of stock relationships
  */
@@ -352,14 +380,11 @@ function germplasm_manage_generate_object_pedigree_array($current_stock_id, $tot
     'stock_relationship',
     array('subject_id'=>$current_stock_id)
   );
-  //dpm($relationships, 'Relationships');
   
   $cur_stock = tripal_core_generate_chado_var('stock',array('stock_id'=>$current_stock_id));
   
   // Base Case: No relationships
   if (empty($relationships)) {
-    //dpm('Base Case: '.$cur_stock->name);
-    //dpm($cur_stock, 'current stock');
     $new_pedigree = array(
       'stock_id' => $cur_stock->stock_id,
       'name' => $cur_stock->name,
@@ -374,7 +399,6 @@ function germplasm_manage_generate_object_pedigree_array($current_stock_id, $tot
   
   // Recursive Case: 1+ Relationships we haven't reached the final level yet
   } elseif ($cur_level < $total_levels) {
-    //dpm('1+ Relationships & < total_levels: '.$cur_stock->name);
     $new_pedigree = array(
       'stock_id' => $cur_stock->stock_id,
       'name' => $cur_stock->name,
@@ -400,7 +424,6 @@ function germplasm_manage_generate_object_pedigree_array($current_stock_id, $tot
     
   // Case: 1+ Relationships but we Have reached the final level 
   } else {
-    //dpm('1+ Relationships & == total_levels: '.$cur_stock->name);
     $new_pedigree = array(
       'stock_id' => $cur_stock->stock_id,
       'name' => $cur_stock->name,
@@ -432,6 +455,7 @@ function germplasm_manage_generate_object_pedigree_array($current_stock_id, $tot
  *   The maximum depth to travel
  * @param $pedigree
  *   The pedigree array generated so far. This is used for recursive function calls.
+ *
  * @return
  *   A pedigree array where the initial current_stock_id is the deepest stock
  *
@@ -1029,11 +1053,6 @@ function germplasm_manange_pedigree_get_name ($location, $full_pedigree) {
   return $node['name'];
   
 }
-
-
-////////////////////////////////////////////////////////////////////////////////
-// End of Software
-////////////////////////////////////////////////////////////////////////////////
 
 
 
