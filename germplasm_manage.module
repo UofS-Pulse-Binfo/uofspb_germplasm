@@ -4,6 +4,7 @@ module_load_include('inc', 'germplasm_manage', 'administration');
 module_load_include('inc', 'germplasm_manage', 'register_crosses_form');
 module_load_include('inc', 'germplasm_manage', 'parents_form');
 module_load_include('inc', 'germplasm_manage', 'generate_pedigree');
+//module_load_include('inc', 'germplasm_manage', 'crossing_block');
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -21,7 +22,7 @@ function germplasm_manage_menu() {
 		'page callback' => 'germplasm_manage_description_page',
 		'access arguments' => array('administer site configuration'),
 	);
-	
+
 	$items['admin/tripal/germplasm/configuration'] = array(
 		'title' => t('Configuration'),
 		'page callback' => 'germplasm_manage_admin_page',
@@ -34,7 +35,7 @@ function germplasm_manage_menu() {
     'page arguments' => array('germplasm_form'),
     'access arguments' => array('create chado_stock content'),
   );
-	
+
   $items['node/add/crosses'] = array(
     'title' => t('Bulk Registration of Crosses'),
     'page callback' => 'germplasm_manage_register_crosses_page',
@@ -46,27 +47,27 @@ function germplasm_manage_menu() {
     'page callback' => 'assign_crossing_parents_page',
     'access arguments' => array('create chado_stock content'),
   );
-  
+
   $items['Crossing_Blocks'] = array(
   	'title' => t('Crossing Blocks'),
   	'page callback' => 'all_crossing_block_summary_page',
   	'access arguments' => array('access chado_stock content'),
   );
-	
+
   $items['Crossing_Block/%organism_common_name/%cb_year/%cb_season/Summary'] = array(
   	'title' => t('Crossing Block Summary'),
   	'page callback' => 'crossing_block_summary',
   	'page arguments' => array(1,2,3),
     'access arguments' => array('access chado_stock content'),
   );
-  
+
   $items['germplasm/generate_pedigree'] = array(
   	'title' => t('Generate Pedigree'),
   	'page callback' => 'drupal_get_form',
   	'page arguments' => array('germplasm_manage_generate_pedigree_form'),
     'access arguments' => array('access chado_stock content'),
   );
-  
+
   return $items;
 }
 
@@ -84,9 +85,9 @@ function germplasm_manage_theme() {
       'function' => 'theme_set_crossing_block_form'
   );
 
-  $themes['bulk_register_crosses_form'] = array( 
-      'arguments' => array('form'),  
-      'function' => 'theme_bulk_register_crosses_form' 
+  $themes['bulk_register_crosses_form'] = array(
+      'arguments' => array('form'),
+      'function' => 'theme_bulk_register_crosses_form'
   );
 
   $themes['create_parent_alias_for_existing_stock_form'] = array(
@@ -96,28 +97,28 @@ function germplasm_manage_theme() {
 
   $themes['germplasm_manage_pedigree'] = array(
       'arguments' => array('node' => NULL),
-      'template' => 'germplasm_manage_pedigree',
+      'template' => 'germplasm_theme/germplasm_manage_pedigree',
   );
 
   $themes['germplasm_manage_pedigree_jsarray'] = array(
     'arguments' => array('pedigree_array'=>NULL),
     'function' => 'theme_germplasm_manage_pedigree_jsarray',
   );
-  
+
   $themes['germplasm_manage_pedigree_drawing'] = array(
     'arguments' => array('pedigree'=>NULL),
-    'function' => 'theme_germplasm_manage_pedigree_drawing',
+    'template' => 'germplasm_theme/germplasm_manage_pedigree_drawing',
   );
-  
+
   $themes['germplasm_manage_generate_pedigree_on_node_form'] = array(
     'arguments' => array('form'),
     'function' => 'theme_germplasm_manage_generate_pedigree_on_node_form',
   );
-  
+
   $themes['crossing_block'] = array(
   	'arguments' => array('element' => NULL)
   );
-  
+
   return $themes;
 }
 
@@ -126,7 +127,7 @@ function germplasm_manage_theme() {
  * Purpose: Essentially this hook tells drupal that there is views support for
  *  for this module which then includes germplasm_management.views.inc where all the
  *  views integration code is
- */ 
+ */
 function germplasm_manage_views_api() {
    return array(
       'api' => 2.0,
@@ -172,7 +173,7 @@ function germplasm_manage_nodeapi (&$node, $op, $a3 = NULL, $a4 = NULL) {
 function germplasm_manage_block ($op = 'list', $delta = 0, $edit=array()) {
   switch($op) {
     case 'list':
-    
+
       $blocks['pedigree']['info'] = t('Germplasm Pedigree');
       $blocks['pedigree']['cache'] = BLOCK_NO_CACHE;
 
@@ -180,9 +181,9 @@ function germplasm_manage_block ($op = 'list', $delta = 0, $edit=array()) {
  			if(user_access('access chado_stock content') and arg(0) == 'node' and is_numeric(arg(1))) {
       	$nid = arg(1);
       	$node = node_load($nid);
-      	
+
         $block = array();
-        switch($delta){      	
+        switch($delta){
 					case 'pedigree':
 						$block['subject'] = t('Germplasm Pedigree');
 						$block['content'] = theme('germplasm_manage_pedigree',$node);
@@ -190,7 +191,7 @@ function germplasm_manage_block ($op = 'list', $delta = 0, $edit=array()) {
 				}
 			}
 	}
-	
+
 	return ($block) ? $block : $blocks;
 }
 
@@ -228,10 +229,10 @@ function crossing_block_form_element ($element) {
 			'season' => '<ANY>',
 		);
   }
- 
+
   // create form elements
 	$element['#tree'] = TRUE;
- 
+
 	$parents = $element['#parents'];
 	$parents[] = 'year';
 	$element['year'] = array(
@@ -240,7 +241,7 @@ function crossing_block_form_element ($element) {
 		'#options' => $element['#options']['year'],
 		'#prefix' => t('Year:'),
 	);
- 
+
 	$parents = $element['#parents'];
   $parents[] = 'season';
   $element['season'] = array(
@@ -252,7 +253,7 @@ function crossing_block_form_element ($element) {
 
   // Assign default options to the form element
   if (empty($element['#options'])) {
-  
+
   	$stock_prop_types_cv_id = variable_get('chado_stock_prop_types_cv', '');
     if ($stock_prop_types_cv_id) {
 			$cb_year_cvterm = tripal_cv_get_cvterm_by_name('crossingblock_year', $stock_prop_types_cv_id);
@@ -265,9 +266,9 @@ function crossing_block_form_element ($element) {
 					$year_options[$r->value] = $r->value;
 				}
 			} else {
-				$year_options = array('<NONE>'=>'None');    
+				$year_options = array('<NONE>'=>'None');
 			}
-	
+
 			$cb_season_cvterm = tripal_cv_get_cvterm_by_name('crossingblock_season', $stock_prop_types_cv_id);
 			if ($cb_season_cvterm->cvterm_id) {
 				$previous_db = db_set_active('chado');
@@ -284,11 +285,11 @@ function crossing_block_form_element ($element) {
 			$year_options = array('<NONE>'=>'None');
 			$season_options = array('<NONE>'=>'None');
 		}
-    
+
 		$element['season']['#options'] = $season_options;
 		$element['year']['#options'] = $year_options;
   }
-  
+
 	return $element;
 }
 
@@ -316,7 +317,7 @@ function theme_crossing_block ($element) {
  * Note: This form essentially hijacks the chado_stock node form
  */
 function germplasm_form ($form_state) {
-  
+
   $form = chado_stock_form($node, array());
 
   $form['names']['uniquename']['#type'] = 'hidden';
@@ -324,12 +325,12 @@ function germplasm_form ($form_state) {
 
   $form['database_reference']['#collapsible'] = TRUE;
   $form['database_reference']['#collapsed'] = TRUE;
-  
+
   $form['database_reference']['accession']['#disabled'] = TRUE;
   $form['database_reference']['db_description']['#disabled'] = TRUE;
   $form['database_reference']['db_description']['#default_value'] = 'This Database Reference is set automatically. It is used as the accession for the current database and will follow the form KP:GERM followed by a number.';
   $form['database_reference']['database']['#disabled'] = TRUE;
-  
+
 	$user->height = array('feet' => '5', 'inch' => '8');
 	// Create element of 'type' height
 	$form['height'] = array(
@@ -337,13 +338,13 @@ function germplasm_form ($form_state) {
 		'#title' => t('Height'),
 		'#required' => TRUE,
 		'#default_value' => isset($user->height) ? $user->height : array('feet' => '-', 'inch' => '-'),
-	);  
-  
+	);
+
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => 'Save'
   );
-  
+
   return $form;
 }
 
@@ -380,9 +381,9 @@ global $user;
       ),
   );
   module_load_include('inc', 'node', 'node.pages');
-  $errors = drupal_execute('chado_stock_node_form', $node_form_state, (object)$node);  
+  $errors = drupal_execute('chado_stock_node_form', $node_form_state, (object)$node);
   drupal_set_message(print_r($errors, TRUE), 'error');
-  $node = node_load($node_form_state['nid']);  
+  $node = node_load($node_form_state['nid']);
 
   // Create Main Db reference------------------------------------------------------
   $uniquename = variable_get( 'germplasm_prefix', 'GERM:') . $node->stock->stock_id;
@@ -392,11 +393,11 @@ global $user;
     'version' => 1
   );
   $success = tripal_core_chado_insert('dbxref', $insert_values);
-  
+
   if ($success) {
     // Update name/title = uniquename-----------------------------------------------
     $update_values = array(
-      'uniquename' => $uniquename, 
+      'uniquename' => $uniquename,
       'dbxref_id' => array(
         'accession' => $uniquename,
         'db_id' => variable_get('tripal_stock_main_dbxref_db', 0)
@@ -425,13 +426,13 @@ global $user;
  */
 function crossing_block_summary ($organism_common_name, $cb_year, $cb_season) {
 	$output = '';
-	
+
 	$output .= '<br />';
 	$output .= '<table>';
 	$output .= '<tr><th>Organism</th><td>'.strtr($organism_common_name, '-', ' ').'</td></tr>';
 	$output .= '<tr><th>Crossing Block Year</th><td>'.$cb_year.'</td></tr>';
 	$output .= '<tr><th>Crossing Block Season</th><td>'.$cb_season.'</td></tr>';
-	
+
 	// Summary of Parents-------------------------------------------
 	//synonym prefix
 	if (preg_match('/[Ss]ummer/', $cb_season)) { $synonym_prefix = 'Sm'.$cb_year.'-P'; }
@@ -441,7 +442,7 @@ function crossing_block_summary ($organism_common_name, $cb_year, $cb_season) {
 
 	// synonym type id
 	$cvterm = tripal_cv_get_cvterm_by_name('synonym', variable_get('chado_stock_prop_types_cv', 'null'));
-            
+
 	// count number of parents
 	$query = "SELECT count(*) as count FROM stock stock "
 						."LEFT JOIN organism organism ON stock.organism_id = organism.organism_id "
@@ -450,7 +451,7 @@ function crossing_block_summary ($organism_common_name, $cb_year, $cb_season) {
 	$previous_db = tripal_db_set_active('chado');
 	$r = db_fetch_object(db_query($query));
 	tripal_db_set_active($previous_db);
-	
+
 	// summary variables
 	$num_parents = $r->count;
 	$parent_view_link = l('more', 'Crossing_Block/'.$organism_common_name.'/'.$cb_year.'/'.$cb_season.'/Parents');
@@ -458,11 +459,11 @@ function crossing_block_summary ($organism_common_name, $cb_year, $cb_season) {
 	$output .= '<tr><th>Parents</th><td>'.$num_parents.' parents ('.$parent_view_link.', '.$parent_add_link.')</td></tr>';
 
 	// Summary of Progeny-----------------------------
-	
+
 	// get type ids
 	$cb_year_cvterm = tripal_cv_get_cvterm_by_name('crossingblock_year', variable_get('chado_stock_prop_types_cv', 'null'));
-	$cb_season_cvterm = tripal_cv_get_cvterm_by_name('crossingblock_season', variable_get('chado_stock_prop_types_cv', 'null'));                           
-	
+	$cb_season_cvterm = tripal_cv_get_cvterm_by_name('crossingblock_season', variable_get('chado_stock_prop_types_cv', 'null'));
+
 	// Count the number of progeny
 	$query = "SELECT count(*) as count FROM stock stock "
 						."LEFT JOIN organism organism ON stock.organism_id = organism.organism_id "
@@ -476,12 +477,12 @@ function crossing_block_summary ($organism_common_name, $cb_year, $cb_season) {
 	// summary variables
 	$num_progeny = $r->count;
 	$progeny_view_link = l('more', 'Crossing_Block/'.$organism_common_name.'/'.$cb_year.'/'.$cb_season.'/Progeny');
-	$progeny_add_link = l('add', 'node/add/crosses');	
+	$progeny_add_link = l('add', 'node/add/crosses');
 	$output .= '<tr><th>Progeny</th><td>'.$num_progeny.' progeny ('.$progeny_view_link.', '.$progeny_add_link.')</td></tr>';
 	$output .= '</table>';
 	$output .= '<br />';
-	
-	
+
+
 	return $output;
 }
 
@@ -505,14 +506,14 @@ function set_crossing_block_form($form_state) {
 		if (!empty($_SESSION['crossingblock_season'])) { $default = $_SESSION['crossingblock_season']; }
     else { $default = '---'; }
 
-    $form['crossblock']['season'] = array( 
-      '#type' => 'select', 
+    $form['crossblock']['season'] = array(
+      '#type' => 'select',
       '#title' => t('Season'),
       '#options' => array(
                  '---' => '---',
                  'Spring' => 'Spring',
                  'Summer' => 'Summer',
-                 'Fall' => 'Fall',  
+                 'Fall' => 'Fall',
                  'Winter' => 'Winter'
         ),
       '#default_value' => $default,
@@ -521,36 +522,44 @@ function set_crossing_block_form($form_state) {
 
 		// Crossing Block Year
 		$current_year = date('Y');
-    $years_range = range(1972, $current_year+5, 1); 
+    $years_range = range(1972, $current_year+5, 1);
     $years_range['---'] = '---';
-    
-    foreach ($years_range as $k => $v) { $years_opt[$v] = $v; } 
+
+    foreach ($years_range as $k => $v) { $years_opt[$v] = $v; }
     if (!empty($_SESSION['crossingblock_year'])) { $default = $_SESSION['crossingblock_year']; }
     else { $default = '---'; }
-  
+
     $form['crossblock']['year'] = array(
-      '#type' => 'select',       
-      '#title' => t('Year'),   
+      '#type' => 'select',
+      '#title' => t('Year'),
       '#options' => $years_opt,
       '#default_value' => $default,
       '#required'   => TRUE
-    );  
+    );
 
 		// Crossing Block Organism
-    $stock_organism_options = tripal_organism_get_organism_options();
-    $stock_organism_options[0] = 'Select An Organism';
+		$stock_organisms = tripal_core_chado_select(
+		  'organism',
+		  array('organism_id', 'abbreviation'),
+		  array()
+		);
+		$stock_organism_options = array();
+		$stock_organism_options[0] = 'Select An Organism';
+		foreach ($stock_organisms as $o) {
+		  $stock_organism_options[$o->organism_id] = $o->abbreviation;
+		}
 
     if (!empty($form_state['values']['organism'])) { $organism_default = $form_state['values']['organism']; }
     elseif (!empty($_SESSION['organism_id'])) { $organism_default = $_SESSION['organism_id']; }
-    else { $organism_default = 0; } 
-    
+    else { $organism_default = 0; }
+
     $form['crossblock']['organism'] = array(
       '#type' => 'select',
       '#title' => t('Source Organism'),
       '#default_value' => $organism_default,
       '#options' => $stock_organism_options,
       '#required'   => TRUE,
-    );  
+    );
 
     $form['crossblock']['message'] = array(
       '#type' => 'item',
@@ -561,7 +570,7 @@ function set_crossing_block_form($form_state) {
       '#type' => 'submit',
       '#value' => 'Set Organism',
     );
-    
+
     $form['crossblock']['submit-goto_crossblock'] = array(
       '#type' => 'submit',
       '#value' => 'Go to Crossing Block Summary',
@@ -582,10 +591,10 @@ function set_crossing_block_form_submit($form, $form_state) {
   $_SESSION['crossingblock_year'] = $form_state['values']['year'];
   $_SESSION['crossingblock_season'] = $form_state['values']['season'];
   $_SESSION['organism_id'] = $form_state['values']['organism'];
-  
+
   if ($form_state['values']['op'] == 'Go to Crossing Block Summary') {
       $organism = tripal_core_chado_select(
-  	  'organism', 
+  	  'organism',
   	  array('common_name'),
   	  array('organism_id'=>$_SESSION["organism_id"])
   	);
@@ -604,7 +613,7 @@ function set_crossing_block_form_submit($form, $form_state) {
 */
 function theme_set_crossing_block_form($form) {
 
-  unset($form['crossblock']['organism']['#title']);  
+  unset($form['crossblock']['organism']['#title']);
   $output = '<fieldset><legend>Set Crossing Block</legend>';
   $output .= drupal_render($form['crossblock']['message']);
 
@@ -615,13 +624,13 @@ function theme_set_crossing_block_form($form) {
   $output .= '<td>'.drupal_render($form['crossblock']['season']).'</td>';
   $output .= '<td>'.drupal_render($form['crossblock']['submit-goto_crossblock']).'</td>';
   $output .= '</tr>';
-  
+
   $output .= '<tr>';
   $output .= '<td>Organism</td>';
   $output .= '<td colspan="2">'.drupal_render($form['crossblock']['organism']).'</td>';
   $output .= '<td>'.drupal_render($form['crossblock']['submit-set_organism']).'</td>';
   $output .= '</tr>';
-  
+
   $output .= '</table>';
   $output .= '</fieldset>';
 
@@ -636,14 +645,14 @@ function theme_set_crossing_block_form($form) {
 // Purpose: To provide a static link to access all crossing blocks and perform
 //   a basic summary of then number of stocks in each
 ////////////////////////////////////////////////////////////////////////////
- 
+
 /**
  * Purpose: To provide a static link to access all crossing blocks and perform
  *   a basic summary of then number of stocks in each
  */
 function all_crossing_block_summary_page() {
 	$output = '';
-	
+
 	// get cvterm needed below
 	$cvterm = tripal_cv_get_cvterm_by_name('synonym', variable_get('chado_stock_prop_types_cv', 'null'));
   $synonym_id = $cvterm->cvterm_id;
@@ -651,7 +660,7 @@ function all_crossing_block_summary_page() {
   $cb_season_id = $cvterm->cvterm_id;
 	$cvterm = tripal_cv_get_cvterm_by_name('crossingblock_year', variable_get('chado_stock_prop_types_cv', 'null'));
   $cb_year_id = $cvterm->cvterm_id;
-	
+
 	// Get Organisms and their total counts-----------------------------------------------------------
 	$output .= '<table>';
 	$output .= '<tr><th>Organism</th><th>Total Progeny</th><th>Total Parents</th></tr>';
@@ -669,7 +678,7 @@ function all_crossing_block_summary_page() {
 		$organisms[$r->common_name]['progeny'] = $r->count;
 		$organisms[$r->common_name]['organism_id'] = $r->organism_id;
 	}
-	
+
 	//get parent numbers
 	$query = "SELECT organism.common_name, organism.organism_id, count(stock.*) as count FROM stock "
 										."LEFT JOIN organism organism ON organism.organism_id=stock.organism_id "
@@ -681,21 +690,21 @@ function all_crossing_block_summary_page() {
 	while ($r = db_fetch_object($resource)) {
 		$organisms[$r->common_name]['parents'] = $r->count;
 		$organisms[$r->common_name]['organism_id'] = $r->organism_id;
-	}	
+	}
 
 	// output the organism summary table
 	foreach ($organisms as $name => $organism) {
 		$output .= '<tr><th>'.$name.'</th><td>'.$organism['progeny'].'</td><td>'.$organism['parents'].'</td></tr>';
 	}
 	$output .= '</table><br />';
-	
+
 	// ouput details for each organism----------------------------------------------------------------
 	foreach ($organisms as $common_name => $organism) {
-	
+
     $output .= '<br /><br /><div id="feature-references" class="tripal_feature-info-box">';
     $output .= '<div class="tripal_expandableBox"><h3>'.$common_name.'</h3></div>';
     $output .= '<div class="tripal_expandableBoxContent">';
-    
+
 		//Get Seasons & their total number of stocks
 		$query = "SELECT stockprop.value as crossing_block_season, count(stockprop.stockprop_id) as count "
 					."FROM stockprop WHERE stockprop.type_id=%d AND stock_id IN (SELECT stock_id FROM stock WHERE organism_id=%d) "
@@ -717,9 +726,9 @@ function all_crossing_block_summary_page() {
 			tripal_db_set_active($previous_db);
 			while ($y = db_fetch_object($resource_year)) {
 				$stock_numbers[$y->crossing_block_year][$s->crossing_block_season]['progeny'] = $y->count;
-			} //end of years				
+			} //end of years
 		}// end of seasons
-		
+
 		// get parent numbers
 		$query = "SELECT substring(stockprop.value from '([WFS][mp]*)[0-9]+-P[0-9]+') as season, "
 							."substring(stockprop.value from '[WFS][mp]*([0-9]+)-P[0-9]+') as year, "
@@ -749,7 +758,7 @@ function all_crossing_block_summary_page() {
 					break;
 			}
 		}// end of get parent numbers
-		
+
 		$output .= '<br /><table>';
 		$output .= '<tr><th rowspan="2">Year</th><th colspan="3">'.implode('</th><th colspan="3">', $seasons).'</th></tr>';
 		$output .= '<tr>'.str_repeat('<th>Summary</th><th>Parents</th><th>Progeny</th>', sizeof($seasons)).'</tr>';
@@ -758,20 +767,20 @@ function all_crossing_block_summary_page() {
 			$output .= '<tr><td>'.$year.'</td>';
 			foreach ($seasons as $season) {
 				$output .= '<td>'.l('Link','Crossing_Block/'.strtr($common_name, ' ', '-').'/'.$year.'/'.$season.'/Summary').'</td>';
-				if (!empty($numbers[$season]['parents'])) { 
-					$output .= '<td>'.l($numbers[$season]['parents'], 'Crossing_Block/'.strtr($common_name, ' ', '-').'/'.$year.'/'.$season.'/Parents').'</td>'; 
+				if (!empty($numbers[$season]['parents'])) {
+					$output .= '<td>'.l($numbers[$season]['parents'], 'Crossing_Block/'.strtr($common_name, ' ', '-').'/'.$year.'/'.$season.'/Parents').'</td>';
 				} else { $output .= '<td></td>'; }
-				if (!empty($numbers[$season]['progeny'])) { 
-					$output .= '<td>'.l($numbers[$season]['progeny'], 'Crossing_Block/'.strtr($common_name, ' ', '-').'/'.$year.'/'.$season.'/Progeny').'</td>'; 
+				if (!empty($numbers[$season]['progeny'])) {
+					$output .= '<td>'.l($numbers[$season]['progeny'], 'Crossing_Block/'.strtr($common_name, ' ', '-').'/'.$year.'/'.$season.'/Progeny').'</td>';
 				} else { $output .= '<td></td>'; }
 			}
 			$output .= '</tr>';
 		}
-	
+
 		$output .= '</table></div></div>';
 	}
-	
+
 	return $output;
 }
- 
- 
+
+

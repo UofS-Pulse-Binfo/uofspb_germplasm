@@ -4,46 +4,67 @@ class views_handler_sort_parent_number extends views_handler_sort {
 
   function init(&$view, $options) {
     parent::init(&$view, $options);
-    
+
     $this->table_alias = 'stockprop';
 
     $display_id = 'default';
-		
+
 		// get the stock property types cv
 		$this->stock_prop_types_cv_id = variable_get('chado_stock_prop_types_cv', '');
-		
+
     if ($this->stock_prop_types_cv_id) {
-    
+
       // synonym cvterm_id
-      $synonym_cvterm = tripal_cv_get_cvterm_by_name('synonym', $this->stock_prop_types_cv_id);
-		  $this->synonym_type_id = $synonym_cvterm->cvterm_id;		  
+      $synonym_cvterm = tripal_core_chado_select(
+        'cvterm',
+        array('cvterm_id'),
+        array(
+          'name' => 'synonym',
+          'cv_id' => $this->stock_prop_types_cv_id
+        )
+      );
+		  $this->synonym_type_id = $synonym_cvterm[0]->cvterm_id;
 		  if (empty($this->synonym_type_id)) {
         $cv = tripal_core_chado_select('cv',array('name'),array('cv_id'=>$this->stock_prop_types_cv_id));
         $cv_name = $cv[0]->name;
-		    drupal_set_message('Missing controlled vocabulary term <b>synonym</b> in stock property type controlled vocabulary ('.$cv_name.')', 'error');  		  
+		    drupal_set_message('Missing controlled vocabulary term <b>synonym</b> in stock property type controlled vocabulary ('.$cv_name.')', 'error');
         $this->broken = TRUE;
 		  }
 
 		  //crossingblock_year cvterm_id
-      $cb_year_cvterm = tripal_cv_get_cvterm_by_name('crossingblock_year', $this->stock_prop_types_cv_id);
-	  	$this->cb_year_type_id = $cb_year_cvterm->cvterm_id;
+      $cb_year_cvterm = tripal_core_chado_select(
+        'cvterm',
+        array('cvterm_id'),
+        array(
+          'name' => 'crossingblock_year',
+          'cv_id' => $this->stock_prop_types_cv_id
+        )
+      );
+	  	$this->cb_year_type_id = $cb_year_cvterm[0]->cvterm_id;
 		  if (empty($this->cb_year_type_id)) {
         $cv = tripal_core_chado_select('cv',array('name'),array('cv_id'=>$this->stock_prop_types_cv_id));
         $cv_name = $cv[0]->name;
 		    drupal_set_message('Missing controlled vocabulary term <b>crossingblock_year</b> in stock property type controlled vocabulary ('.$cv_name.')', 'error');
         $this->broken = TRUE;
-		  }		  
+		  }
 
       // crossingblock_season cvterm_id
-      $cb_season_cvterm = tripal_cv_get_cvterm_by_name('crossingblock_season', $this->stock_prop_types_cv_id);
-		  $this->cb_season_type_id = $cb_season_cvterm->cvterm_id;
+      $cb_season_cvterm = tripal_core_chado_select(
+        'cvterm',
+        array('cvterm_id'),
+        array(
+          'name' => 'crossingblock_season',
+          'cv_id' => $this->stock_prop_types_cv_id
+        )
+      );
+		  $this->cb_season_type_id = $cb_season_cvterm[0]->cvterm_id;
 		  if (empty($this->cb_season_type_id)) {
         $cv = tripal_core_chado_select('cv',array('name'),array('cv_id'=>$this->stock_prop_types_cv_id));
         $cv_name = $cv[0]->name;
-		    drupal_set_message('Missing controlled vocabulary term <b>crossingblock_season</b> in stock property type controlled vocabulary ('.$cv_name.')', 'error');		  
+		    drupal_set_message('Missing controlled vocabulary term <b>crossingblock_season</b> in stock property type controlled vocabulary ('.$cv_name.')', 'error');
         $this->broken = TRUE;
 		  }
-		  
+
       // Check if there is currently a property field
       // This is needed because the parent number will be extracted from a synonym (property)
       $properties_field_exists = FALSE;
@@ -54,11 +75,11 @@ class views_handler_sort_parent_number extends views_handler_sort {
           }
         }
       }
-      
+
       // if property field doesn't already exist then add one
       if (!$properties_field_exists) {
-        $id = $view->add_item($display_id, 'field', 'stock', 'properties', 
-                              array('exclude'=>TRUE, 
+        $id = $view->add_item($display_id, 'field', 'stock', 'properties',
+                              array('exclude'=>TRUE,
                                     'stockprop_type_ids'=>array(
                                       $this->synonym_type_id => $this->synonym_type_id
                                      ),
@@ -67,14 +88,14 @@ class views_handler_sort_parent_number extends views_handler_sort {
       }
     } else {
       drupal_set_message('Please set the stock type controlled vocabulary in Tripal Management -> Stock -> Configure', 'error');
-      $this->broken = TRUE;    
+      $this->broken = TRUE;
     }
-    
+
   }
-  
+
   function options_form (&$form, &$form_state) {
 
-    if ($this->broken) { 
+    if ($this->broken) {
       $form = array(
         'msg' => array(
           '#type' => 'item',
@@ -84,7 +105,7 @@ class views_handler_sort_parent_number extends views_handler_sort {
       );
       return $form;
     }
-    
+
     if ($this->cb_year_type_id) {
       $previous_db = db_set_active('chado');
       $resource = db_query("SELECT value FROM stockprop WHERE type_id=".$this->cb_year_type_id." ORDER BY value");
@@ -95,22 +116,22 @@ class views_handler_sort_parent_number extends views_handler_sort {
         $options[$r->value] = $r->value;
       }
     } else {
-      $options = array('<NONE>'=>'None');	      
+      $options = array('<NONE>'=>'None');
     }
     $form['cb_year'] = array(
       '#type' => 'select',
       '#title' => t('Crossing Block Year'),
-      '#options' => $options,   
+      '#options' => $options,
       '#description' => 'If Selected the only parent numbers from the selected year are displayed.',
       '#default_value' => $this->options['cb_year'],
     );
-    
+
     $form['use_cbyear_arg'] = array(
       '#type' => 'checkbox',
       '#title' => 'Set Year based on "Parent Number:Crossing Block Year Argument"',
       '#default_value' => $this->options['use_cbyear_arg'],
     );
-    
+
     if ($this->cb_season_type_id) {
       $previous_db = db_set_active('chado');
       $resource = db_query("SELECT value FROM stockprop WHERE type_id=".$this->cb_season_type_id." ORDER BY value");
@@ -121,7 +142,7 @@ class views_handler_sort_parent_number extends views_handler_sort {
         $options[$r->value] = $r->value;
       }
     } else {
-      $options = array('<NONE>'=>'None');    
+      $options = array('<NONE>'=>'None');
     }
     $form['cb_season'] = array(
       '#type' => 'select',
@@ -130,15 +151,15 @@ class views_handler_sort_parent_number extends views_handler_sort {
       '#description' => 'If Selected the only parent numbers from the selected season are displayed.',
       '#default_value' => $this->options['cb_season'],
     );
-    
+
     $form['use_cbseason_arg'] = array(
       '#type' => 'checkbox',
       '#title' => 'Set Season based on "Parent Number:Crossing Block Season Argument"',
       '#default_value' => $this->options['use_cbseason_arg'],
     );
-    
+
   }
-  
+
   function query () {
 
 	  if (!$this->broken) {
@@ -151,28 +172,28 @@ class views_handler_sort_parent_number extends views_handler_sort {
         $year_arguement = $this->view->args[$this->view->argument['pnum_cb_year']->position];
         $this->options['cb_year'] = $year_arguement;
       }
-      
+
       //Determine synonym Prefix
       if (empty($this->options['cb_year'])) {
         $this->options['cb_year'] = '.*';
       }
-      
+
       $synonym_prefix = '';
-      if (preg_match('/[Ss]ummer/', $this->options['cb_season'])) { 
-        $synonym_prefix = 'Sm'.$this->options['cb_year'].'-P'; 
-      } elseif (preg_match('/[Ff]all/', $this->options['cb_season'])) { 
-        $synonym_prefix = 'F'.$this->options['cb_year'].'-P'; 
-      } elseif (preg_match('/[Ww]inter/', $this->options['cb_season'])) { 
-        $synonym_prefix = 'W'.$this->options['cb_year'].'-P'; 
-      } elseif (preg_match('/[Ss]pring/', $this->options['cb_season'])) { 
-        $synonym_prefix = 'Sp'.$this->options['cb_year'].'-P'; 
+      if (preg_match('/[Ss]ummer/', $this->options['cb_season'])) {
+        $synonym_prefix = 'Sm'.$this->options['cb_year'].'-P';
+      } elseif (preg_match('/[Ff]all/', $this->options['cb_season'])) {
+        $synonym_prefix = 'F'.$this->options['cb_year'].'-P';
+      } elseif (preg_match('/[Ww]inter/', $this->options['cb_season'])) {
+        $synonym_prefix = 'W'.$this->options['cb_year'].'-P';
+      } elseif (preg_match('/[Ss]pring/', $this->options['cb_season'])) {
+        $synonym_prefix = 'Sp'.$this->options['cb_year'].'-P';
       } else {
         $synonym_prefix = '-P';
       }
-  
+
       $synonym_cvterm = tripal_cv_get_cvterm_by_name('synonym', variable_get('chado_stock_prop_types_cv', null));
-      $synonym_type_id = $synonym_cvterm->cvterm_id;  
-      
+      $synonym_type_id = $synonym_cvterm->cvterm_id;
+
       // Modify Query
       $this->query->add_orderby("sort","parent_number", $this->options['order']);
 

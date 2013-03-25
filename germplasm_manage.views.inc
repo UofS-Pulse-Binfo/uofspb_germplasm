@@ -1,41 +1,270 @@
 <?php
 
-
 /**
  *  @file
  *  This file contains extensions for views integration of chado/tripal stock
  *  tables with germplasm management in mind. Supplementary functions can be
  *  found in ./views/
  *
- *  Documentation on views integration can be found at 
+ *  Documentation on views integration can be found at
  *  http://views2.logrus.com/doc/html/index.html.
  */
- 
+
 /**
  * Implements hook_views_data()
  * Purpose: Describe chado/tripal tables & fields to views
  *
  * @return: a data array which follows the structure outlined in the
  *   views2 documentation for this hook. Essentially, it's an array of table
- *   definitions keyed by chado/tripal table name. Each table definition 
+ *   definitions keyed by chado/tripal table name. Each table definition
  *   includes basic details about the table, fields in that table and
  *   relationships between that table and others (joins)
  */
-require_once('views/stock.views.inc');
-require_once('views/stockprop.views.inc');
 function germplasm_manage_views_data()  {
-  $data = array();
-	
-  $data = array_merge($data, germplasm_additions_stock_views_data());
-  $data = array_merge($data, germplasm_additions_stockprop_views_data());
-  
-  return $data;
+
+  // Add Fields to stock integration
+  if (!tripal_views_is_integrated('stock',6)) {
+    $fields = array();
+
+    // Field: Display the Parent number of a stock
+    $fields['parent_number'] = array(
+      'name' => 'parent_number',
+      'title' => 'Parent Number',
+      'description' => 'The Parent Number of an assigned parent for the current crossing block.',
+      'type' => 'custom',
+      'handlers' => array(
+        'field' => array(
+          'name' => 'views_handler_field_parent_number'
+        ),
+        'filter' => array(
+          'name' => 'views_handler_filter_parent_number'
+        ),
+        'sort' => array(
+          'name' => 'views_handler_sort_parent_number',
+        ),
+      ),
+      'joins' => array(),
+    );
+
+    // Argument: Used to filter a view based on the crossing block year in the path
+    $fields['pnum_cb_year'] = array(
+      'name' => 'pnum_cb_year',
+      'title' => 'Parent Number: Crossing Block Year',
+      'description' => 'Sets the crossing block year a stock is the parent of',
+      'type' => 'custom',
+      'handlers' => array(
+        'argument' => array(
+          'name' => 'views_handler_argument_no_query',
+        ),
+      ),
+      'joins' => array(),
+    );
+
+    // Argument: Used to filter a view based on the crossing block season in the path
+    $fields['pnum_cb_season'] = array(
+      'name' => 'pnum_cb_season',
+      'title' => 'Parent Number: Crossing Block Season',
+      'description' => 'Sets the crossing block season a stock is the parent of',
+      'type' => 'custom',
+      'handlers' => array(
+        'argument' => array(
+          'name' => 'views_handler_argument_no_query',
+        ),
+      ),
+      'joins' => array(),
+    );
+
+    $fields['crossing_block'] = array(
+      'name' => 'crossing_block',
+      'title' => 'Crossing Block',
+      'description' => 'The crossing block a given stock was marked as progeny in',
+      'type' => 'custom',
+      'handlers' => array(
+        'field' => array(
+          'name' => 'views_handler_field_crossing_block',
+        ),
+        'filter' => array(
+          'name' => 'views_handler_filter_crossingblock',
+        ),
+        'sort' => array(
+          'name' => 'views_handler_sort',
+        ),
+      ),
+      'joins' => array(),
+    );
+
+    $fields['cross_number'] = array(
+      'name' => 'cross_number',
+      'title' => 'Cross Number',
+      'description' => 'The cross number a cross was registered with',
+      'type' => 'custom',
+      'handlers' => array(
+        'field' => array(
+          'name' => 'views_handler_field_cross_number',
+        ),
+        'filter' => array(
+          'name' => 'views_handler_filter_cross_number',
+        ),
+        'sort' => array(
+          'name' => 'views_handler_sort_cross_number',
+        ),
+      ),
+      'joins' => array(),
+    );
+
+    $fields['is_germplasm'] = array(
+      'name' => 'is_germplasm',
+      'title' => 'Is Germplasm?',
+      'description' => 'A boolean to indicate whether a given stock is considered germplasm or not. A stock is considered germplasm if it\'s main database reference is for the database set as the germplasm database.',
+      'type' => 'custom',
+      'handlers' => array(
+        'filter'=> array(
+          'name' => 'views_handler_filter_is_germplasm',
+        ),
+      ),
+      'joins' => array(),
+    );
+
+    // STOCK DEPRECATED ------
+    //Calculated Field: stock properties
+    // uses a custom field handler which pulls results from the view
+    // actual query performed in chado_stock_views_views_pre_render	(&$view) -file:tripal_stock.views.inc
+    $fields['properties'] = array(
+      'name' => 'properties',
+      'title' => 'Stock Properties',
+      'description' => 'Properties of the current stock.',
+      'type' => 'custom',
+      'handlers' => array(
+        'field' => array(
+          'title' => 'Properties',
+          'help' => 'Display a given type of properties associated with a stock.',
+          'name' => 'views_handler_field_stockprop_by_type',
+        ),
+        'filter' => array(
+          'title' => 'Properties',
+          'help' => 'Filter by a given property type or value.',
+          'name' => 'views_handler_filter_stockprop_id',
+        ),
+        'argument' => array(
+          'title' => 'Properties',
+          'help' => 'Allow a property to be supplied in the path',
+          'name' => 'views_handler_argument_stockprop_id',
+        ),
+      ),
+      'joins' => array(),
+    );
+
+    //Calculated Field: stock properties (ALL)
+    // uses a custom field handler which pulls results from the view
+    // actual query performed in chado_stock_views_views_pre_render	(&$view) -file:tripal_stock.views.inc
+    $fields['all_properties'] = array(
+      'name' => 'all_properties',
+      'title' => 'All Stock Properties',
+      'description' => 'Properties of the current stock.',
+      'type' => 'custom',
+      'handlers' => array(
+        'field' => array(
+          'title' => 'All Properties',
+          'help' => 'Display all properties associated with a stock.',
+          'name' => 'views_handler_field_stockprop_all',
+        ),
+      ),
+      'joins' => array(),
+    );
+
+    //Calculated Field: stock relationships
+    // uses a custom field handler which pulls results from the view
+    // actual query performed in chado_stock_views_views_pre_render	(&$view) -file:tripal_stock.views.inc
+    $fields['relationships'] = array(
+      'name' => 'relationships',
+      'title' => 'Stock Relationships',
+      'description' => 'Relationships including the current stock.',
+      'type' => 'custom',
+      'handlers' => array(
+        'field' => array(
+          'title' => 'Relationships',
+          'help' => 'Display a given type of relationships including the current stock.',
+          'name' => 'views_handler_field_stockrel_by_type',
+        ),
+        'filter' => array(
+          'name' => 'views_handler_filter_stock_relationship_id'
+        ),
+      ),
+      'joins' => array(),
+    );
+
+    //Calculated Field: stock relationships (ALL)
+    // uses a custom field handler which pulls results from the view
+    // actual query performed in chado_stock_views_views_pre_render	(&$view) -file:tripal_stock.views.inc
+    $fields['all_relationships'] = array(
+      'name' => 'all_relationships',
+      'title' => 'All Stock Relationships',
+      'description' => 'Relationships including the current stock.',
+      'type' => 'custom',
+      'handlers' => array(
+        'field' => array(
+          'title' => 'All Relationships',
+          'help' => 'Display all relationships including the stock.',
+          'name' => 'views_handler_field_stockrel_all',
+        ),
+      ),
+      'joins' => array(),
+    );
+
+    //Calculated Field: stock dbxrefs
+    // uses a custom field handler which pulls results from the view
+    // actual query performed in chado_stock_views_views_pre_render	(&$view) -file:tripal_stock.views.inc
+    $fields['dbxref'] = array(
+      'name' => 'dbxref',
+      'title' => 'Stock Database References',
+      'description' => 'Database References associated with the current stock.',
+      'type' => 'custom',
+      'handlers' => array(
+        'field' => array(
+          'title' => 'Database References',
+          'help' => 'Display database references from a given database for the current stock.',
+          'name' => 'views_handler_field_stock_dbxref_by_type',
+        ),
+        'filter' => array(
+          'title' => 'Database References',
+          'help' => 'Filter by a given database reference type and/or value.',
+          'name' => 'views_handler_filter_stock_dbxref_id',
+        ),
+      ),
+      'joins' => array(),
+    );
+
+    //Calculated Field: stock dbxrefs (ALL)
+    // uses a custom field handler which pulls results from the view
+    // actual query performed in chado_stock_views_views_pre_render	(&$view) -file:tripal_stock.views.inc
+    $fields['all_dbxref'] = array(
+      'name' => 'all_dbxref',
+      'title' => 'All Stock Database References',
+      'description' => 'Database References associated with the current stock.',
+      'type' => 'custom',
+      'handlers' => array(
+        'field' => array(
+          'title' => 'All Database References',
+          'help' => 'Display all database references for the current stock.',
+          'name' => 'views_handler_field_stock_dbxref_all',
+        ),
+      ),
+      'joins' => array(),
+    );
+
+    $table = 'stock';
+    $priority = 6;
+    foreach ($fields as $field_array) {
+      tripal_views_add_field_to_integration($table, $priority, $field_array);
+    }
+  }
+
 }
 
 /**
  * Implements hook_views_handlers()
  * Purpose: Register all custom handlers with views
- *   where a handler describes either "the type of field", 
+ *   where a handler describes either "the type of field",
  *   "how a field should be filtered", "how a field should be sorted"
  *
  * @return: An array of handler definitions
@@ -46,6 +275,38 @@ function germplasm_manage_views_handlers() {
      'path' => drupal_get_path('module', 'germplasm_manage') . '/views/handlers',
    ),
    'handlers' => array(
+     //Deprecated stock handlers
+     'views_handler_field_stock_dbxref_all' => array(
+       'parent' => 'views_handler_field_prerender_list',
+     ),
+     'views_handler_field_stock_dbxref_by_type' => array(
+       'parent' => 'views_handler_field_prerender_list',
+     ),
+     'views_handler_field_stockprop_all' => array(
+       'parent' => 'views_handler_field_prerender_list',
+     ),
+     'views_handler_field_stockprop_by_type' => array(
+       'parent' => 'tripal_views_handler_field_aggregate',
+     ),
+     'views_handler_field_stockrel_all' => array(
+       'parent' => 'views_handler_field_prerender_list',
+     ),
+     'views_handler_field_stockrel_by_type' => array(
+       'parent' => 'views_handler_field_prerender_list',
+     ),
+     'views_handler_filter_stock_dbxref_id' => array(
+       'parent' => 'views_handler_filter',
+     ),
+     'views_handler_filter_stockprop_id' => array(
+       'parent' => 'views_handler_filter',
+     ),
+     'views_handler_filter_stock_relationship_id' => array(
+       'parent' => 'views_handler_filter',
+     ),
+     'views_handler_argument_stockprop_id' => array(
+       'parent' => 'views_handler_argument_string',
+     ),
+
      'views_handler_field_parent_number' => array(
      	'parent' => 'views_handler_field_prerender_list',
      ),
@@ -61,7 +322,7 @@ function germplasm_manage_views_handlers() {
      ),
      'views_handler_filter_crossingblock' => array(
        'parent' => 'views_handler_filter',
-     ), 
+     ),
      'views_handler_filter_is_germplasm' => array(
       'parent' => 'views_handler_filter',
      ),
@@ -95,18 +356,18 @@ function germplasm_manage_views_default_views() {
   foreach (variable_get('germplasm_cross_dbs', array()) as $k => $v) {
     $cross_num_db_options[$k] = $k;
   }
-  
+
   //synonym cvterm
   $synonym = tripal_core_chado_select('cvterm',array('cvterm_id'), array('name'=>'synonym', 'cv_id'=>variable_get('chado_stock_prop_types_cv',NULL)));
   if ($synonym[0]->cvterm_id) {
     $properties_synonym_options = array(
-      $synonym[0]->cvterm_id => $synonym[0]->cvterm_id,  
+      $synonym[0]->cvterm_id => $synonym[0]->cvterm_id,
     );
   } else {
     $properties_synonym_options = array();
     drupal_set_message('Unable to determine the synonym controlled vocabulary term ID when generating default Germplasm views. Ensure that the Tripal Stock property CV is set an contains the term synonym.','warning');
   }
-  
+
   //crossingblock_year and crossingblock_season cvterms
   $cb_year = tripal_core_chado_select('cvterm',array('cvterm_id'), array('name'=>'crossingblock_year', 'cv_id'=>variable_get('chado_stock_prop_types_cv',NULL)));
   $cb_season = tripal_core_chado_select('cvterm',array('cvterm_id'), array('name'=>'crossingblock_season', 'cv_id'=>variable_get('chado_stock_prop_types_cv',NULL)));
@@ -119,25 +380,25 @@ function germplasm_manage_views_default_views() {
     $properties_crossingblock_options = array();
     drupal_set_message('Unable to determine the crossingblock_season/year controlled vocabulary term IDs when generating default Germplasm views. Ensure that the Tripal Stock property CV is set an contains the terms crossingblock_season and crossingblock_year.','warning');
   }
-  
+
   // is_maternal_parent_of cvterm
   $mom_cv = tripal_core_chado_select('cvterm',array('cvterm_id'), array('name'=>'is_maternal_parent_of', 'cv_id'=>variable_get('chado_stock_relationship_cv',NULL)));
   if ($mom_cv[0]->cvterm_id) {
     $rels_maternal_options = array( $mom_cv[0]->cvterm_id => $mom_cv[0]->cvterm_id );
-  } else { 
-    $rels_maternal_options = array(); 
+  } else {
+    $rels_maternal_options = array();
     drupal_set_message('Unable to determine the is_maternal_parent_of controlled vocabulary term IDs when generating default Germplasm views. Ensure that the Tripal Stock relationship CV is set an contains the term is_maternal_parent_of.','warning');
   }
-  
+
   // is_paternal_parent_of cvterm
   $dad_cv = tripal_core_chado_select('cvterm',array('cvterm_id'), array('name'=>'is_maternal_parent_of', 'cv_id'=>variable_get('chado_stock_relationship_cv',NULL)));
   if ($dad_cv[0]->cvterm_id) {
     $rels_paternal_options = array( $dad_cv[0]->cvterm_id => $dad_cv[0]->cvterm_id );
-  } else { 
-    $rels_paternal_options = array(); 
+  } else {
+    $rels_paternal_options = array();
     drupal_set_message('Unable to determine the is_paternal_parent_of controlled vocabulary term IDs when generating default Germplasm views. Ensure that the Tripal Stock relationship CV is set an contains the term is_paternal_parent_of.','warning');
   }
-  
+
 	// Default View: All Germplasm
 	// This view lists all germplasm (ie: all stocks with a main database reference as set in the germplasm configuration)
 	$view = new view;
@@ -795,7 +1056,7 @@ function germplasm_manage_views_default_views() {
 	));
 	$handler->override_option('title', 'Germplasm');
 	$handler->override_option('empty', 'Please use the filter the germplasm records so you see only the subset of interest. If you want to see all organisms simply leave the organism common name filter blank (Change from <i>None</i> to <i>Any</i>) and click Apply. It may take a while to load the results.
-		
+
 		<b>The Organism Common Name filter must not be <i>None</i> in order for any results to be displayed. Either select the organism you are interested in or select <i>Any</i> if you are not interested in a single organism.</b>');
 	$handler->override_option('empty_format', '2');
 	$handler->override_option('items_per_page', 50);
@@ -1772,9 +2033,9 @@ function germplasm_manage_views_default_views() {
     'description' => '',
     'weight' => 0,
     'name' => 'navigation',
-  ));	
+  ));
 	$views[$view->name] = $view;
-	
+
 	// Default View: Parents for Crossing Block
 	$view = new view;
   $view->name = 'crossingblock_parents';
@@ -2666,7 +2927,7 @@ function germplasm_manage_views_default_views() {
     'name' => 'navigation',
   ));
 	$views[$view->name] = $view;
-	
+
 	// Default View: Cross assigned parents
 	$view = new view;
   $view->name = 'cross_assigned_parents';
@@ -3050,6 +3311,6 @@ function germplasm_manage_views_default_views() {
   $handler->override_option('items_per_page', 0);
   $handler->override_option('style_plugin', 'table');
 	$views[$view->name] = $view;
-	
+
 	return $views;
 }
