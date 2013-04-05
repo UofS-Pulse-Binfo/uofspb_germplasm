@@ -9,8 +9,13 @@ class views_handler_field_crossing_block extends views_handler_field_stockprop_b
 		$this->stock_prop_types_cv_id = variable_get('chado_stock_prop_types_cv', '');
     if ($this->stock_prop_types_cv_id) {
 		  //crossingblock_year cvterm_id
-      $cb_year_cvterm = tripal_cv_get_cvterm_by_name('crossingblock_year', $this->stock_prop_types_cv_id);
-	  	$this->cb_year_type_id = $cb_year_cvterm->cvterm_id;
+      $cb_year_cvterm = tripal_core_chado_select(
+              'cvterm',
+              array('cvterm_id'),
+              array('name' => 'crossingblock_year', 
+                  'cv_id' => $this->stock_prop_types_cv_id
+              ));
+	  	$this->cb_year_type_id = $cb_year_cvterm[0]->cvterm_id;
 		  if (empty($this->cb_year_type_id)) {
         $cv = tripal_core_chado_select('cv',array('name'),array('cv_id'=>$this->stock_prop_types_cv_id));
         $cv_name = $cv[0]->name;
@@ -19,8 +24,12 @@ class views_handler_field_crossing_block extends views_handler_field_stockprop_b
 		  }		  
 
       // crossingblock_season cvterm_id
-      $cb_season_cvterm = tripal_cv_get_cvterm_by_name('crossingblock_season', $this->stock_prop_types_cv_id);
-		  $this->cb_season_type_id = $cb_season_cvterm->cvterm_id;
+      $cb_season_cvterm = tripal_core_chado_select(
+              'cvterm',
+              array('cvterm_id'),
+              array('name' => 'crossingblock_season', 
+                  'cv_id' => $this->stock_prop_types_cv_id));
+		  $this->cb_season_type_id = $cb_season_cvterm[0]->cvterm_id;
 		  if (empty($this->cb_season_type_id)) {
         $cv = tripal_core_chado_select('cv',array('name'),array('cv_id'=>$this->stock_prop_types_cv_id));
         $cv_name = $cv[0]->name;
@@ -109,7 +118,7 @@ class views_handler_field_crossing_block extends views_handler_field_stockprop_b
     } //end of foreach values
   } //end of pre_render function
   
-  function render_item($count, $item) {
+  function render($values) {
     $text = array();
     
     if ($this->options['cb_display_options']['season']) {

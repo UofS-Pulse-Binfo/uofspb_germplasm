@@ -1,6 +1,6 @@
 <?php
 
-class views_handler_field_parent_number extends views_handler_field_prerender_list {
+class views_handler_field_parent_number extends views_handler_field_stockprop_by_type {
 
   function init(&$view, $options) {
     parent::init(&$view, $options);
@@ -68,6 +68,7 @@ class views_handler_field_parent_number extends views_handler_field_prerender_li
         if (preg_match('/properties/', $name)) {
           if (!empty($field['stockprop_type_ids'][$this->synonym_type_id])) {
             $properties_field_exists = TRUE;
+            $this->property_field_id = $field['id'];
           }
         }
       }
@@ -81,6 +82,7 @@ class views_handler_field_parent_number extends views_handler_field_prerender_li
                                      ),
                                      'label' => 'Synonyms'
                               ));
+        $this->property_field_id = $id;
       }
     } else {
       drupal_set_message('Please set the stock property type controlled vocabulary in Tripal Management -> Stock -> Configure', 'error');
@@ -100,6 +102,8 @@ class views_handler_field_parent_number extends views_handler_field_prerender_li
 
   function options_form(&$form, &$form_state) {
     parent::options_form($form, $form_state);
+    unset($form['stockprop_display_options'], $form['stockprop_type_ids']);
+
     if ($this->broken) {
       $form = array(
         'msg' => array(
@@ -186,29 +190,37 @@ class views_handler_field_parent_number extends views_handler_field_prerender_li
 
 	function pre_render($values) {
 	  if ($this->broken) { return false; }
-
-		$this->aliases['properties'] = 'properties';
+		$this->aliases['properties'] = $this->view->field[$this->property_field_id]->field_alias;
 		$this->aliases['stock_id'] = 'stock_id';
-		$this->field_alias = $this->aliases['stock_id'];
+		$this->field_alias = $this->aliases['properties'];
+
+    parent::pre_render($values);
 
 		// set the crossing block from arguements
 		if ($this->options['use_cbseason_arg']) {
 			$season_arguement = $this->view->args[$this->view->argument['pnum_cb_season']->position];
+      if (empty($season_arguement)) {
+        $season_arguement = $_SESSION['crossingblock_season'];
+      }
 			$this->options['cb_season'] = $season_arguement;
 		}
 		if ($this->options['use_cbyear_arg']) {
 			$year_arguement = $this->view->args[$this->view->argument['pnum_cb_year']->position];
-			$this->options['cb_year'] = $year_arguement;
+      if (empty($year_arguement)) {
+        $year_arguement = $_SESSION['crossingblock_year'];
+      }
+      $this->options['cb_year'] = $year_arguement;
 		}
 
-		//for each stock in this view page
-		foreach ($values as $result) {
-			if (!empty($result->{$this->aliases['properties']})) {
+    //for each stock in this view page
+    foreach ($values as $vk => $results) {
+      if (!empty($results->{$this->aliases['properties']})) {
 
-				// all properties for the current stock
-				$properties = $result->{$this->aliases['properties']};
-				foreach ($properties as $property) {
-					// perform filtering
+        // all properties for the current stock
+        $properties = $results->{$this->aliases['properties']};
+        foreach ($properties as $rk => $property) {
+          $property = (object) $property;
+          // perform filtering
 					if ($property->type_id == $this->synonym_type_id) {
 						$synonym = check_plain($property->value);
 						if (preg_match('/(Sm|F|W|Sp)(\d+)-P(\d+)/',$synonym, $matches)) {
@@ -231,47 +243,89 @@ class views_handler_field_parent_number extends views_handler_field_prerender_li
 
 							// Do filtering if these options were supplied
 							if (!empty($this->options['cb_year'])) {
-								if ($this->options['cb_year'] != $year) { continue; }
+								if ($this->options['cb_year'] != $year) { 
+                  continue; 
+                }
 							}
 							if (!empty($this->options['cb_season'])) {
-								if (!preg_match('/'.$season.'/i',$this->options['cb_season'])) { continue; }
+								if (!preg_match('/'.$season.'/i',$this->options['cb_season'])) { 
+                  continue; 
+                }
 							}
+
 
 							$this->items[$property->stock_id][$property->stockprop_id]['crossingblock_season'] = $season;
 							$this->items[$property->stock_id][$property->stockprop_id]['crossingblock_year'] = $year;
 							$this->items[$property->stock_id][$property->stockprop_id]['parent_number'] = $pnumber;
 							$organism_common_name = preg_replace('/\s+/','-',$result->organism_common_name);
 							$this->items[$property->stock_id][$property->stockprop_id]['cb_link'] = 'Crossing_Block/'.$organism_common_name.'/'.$year.'/'.$season.'/Parents';
+
+              $this->aliases['field_handler'] = 'parent_number_' . $this->position;
+              $values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['crossingblock_season'] = $season;
+							$values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['crossingblock_year'] = $year;
+							$values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['parent_number'] = $pnumber;
+							$values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['cb_link'] = 'Crossing_Block/'.$organism_common_name.'/'.$year.'/'.$season.'/Parents';
 						}
 					}
 				}	//end of foreach property
 			} //end of if there are properties
 		} //end of foreach result
-
 	}
 
-	function render_item($count, $item) {
-	  if ($this->broken) { return false; }
+  /**
+   * Render the field.
+   *
+   * Note: Checks to see if we have an array or simple field. If we have an array, then
+   *   split it up and render each part using the parent render functionality.
+   *
+   * @param $values
+   *   The values retrieved from the database.
+   */
+  function render($values) {
 
-		$text = array();
+    // If it's aggregated (an array), then render each part
+    // using the parent render functionality
+    if ($this->aggregated) {
+      $items = $values->{$this->field_alias}[$this->aliases['field_handler']];
+      $rendered_items = array();
+      foreach ($items as $item) {
+        $text = array();
+        if ($this->options['display_options']['parent_number']) {
+          $text[] = $item['parent_number'];
+        }
+        if ($this->options['display_options']['crossing_block']) {
+          $text[] = $item['crossingblock_season'].' '.$item['crossingblock_year'];
+        }
 
-		if ($this->options['display_options']['parent_number']) {
-			$text[] = $item['parent_number'];
-		}
-		if ($this->options['display_options']['crossing_block']) {
-			$text[] = $item['crossingblock_season'].' '.$item['crossingblock_year'];
-		}
+        if (!empty($text[0])) {
+          if (sizeof($text) == 1) {
+            $name = $text[0];
+          }
+          elseif (sizeof($text) == 2) {
+            $name = $text[0] .' ('.$text[1].')';
+          }
 
-		if (sizeof($text) == 1) {
-			$name = $text[0];
-		} elseif (sizeof($text) == 2) {
-			$name = $text[0] .' ('.$text[1].')';
-		}
+          if ($this->options['link_to_cb_parent_view']) {
+            $rendered_items[] = l($name, $item['cb_link']);
+          }
+          else {
+            $rendered_items[] = $name;
+          }
+        }
+      }
 
-		if ($this->options['link_to_cb_parent_view']) {
-		  return l($name, $item['cb_link']);
-		} else {
-		  return $name;
-		}
-	}
+      if ($this->options['type'] == 'separator') {
+        return implode(check_plain($this->options['separator']), $rendered_items);
+      }
+      else {
+        return theme('item_list', $rendered_items, NULL, $this->options['type']);
+      }
+    // Otherwise it is not aggragated
+    // Just render like the default handler would
+    }
+    else {
+      return $this->parent_render($values);
+    }
+  }
+
 }

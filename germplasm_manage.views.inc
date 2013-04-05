@@ -308,7 +308,7 @@ function germplasm_manage_views_handlers() {
      ),
 
      'views_handler_field_parent_number' => array(
-     	'parent' => 'views_handler_field_prerender_list',
+     	'parent' => 'views_handler_field_stockprop_by_type',
      ),
      'views_handler_field_crossing_block' => array(
        'parent' => 'views_handler_field_stockprop_by_type',
