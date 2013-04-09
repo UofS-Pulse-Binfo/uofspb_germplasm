@@ -289,10 +289,10 @@ function germplasm_manage_views_handlers() {
        'parent' => 'tripal_views_handler_field_aggregate',
      ),
      'views_handler_field_stockrel_all' => array(
-       'parent' => 'views_handler_field_prerender_list',
+       'parent' => 'tripal_views_handler_field_aggregate',
      ),
      'views_handler_field_stockrel_by_type' => array(
-       'parent' => 'views_handler_field_prerender_list',
+       'parent' => 'tripal_views_handler_field_aggregate',
      ),
      'views_handler_filter_stock_dbxref_id' => array(
        'parent' => 'views_handler_filter',

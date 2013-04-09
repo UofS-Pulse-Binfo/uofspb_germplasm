@@ -1,19 +1,37 @@
 <?php
 
 /**
- * Field handler allowing all relationships of a specified type for a given stock to be displayed in 
+ * Field handler allowing all relationships of a specified type for a given stock to be displayed in
  * a single cell
  *
  * @ingroup tripal_stock
  * @ingroup views_field_handlers
  */
-class views_handler_field_stockrel_by_type extends views_handler_field_prerender_list {
+class views_handler_field_stockrel_by_type extends tripal_views_handler_field_aggregate {
   function init(&$view, $options) {
     parent::init($view, $options);
 
+    if ($this->table != 'stock_relationship') {
+      $this->table = 'stock_relationship';
+      $this->field = 'all';
+      $this->field_alias = 'stock_relationship_all';
+      $this->additional_fields['stock_relationship_all'] = array('table' => 'stock_relationship', 'field' => 'all');
+      $this->additional_fields['stock_stock_id'] = array('table' => 'stock', 'field' => 'stock_id');
+
+      $this->chado_table_description = tripal_core_get_chado_table_schema($this->table);
+      foreach ($this->chado_table_description['foreign keys'] as $defn) {
+        if ($defn['table'] != $this->view->base_table) {
+          $join_table = tripal_core_get_chado_table_schema($defn['table']);
+          foreach ($join_table['fields'] as $fname => $f) {
+            $this->chado_table_description['fields'][$defn['table'] . '_' . $fname] = $f;
+          }
+        }
+      }
+    }
+
     // Boolean to determine whether
     //    TRUE =>  value (property type)      -more than one property type displayed
-    //    FALSE => or just value is rendered  -only 1 porperty type is displayed    
+    //    FALSE => or just value is rendered  -only 1 porperty type is displayed
     $this->display_type = TRUE;
 
   }
@@ -30,6 +48,7 @@ class views_handler_field_stockrel_by_type extends views_handler_field_prerender
    */
   function options_form(&$form, &$form_state) {
     parent::options_form($form, $form_state);
+    unset($form['format']);
 
     $form['stockrel_display_parts'] = array(
       '#type' => 'checkboxes',
@@ -45,7 +64,7 @@ class views_handler_field_stockrel_by_type extends views_handler_field_prerender
       ),
       '#default_value' => array($this->options['stockrel_display_parts']['subject'], $this->options['stockrel_display_parts']['type'], $this->options['stockrel_display_parts']['object']),
     );
-    
+
     $form['stockrel_display_rels'] = array(
       '#type' => 'radios',
       '#title' => t('Display Relationships Where'),
@@ -62,7 +81,7 @@ class views_handler_field_stockrel_by_type extends views_handler_field_prerender
       ),
       '#default_value' => $this->options['stockrel_display_rels'],
     );
-    
+
     $options = tripal_cv_get_cvterm_options( variable_get('chado_stock_relationship_cv', 'null') );
     $form['stockrel_type_ids'] = array(
       '#type' => 'checkboxes',
@@ -76,93 +95,142 @@ class views_handler_field_stockrel_by_type extends views_handler_field_prerender
    * Add this term to the query
    */
   function query() {
+    $this->query->ensure_table('stock_relationship');
     $this->add_additional_fields();
+
+    // Add a join between stock_relationship and stock for the subject
+    // We want this to be added within the stock_relationship subquery
+    $table = $this->query->get_table_info('stock_relationship');
+    $table['join']->additional_joins['subject'] = array(
+      'table' => 'stock',
+      'table_alias' => 'subject',
+      'field' => 'stock_id',
+      'left_table' => 'stock_relationship',
+      'left_field' => 'subject_id',
+    );
+
+    // Add a join between stock_relationship and stock for the object
+    // We want this to be added within the stock_relationship subquery
+    $table = $this->query->get_table_info('stock_relationship');
+    $table['join']->additional_joins['object'] = array(
+      'table' => 'stock',
+      'table_alias' => 'object',
+      'field' => 'stock_id',
+      'left_table' => 'stock_relationship',
+      'left_field' => 'object_id',
+    );
+
   }
 
   function pre_render($values) {
-    $this->aliases['relationships'] = 'relationships';
-    $this->aliases['stock_id'] = 'stock_id';
-    $this->field_alias = $this->aliases['stock_id'];
-    
+		$this->aliases['relationships'] = 'stock_relationship_all';
+		$this->aliases['stock_id'] = 'stock_id';
+		$this->field_alias = $this->aliases['relationships'];
+    if (!isset($this->aliases['field_handler'])) {
+      $this->aliases['field_handler'] = 'stockrel_by_type_' . $this->position;
+    }
+
+    // further check the results to see if this field is a postgresql array
+    $this->aggregated = chado_wrapper_is_aggregated_by_result($this, $values);
+    if ($this->aggregated) {
+      // Split Aggregated Results
+      chado_wrapper_split_array_agg_results($this, $values);
+
+      // Now each result is of the following form:
+      // stockprop_id::16554,stock_id::12037,type_id::3650,value::Sm2008-P13,rank::1...
+      // we need to split it further
+      foreach ($values as $k => $v) {
+        $this->split_aggregated_result_with_keys($values[$k]->{$this->field_alias});
+      }
+    }
+
+    if (!empty($this->options['stockrel_type_ids'])) {
+      $relationships2keep = array_filter($this->options['stockrel_type_ids']);
+    }
+
     //for each stock in this view page
-    foreach ($values as $result) {
+    foreach ($values as $vk => $result) {
       if (!empty($result->{$this->aliases['relationships']})) {
-          
+
         // all relationships including the current stock
         $relationships = $result->{$this->aliases['relationships']};
-        foreach ($relationships as $relationship) {      
+        foreach ($relationships as $rk => $relationship) {
           // perform filtering------
           //type
-          if (!empty($this->options['stockrel_type_ids'])) {
-            $relationships2keep = array_filter($this->options['stockrel_type_ids']);
-            if (!in_array($relationship->type_id, $relationships2keep)) {
-              continue;
-            }
+          if (!empty($relationships2keep) AND !in_array($relationship['type_id'], $relationships2keep)) {
+            continue;
           }
-          
+
           //"Display Relationships Where" criteria
           if (preg_match('/subject/', $this->options['stockrel_display_rels'])) {
-            if ($relationship->stock_id != $relationship->subject_id) {
+            if ($result->stock_stock_id != $relationship['subject_id']) {
               continue;
-            }      
+            }
           } elseif (preg_match('/object/', $this->options['stockrel_display_rels'])) {
-            if ($relationship->stock_id != $relationship->object_id) {
+            if ($result->stock_stock_id != $relationship['object_id']) {
               continue;
             }
           }
-          
+
           // Add relationship to the list of items to be rendered
-          $this->items[$relationship->stock_id][$relationship->stock_relationship_id]['stock_id'] = $relationship->stock_id;
-          $this->items[$relationship->stock_id][$relationship->stock_relationship_id]['stock_relationship_id'] = $relationship->stock_relationship_id;
-          $this->items[$relationship->stock_id][$relationship->stock_relationship_id]['subject_id'] = $relationship->subject_id;
-          $this->items[$relationship->stock_id][$relationship->stock_relationship_id]['subject_name'] = $relationship->subject_name;
-          $this->items[$relationship->stock_id][$relationship->stock_relationship_id]['object_id'] = $relationship->object_id;
-          $this->items[$relationship->stock_id][$relationship->stock_relationship_id]['object_name'] = $relationship->object_name;
-          $this->items[$relationship->stock_id][$relationship->stock_relationship_id]['type_id'] = $relationship->type_id;
-          $this->items[$relationship->stock_id][$relationship->stock_relationship_id]['type_name'] = $relationship->type_name;
+          $values[$vk]->{$this->aliases['relationships']}[$this->aliases['field_handler']][$rk] = $relationship;
         }
       }
     }
   }
 
-  function render_item($count, $item) {
-    $text = array();
-    
-    // Render Parts
-    if ($this->options['stockrel_display_parts']['subject']) {
-      $text[] = $item['subject_name'];
-    }
-    if ($this->options['stockrel_display_parts']['type']) {
-      $text[] = $item['type_name'];
-    }
-    if ($this->options['stockrel_display_parts']['object']) {
-      $text[] = $item['object_name'];
-    }
-    
-    return implode(' ', $text);
-  }
+  /**
+   * Render the field.
+   *
+   * Note: Checks to see if we have an array or simple field. If we have an array, then
+   *   split it up and render each part using the parent render functionality.
+   *
+   * @param $values
+   *   The values retrieved from the database.
+   */
+  function render($values) {
 
-  function document_self_tokens(&$tokens) {
-    $tokens['[' . $this->options['id'] . '-stock_id' . ']'] = t('The Stock ID.');
-    $tokens['[' . $this->options['id'] . '-stock_relationship_id' . ']'] = t('Relationship ID');
-    $tokens['[' . $this->options['id'] . '-subject_id' . ']'] = t('Subject ID');
-    $tokens['[' . $this->options['id'] . '-subject_name' . ']'] = t('Subject Name');
-    $tokens['[' . $this->options['id'] . '-object_id' . ']'] = t('Object ID');
-    $tokens['[' . $this->options['id'] . '-object_name' . ']'] = t('Object Name');
-    $tokens['[' . $this->options['id'] . '-type_id' . ']'] = t('Type ID');
-    $tokens['[' . $this->options['id'] . '-type_name' . ']'] = t('Type Name');
-  }
+    // If it's aggregated (an array), then render each part
+    // using the parent render functionality
+    if ($this->aggregated) {
+      $items = $values->{$this->aliases['relationships']}[$this->aliases['field_handler']];
+      if (empty($items)) { $items = array(); }
+      $rendered_items = array();
+      foreach ($items as $k => $item) {
+        if (!is_int($k)) {
+          continue;
+        }
 
-  function add_self_tokens(&$tokens, $item) {
-    $tokens['[' . $this->options['id'] . '-stock_id' . ']'] = $item['stock_id'];
-    $tokens['[' . $this->options['id'] . '-stock_relationship_id' . ']'] = $item['stock_relationship_id'];
-    $tokens['[' . $this->options['id'] . '-subject_id' . ']'] = $item['subject_id'];
-    $tokens['[' . $this->options['id'] . '-subject_name' . ']'] = $item['subject_name'];
-    $tokens['[' . $this->options['id'] . '-object_id' . ']'] = $item['object_id'];
-    $tokens['[' . $this->options['id'] . '-object_name' . ']'] = $item['object_name'];
-    $tokens['[' . $this->options['id'] . '-type_id' . ']'] = $item['type_id'];
-    $tokens['[' . $this->options['id'] . '-type_name' . ']'] = $item['type_name'];
+        $text = array();
+        // Render Parts
+        if ($this->options['stockrel_display_parts']['subject']) {
+          $text[] = $item['subject_name'];
+        }
+        if ($this->options['stockrel_display_parts']['type']) {
+          $text[] = $item['cvterm_name'];
+        }
+        if ($this->options['stockrel_display_parts']['object']) {
+          $text[] = $item['object_name'];
+        }
 
+        $rendered_items[] = implode(' ', $text);
+      }
+
+      if ($this->options['type'] == 'separator') {
+        return implode(check_plain($this->options['separator']), $rendered_items);
+      }
+      else {
+        return theme('item_list', $rendered_items, NULL, $this->options['type']);
+      }
+    // Otherwise it is not aggragated
+    // Just render like the default handler would
+    }
+    else {
+      if (empty($values->{$this->field_alias})) {
+        $values->{$this->field_alias} = '';
+      }
+      return $this->parent_render($values);
+    }
   }
 }
 
