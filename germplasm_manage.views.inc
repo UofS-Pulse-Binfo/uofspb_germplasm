@@ -277,10 +277,10 @@ function germplasm_manage_views_handlers() {
    'handlers' => array(
      //Deprecated stock handlers
      'views_handler_field_stock_dbxref_all' => array(
-       'parent' => 'views_handler_field_prerender_list',
+       'parent' => 'tripal_views_handler_field_aggregate',
      ),
      'views_handler_field_stock_dbxref_by_type' => array(
-       'parent' => 'views_handler_field_prerender_list',
+       'parent' => 'tripal_views_handler_field_aggregate',
      ),
      'views_handler_field_stockprop_all' => array(
        'parent' => 'tripal_views_handler_field_aggregate',

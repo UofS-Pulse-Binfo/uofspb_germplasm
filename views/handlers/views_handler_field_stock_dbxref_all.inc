@@ -3,84 +3,118 @@
 /**
  * Field handler allowing all database references for a given stock to be displayed in a single cell
  *
- * This handler only deals with database references joined to the stock through stock_dbxref. For 
+ * This handler only deals with database references joined to the stock through stock_dbxref. For
  * the database reference joined to the stock by stock.dbxref_id simply join to the dbxref table.
  *
  * @ingroup tripal_stock
  * @ingroup views_field_handlers
  */
-class views_handler_field_stock_dbxref_all extends views_handler_field_prerender_list {
+class views_handler_field_stock_dbxref_all extends tripal_views_handler_field_aggregate {
+
   function init(&$view, $options) {
-    parent::init($view, $options);
+    parent::init(&$view, $options);
+
+    if ($this->table != 'stock_dbxref') {
+      $this->table = 'stock_dbxref';
+      $this->field = 'all';
+      $this->field_alias = 'stock_dbxref_all';
+      $this->additional_fields['stock_dbxref_all'] = array('table' => 'stock_dbxref', 'field' => 'all');
+
+      $this->chado_table_description = tripal_core_get_chado_table_schema($this->table);
+      foreach ($this->chado_table_description['foreign keys'] as $defn) {
+        if ($defn['table'] != $this->view->base_table) {
+          $join_table = tripal_core_get_chado_table_schema($defn['table']);
+          foreach ($join_table['fields'] as $fname => $f) {
+            $this->chado_table_description['fields'][$defn['table'] . '_' . $fname] = $f;
+          }
+        }
+      }
+    }
   }
 
   /**
    * Add this term to the query
    */
   function query() {
+    $this->query->ensure_table('stock_dbxref');
     $this->add_additional_fields();
+
+    // Add a join between stock_dbxref and db
+    // We want this to be added within the stock_dbxref subquery
+    $table = $this->query->get_table_info('stock_dbxref');
+    $table['join']->additional_joins['db'] = array(
+      'table' => 'db',
+      'field' => 'db_id',
+      'left_table' => 'dbxref',
+      'left_field' => 'db_id',
+    );
   }
 
 	function pre_render($values) {
-		$this->aliases['dbxref'] = 'dbxref';
+		$this->aliases['dbxrefs'] = 'stock_dbxref_all';
 		$this->aliases['stock_id'] = 'stock_id';
-		$this->field_alias = $this->aliases['stock_id'];
-		
-		//for each stock in this view page
-		foreach ($values as $result) {
-			if (!empty($result->{$this->aliases['dbxref']})) {
-				
-				// all dbxrefs including the current stock
-				$dbxrefs = $result->{$this->aliases['dbxref']};
-				foreach ($dbxrefs as $dbxref) {			
-					// Add dbxref to the list of items to be rendered
-					$this->items[$dbxref->stock_id][$dbxref->stock_dbxref_id]['stock_id'] = $dbxref->stock_id;
-					$this->items[$dbxref->stock_id][$dbxref->stock_dbxref_id]['stock_dbxref_id'] = $dbxref->stock_dbxref_id;
-					$this->items[$dbxref->stock_id][$dbxref->stock_dbxref_id]['dbxref_id'] = $dbxref->dbxref_id;
-					$this->items[$dbxref->stock_id][$dbxref->stock_dbxref_id]['is_current'] = $dbxref->is_current;
-					$this->items[$dbxref->stock_id][$dbxref->stock_dbxref_id]['db_id'] = $dbxref->db_id;
-					$this->items[$dbxref->stock_id][$dbxref->stock_dbxref_id]['db_name'] = $dbxref->db_name;
-					$this->items[$dbxref->stock_id][$dbxref->stock_dbxref_id]['urlprefix'] = $dbxref->urlprefix;
-					$this->items[$dbxref->stock_id][$dbxref->stock_dbxref_id]['accession'] = $dbxref->accession;
-					$this->items[$dbxref->stock_id][$dbxref->stock_dbxref_id]['version'] = $dbxref->version;
-					$this->items[$dbxref->stock_id][$dbxref->stock_dbxref_id]['description'] = $dbxref->description;
-				}
-			}
-		}
+		$this->field_alias = $this->aliases['dbxrefs'];
+
+    // further check the results to see if this field is a postgresql array
+    $this->aggregated = chado_wrapper_is_aggregated_by_result($this, $values);
+    if ($this->aggregated) {
+      // Split Aggregated Results
+      chado_wrapper_split_array_agg_results($this, $values);
+
+      // Now each result is of the following form:
+      // stockprop_id::16554,stock_id::12037,type_id::3650,value::Sm2008-P13,rank::1...
+      // we need to split it further
+      foreach ($values as $k => $v) {
+        $this->split_aggregated_result_with_keys($values[$k]->{$this->field_alias});
+      }
+    }
 	}
 
-  function render_item($count, $item) {
-		if (!empty($item['urlprefix'])) {
-			return l($item['accession'],$item['urlprefix'].$item['accession']).' ('.$item['db_name'].')';
-		} else {
-			return $item['accession'].' ('.$item['db_name'].')';
-		}
-  }
+  /**
+   * Render the field.
+   *
+   * Note: Checks to see if we have an array or simple field. If we have an array, then
+   *   split it up and render each part using the parent render functionality.
+   *
+   * @param $values
+   *   The values retrieved from the database.
+   */
+  function render($values) {
 
-  function document_self_tokens(&$tokens) {
-    $tokens['[' . $this->options['id'] . '-stock_id' . ']'] = t('The Stock ID.');
-		$tokens['[' . $this->options['id'] . '-stock_dbxref_id' . ']'] = t('Stock Database Reference ID');
-		$tokens['[' . $this->options['id'] . '-dbxref_id' . ']'] = t('Database Reference ID');
-		$tokens['[' . $this->options['id'] . '-is_current' . ']'] = t('Is Current');
-		$tokens['[' . $this->options['id'] . '-db_id' . ']'] = t('Database ID');
-		$tokens['[' . $this->options['id'] . '-db_name' . ']'] = t('Database Name');
-		$tokens['[' . $this->options['id'] . '-urlprefix' . ']'] = t('URL Prefix');
-		$tokens['[' . $this->options['id'] . '-accession' . ']'] = t('Accession');
-		$tokens['[' . $this->options['id'] . '-version' . ']'] = t('Version');
-		$tokens['[' . $this->options['id'] . '-description' . ']'] = t('Description');
-  }
+    // If it's aggregated (an array), then render each part
+    // using the parent render functionality
+    if ($this->aggregated) {
+      $items = $values->{$this->aliases['dbxrefs']};
+      if (empty($items)) { $items = array(); }
+      $rendered_items = array();
+      foreach ($items as $k => $item) {
+        if (!is_int($k)) {
+          continue;
+        }
 
-  function add_self_tokens(&$tokens, $item) {
-    $tokens['[' . $this->options['id'] . '-stock_id' . ']'] = $item['stock_id'];
-		$tokens['[' . $this->options['id'] . '-stock_dbxref_id' . ']'] = $item['stock_dbxref_id'];
-		$tokens['[' . $this->options['id'] . '-dbxref_id' . ']'] =  $item['dbxref_id'];
-		$tokens['[' . $this->options['id'] . '-is_current' . ']'] = $item['is_current'];
-		$tokens['[' . $this->options['id'] . '-db_id' . ']'] = $item['db_id'];
-		$tokens['[' . $this->options['id'] . '-db_name' . ']'] = $item['db_name'];
-		$tokens['[' . $this->options['id'] . '-urlprefix' . ']'] = $item['urlprefix'];
-		$tokens['[' . $this->options['id'] . '-accession' . ']'] = $item['accession'];
-		$tokens['[' . $this->options['id'] . '-version' . ']'] = $item['version'];
-		$tokens['[' . $this->options['id'] . '-description' . ']'] = $item['description'];
+        if (!empty($item['db_urlprefix'])) {
+          $rendered_items[] = l($item['dbxref_accession'],$item['db_urlprefix'].$item['dbxref_accession']).' ('.$item['db_name'].')';
+        } else {
+          $rendered_items[] = $item['dbxref_accession'].' ('.$item['db_name'].')';
+        }
+
+      }
+
+      if ($this->options['type'] == 'separator') {
+        return implode(check_plain($this->options['separator']), $rendered_items);
+      }
+      else {
+        return theme('item_list', $rendered_items, NULL, $this->options['type']);
+      }
+    // Otherwise it is not aggragated
+    // Just render like the default handler would
+    }
+    else {
+      if (empty($values->{$this->aliases['dbxrefs']})) {
+        $values->{$this->aliases['dbxrefs']} = '';
+      }
+      return $this->parent_render($values);
+    }
   }
 }
 
