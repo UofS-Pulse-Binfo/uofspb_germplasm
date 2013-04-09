@@ -283,7 +283,7 @@ function germplasm_manage_views_handlers() {
        'parent' => 'views_handler_field_prerender_list',
      ),
      'views_handler_field_stockprop_all' => array(
-       'parent' => 'views_handler_field_prerender_list',
+       'parent' => 'tripal_views_handler_field_aggregate',
      ),
      'views_handler_field_stockprop_by_type' => array(
        'parent' => 'tripal_views_handler_field_aggregate',

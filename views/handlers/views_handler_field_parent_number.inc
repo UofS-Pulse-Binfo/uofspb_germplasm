@@ -193,8 +193,21 @@ class views_handler_field_parent_number extends views_handler_field_stockprop_by
 		$this->aliases['properties'] = $this->view->field[$this->property_field_id]->field_alias;
 		$this->aliases['stock_id'] = 'stock_id';
 		$this->field_alias = $this->aliases['properties'];
+		$this->aliases['field_handler'] = 'parent_number_' . $this->position;
 
-    parent::pre_render($values);
+    // further check the results to see if this field is a postgresql array
+    $this->aggregated = chado_wrapper_is_aggregated_by_result($this, $values);
+    if ($this->aggregated) {
+      // Split Aggregated Results
+      chado_wrapper_split_array_agg_results($this, $values);
+
+      // Now each result is of the following form:
+      // stockprop_id::16554,stock_id::12037,type_id::3650,value::Sm2008-P13,rank::1...
+      // we need to split it further
+      foreach ($values as $k => $v) {
+        $this->split_aggregated_result_with_keys($values[$k]->{$this->field_alias});
+      }
+    }
 
 		// set the crossing block from arguements
 		if ($this->options['use_cbseason_arg']) {
@@ -243,13 +256,13 @@ class views_handler_field_parent_number extends views_handler_field_stockprop_by
 
 							// Do filtering if these options were supplied
 							if (!empty($this->options['cb_year'])) {
-								if ($this->options['cb_year'] != $year) { 
-                  continue; 
+								if ($this->options['cb_year'] != $year) {
+                  continue;
                 }
 							}
 							if (!empty($this->options['cb_season'])) {
-								if (!preg_match('/'.$season.'/i',$this->options['cb_season'])) { 
-                  continue; 
+								if (!preg_match('/'.$season.'/i',$this->options['cb_season'])) {
+                  continue;
                 }
 							}
 
@@ -260,7 +273,6 @@ class views_handler_field_parent_number extends views_handler_field_stockprop_by
 							$organism_common_name = preg_replace('/\s+/','-',$result->organism_common_name);
 							$this->items[$property->stock_id][$property->stockprop_id]['cb_link'] = 'Crossing_Block/'.$organism_common_name.'/'.$year.'/'.$season.'/Parents';
 
-              $this->aliases['field_handler'] = 'parent_number_' . $this->position;
               $values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['crossingblock_season'] = $season;
 							$values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['crossingblock_year'] = $year;
 							$values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['parent_number'] = $pnumber;
@@ -287,6 +299,7 @@ class views_handler_field_parent_number extends views_handler_field_stockprop_by
     // using the parent render functionality
     if ($this->aggregated) {
       $items = $values->{$this->field_alias}[$this->aliases['field_handler']];
+      if (!is_array($items)) { $items = array(); }
       $rendered_items = array();
       foreach ($items as $item) {
         $text = array();

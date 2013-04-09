@@ -256,10 +256,17 @@ function crossing_block_form_element ($element) {
 
   	$stock_prop_types_cv_id = variable_get('chado_stock_prop_types_cv', '');
     if ($stock_prop_types_cv_id) {
-			$cb_year_cvterm = tripal_cv_get_cvterm_by_name('crossingblock_year', $stock_prop_types_cv_id);
-			if ($cb_year_cvterm->cvterm_id) {
+			$cb_year_cvterm = tripal_core_chado_select(
+        'cvterm',
+        array('cvterm_id'),
+        array(
+          'name' => 'crossingblock_year',
+          'cv_id' => $stock_prop_types_cv_id
+        )
+      );
+			if ($cb_year_cvterm[0]->cvterm_id) {
 				$previous_db = db_set_active('chado');
-				$resource = db_query("SELECT value FROM stockprop WHERE type_id=".$cb_year_cvterm->cvterm_id." ORDER BY value");
+				$resource = db_query("SELECT value FROM stockprop WHERE type_id=".$cb_year_cvterm[0]->cvterm_id." ORDER BY value");
 				db_set_active($previous_db);
 				$year_options = array(''=>'Any');
 				while ($r = db_fetch_object($resource)) {
@@ -269,10 +276,17 @@ function crossing_block_form_element ($element) {
 				$year_options = array('<NONE>'=>'None');
 			}
 
-			$cb_season_cvterm = tripal_cv_get_cvterm_by_name('crossingblock_season', $stock_prop_types_cv_id);
-			if ($cb_season_cvterm->cvterm_id) {
+			$cb_season_cvterm = tripal_core_chado_select(
+        'cvterm',
+        array('cvterm_id'),
+        array(
+          'name' => 'crossingblock_season',
+          'cv_id' => $stock_prop_types_cv_id
+        )
+      );
+			if ($cb_season_cvterm[0]->cvterm_id) {
 				$previous_db = db_set_active('chado');
-				$resource = db_query("SELECT value FROM stockprop WHERE type_id=".$cb_season_cvterm->cvterm_id." ORDER BY value");
+				$resource = db_query("SELECT value FROM stockprop WHERE type_id=".$cb_season_cvterm[0]->cvterm_id." ORDER BY value");
 				db_set_active($previous_db);
 				$season_options = array(''=>'Any');
 				while ($r = db_fetch_object($resource)) {

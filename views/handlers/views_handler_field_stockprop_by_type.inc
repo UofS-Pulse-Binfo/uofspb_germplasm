@@ -77,17 +77,34 @@ class views_handler_field_stockprop_by_type extends tripal_views_handler_field_a
 
   function pre_render($values) {
     unset($this->options['format']['format_string']);
-    parent::pre_render($values);
+    $this->aliases['properties'] = 'stockprop_all';
+    if (!isset($this->aliases['field_handler'])) {
+      $this->aliases['field_handler'] = 'stockprop_by_type_' . $this->position;
+    }
+
+    // further check the results to see if this field is a postgresql array
+    $this->aggregated = chado_wrapper_is_aggregated_by_result($this, $values);
+    if ($this->aggregated) {
+      // Split Aggregated Results
+      chado_wrapper_split_array_agg_results($this, $values);
+
+      // Now each result is of the following form:
+      // stockprop_id::16554,stock_id::12037,type_id::3650,value::Sm2008-P13,rank::1...
+      // we need to split it further
+      foreach ($values as $k => $v) {
+        $this->split_aggregated_result_with_keys($values[$k]->{$this->field_alias});
+      }
+    }
 
     if (!empty($this->options['stockprop_type_ids'])) {
       $types2keep = array_filter($this->options['stockprop_type_ids']);
     }
     //for each stock in this view page
-    foreach ($values as $results) {
+    foreach ($values as $vk => $results) {
       if (!empty($results->{$this->field_alias})) {
         // all properties for the current stock
         $properties = $results->{$this->field_alias};
-        foreach ($properties as $property) {
+        foreach ($properties as $rk => $property) {
           $property = (object) $property;
           // perform filtering
           if (!empty($types2keep)) {
@@ -103,6 +120,13 @@ class views_handler_field_stockprop_by_type extends tripal_views_handler_field_a
           $this->items[$property->stock_id][$property->stockprop_id]['type_name'] = check_plain($property->cvterm_name);
           $this->items[$property->stock_id][$property->stockprop_id]['value'] = check_plain($property->value);
           $this->items[$property->stock_id][$property->stockprop_id]['rank'] = $property->rank;
+
+          $values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['stock_id'] = $property->stock_id;
+          $values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['stockprop_id'] = $property->stockprop_id;
+          $values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['type_id'] = $property->type_id;
+          $values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['type_name'] = check_plain($property->cvterm_name);
+          $values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['value'] = check_plain($property->value);
+          $values[$vk]->{$this->aliases['properties']}[$this->aliases['field_handler']][$rk]['rank'] = $property->rank;
         }
       }
     }
@@ -122,9 +146,13 @@ class views_handler_field_stockprop_by_type extends tripal_views_handler_field_a
     // If it's aggregated (an array), then render each part
     // using the parent render functionality
     if ($this->aggregated) {
-      $items = $values->{$this->field_alias};
+      $items = $values->{$this->aliases['properties']}[$this->aliases['field_handler']];
+      if (empty($items)) { $items = array(); }
       $rendered_items = array();
-      foreach ($items as $item) {
+      foreach ($items as $k => $item) {
+        if (!is_int($k)) {
+          continue;
+        }
         $text = array();
         if ($this->options['stockprop_display_options']['value']) {
           if ($item['value']) {
@@ -156,6 +184,9 @@ class views_handler_field_stockprop_by_type extends tripal_views_handler_field_a
     // Just render like the default handler would
     }
     else {
+      if (empty($values->{$this->field_alias})) {
+        $values->{$this->field_alias} = '';
+      }
       return $this->parent_render($values);
     }
   }
