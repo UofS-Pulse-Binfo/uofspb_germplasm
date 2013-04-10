@@ -85,7 +85,7 @@ class views_handler_field_crossing_block extends views_handler_field_stockprop_b
   function pre_render(&$values) {
     $this->aliases['properties'] = 'stockprop_all';
     $this->aliases['stock_id'] = 'stock_id';
-    $this->field_alias = $this->aliases['stock_id'];
+    $this->field_alias = $this->aliases['properties'];
     $this->aliases['field_handler'] = 'crossingblock_' . $this->position;
 
     // further check the results to see if this field is a postgresql array

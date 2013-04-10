@@ -276,6 +276,7 @@ function germplasm_manage_views_handlers() {
    ),
    'handlers' => array(
      //Deprecated stock handlers
+     // Updated to work with Tripal 1.0
      'views_handler_field_stock_dbxref_all' => array(
        'parent' => 'tripal_views_handler_field_aggregate',
      ),
@@ -294,9 +295,6 @@ function germplasm_manage_views_handlers() {
      'views_handler_field_stockrel_by_type' => array(
        'parent' => 'tripal_views_handler_field_aggregate',
      ),
-     'views_handler_filter_stock_dbxref_id' => array(
-       'parent' => 'views_handler_filter',
-     ),
      'views_handler_filter_stockprop_id' => array(
        'parent' => 'views_handler_filter',
      ),
@@ -306,7 +304,14 @@ function germplasm_manage_views_handlers() {
      'views_handler_argument_stockprop_id' => array(
        'parent' => 'views_handler_argument_string',
      ),
+     //Deprecated stock handlers
+     //Original; not updated for Tripal 1.0
+     'views_handler_filter_stock_dbxref_id' => array(
+       'parent' => 'views_handler_filter',
+     ),
 
+      // germplasm manage fields
+      // all upgraded to work with Tripal 1.0
      'views_handler_field_parent_number' => array(
      	'parent' => 'views_handler_field_stockprop_by_type',
      ),
@@ -317,6 +322,8 @@ function germplasm_manage_views_handlers() {
        'parent' => 'views_handler_field_stock_dbxref_by_type',
      ),
 
+     // germplasm manage filters
+     // all upgraded to work with Tripal 1.0
      'views_handler_filter_cross_number' => array(
        'parent' => 'views_handler_filter_stock_dbxref_id',
      ),
@@ -330,6 +337,8 @@ function germplasm_manage_views_handlers() {
      	'parent' => 'views_handler_filter',
      ),
 
+     // germplasm manage sort
+     // all upgraded to work with Tripal 1.0
      'views_handler_sort_cross_number' => array(
        'parent' => 'views_handler_sort',
      ),
@@ -337,8 +346,10 @@ function germplasm_manage_views_handlers() {
      	'parent' => 'views_handler_sort',
      ),
 
+     // germplasm manage arguements
+     // this one is used for crossingblock year/season
      'views_handler_argument_no_query' => array(
-     	'parent' => 'views_handler_argument_string'
+      'parent' => 'views_handler_argument_string'
      ),
    ),
  );
@@ -349,22 +360,23 @@ function germplasm_manage_views_handlers() {
  */
 function germplasm_manage_views_default_views() {
 	$veiws = array();
+  $vars = array();
 
   // set variables used when defining default views
   // db_ids selected to be cross number databases
-  $cross_num_db_options = array();
+  $vars['cross_num_db_options'] = array();
   foreach (variable_get('germplasm_cross_dbs', array()) as $k => $v) {
-    $cross_num_db_options[$k] = $k;
+    $vars['cross_num_db_options'][$k] = $k;
   }
 
   //synonym cvterm
   $synonym = tripal_core_chado_select('cvterm',array('cvterm_id'), array('name'=>'synonym', 'cv_id'=>variable_get('chado_stock_prop_types_cv',NULL)));
   if ($synonym[0]->cvterm_id) {
-    $properties_synonym_options = array(
+    $vars['properties_synonym_options'] = array(
       $synonym[0]->cvterm_id => $synonym[0]->cvterm_id,
     );
   } else {
-    $properties_synonym_options = array();
+    $vars['properties_synonym_options'] = array();
     drupal_set_message('Unable to determine the synonym controlled vocabulary term ID when generating default Germplasm views. Ensure that the Tripal Stock property CV is set an contains the term synonym.','warning');
   }
 
@@ -372,838 +384,134 @@ function germplasm_manage_views_default_views() {
   $cb_year = tripal_core_chado_select('cvterm',array('cvterm_id'), array('name'=>'crossingblock_year', 'cv_id'=>variable_get('chado_stock_prop_types_cv',NULL)));
   $cb_season = tripal_core_chado_select('cvterm',array('cvterm_id'), array('name'=>'crossingblock_season', 'cv_id'=>variable_get('chado_stock_prop_types_cv',NULL)));
   if ($cb_year[0]->cvterm_id && $cb_season[0]->cvterm_id) {
-    $properties_crossingblock_options = array(
+    $vars['properties_crossingblock_options'] = array(
       $cb_year[0]->cvterm_id => $cb_year[0]->cvterm_id,
       $cb_season[0]->cvterm_id => $cb_season[0]->cvterm_id
     );
   } else {
-    $properties_crossingblock_options = array();
+    $vars['properties_crossingblock_options'] = array();
     drupal_set_message('Unable to determine the crossingblock_season/year controlled vocabulary term IDs when generating default Germplasm views. Ensure that the Tripal Stock property CV is set an contains the terms crossingblock_season and crossingblock_year.','warning');
   }
 
   // is_maternal_parent_of cvterm
   $mom_cv = tripal_core_chado_select('cvterm',array('cvterm_id'), array('name'=>'is_maternal_parent_of', 'cv_id'=>variable_get('chado_stock_relationship_cv',NULL)));
   if ($mom_cv[0]->cvterm_id) {
-    $rels_maternal_options = array( $mom_cv[0]->cvterm_id => $mom_cv[0]->cvterm_id );
+    $vars['rels_maternal_options'] = array( $mom_cv[0]->cvterm_id => $mom_cv[0]->cvterm_id );
+    $vars['rels_maternal_type_id'] = $mom_cv[0]->cvterm_id;
   } else {
-    $rels_maternal_options = array();
+    $vars['rels_maternal_options'] = array();
+    $vars['rels_maternal_type_id'] = NULL;
     drupal_set_message('Unable to determine the is_maternal_parent_of controlled vocabulary term IDs when generating default Germplasm views. Ensure that the Tripal Stock relationship CV is set an contains the term is_maternal_parent_of.','warning');
   }
 
   // is_paternal_parent_of cvterm
-  $dad_cv = tripal_core_chado_select('cvterm',array('cvterm_id'), array('name'=>'is_maternal_parent_of', 'cv_id'=>variable_get('chado_stock_relationship_cv',NULL)));
+  $dad_cv = tripal_core_chado_select('cvterm',array('cvterm_id'), array('name'=>'is_paternal_parent_of', 'cv_id'=>variable_get('chado_stock_relationship_cv',NULL)));
   if ($dad_cv[0]->cvterm_id) {
-    $rels_paternal_options = array( $dad_cv[0]->cvterm_id => $dad_cv[0]->cvterm_id );
+    $vars['rels_paternal_options'] = array( $dad_cv[0]->cvterm_id => $dad_cv[0]->cvterm_id );
+    $vars['rels_paternal_type_id'] = $dad_cv[0]->cvterm_id;
   } else {
-    $rels_paternal_options = array();
+    $vars['rels_paternal_options'] = array();
+    $vars['rels_paternal_type_id'] = NULL;
     drupal_set_message('Unable to determine the is_paternal_parent_of controlled vocabulary term IDs when generating default Germplasm views. Ensure that the Tripal Stock relationship CV is set an contains the term is_paternal_parent_of.','warning');
   }
 
 	// Default View: All Germplasm
 	// This view lists all germplasm (ie: all stocks with a main database reference as set in the germplasm configuration)
-	$view = new view;
-	$view->name = 'all_germplasm';
-	$view->description = 'List all germplasm';
-	$view->tag = 'germplasm';
-	$view->view_php = '';
-	$view->base_table = 'stock';
-	$view->is_cacheable = FALSE;
-	$view->api_version = 2;
-	$view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
-	$handler = $view->new_display('default', 'Defaults', 'default');
-	$handler->override_option('fields', array(
-		'uniquename' => array(
-			'label' => 'Unique Name',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => 'node/[stock_nid]',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'link_to_node' => 1,
-			'exclude' => 0,
-			'id' => 'uniquename',
-			'table' => 'stock',
-			'field' => 'uniquename',
-			'relationship' => 'none',
-		),
-		'name' => array(
-			'label' => 'Name',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => 'node/[stock_nid]',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'link_to_node' => 1,
-			'exclude' => 0,
-			'id' => 'name',
-			'table' => 'stock',
-			'field' => 'name',
-			'relationship' => 'none',
-		),
-		'name_1' => array(
-			'label' => 'Type',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => '',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'exclude' => 0,
-			'id' => 'name_1',
-			'table' => 'cvterm',
-			'field' => 'name',
-			'relationship' => 'none',
-			'override' => array(
-				'button' => 'Override',
-			),
-		),
-		'common_name' => array(
-			'label' => 'Organism',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => 'node/[organism_nid]',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'link_to_node' => 1,
-			'exclude' => 0,
-			'id' => 'common_name',
-			'table' => 'organism',
-			'field' => 'common_name',
-			'relationship' => 'none',
-		),
-		'cross_number' => array(
-			'label' => 'Cross Number',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => '',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'type' => 'separator',
-			'separator' => ', ',
-			'stockprop_type_ids' => array(),
-			'display_options' => array(
-				'accession' => 'accession',
-				'db_name' => 0,
-				'link' => 0,
-			),
-			'exclude' => 0,
-			'id' => 'cross_number',
-			'table' => 'stock',
-			'field' => 'cross_number',
-			'relationship' => 'none',
-			'db_ids' => $cross_num_db_options,
-		),
-		'accession_link' => array(
-			'label' => 'Main Database Reference',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => '',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'exclude' => 0,
-			'id' => 'accession_link',
-			'table' => 'dbxref',
-			'field' => 'accession_link',
-			'relationship' => 'none',
-		),
-		'properties' => array(
-			'label' => 'Synonyms',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => '',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'type' => 'separator',
-			'separator' => ', ',
-			'stockprop_type_ids' => $properties_synonym_options,
-			'stockprop_display_options' => array(
-				'value' => 'value',
-				'type' => 0,
-			),
-			'exclude' => 0,
-			'id' => 'properties',
-			'table' => 'stock',
-			'field' => 'properties',
-			'relationship' => 'none',
-			'override' => array(
-				'button' => 'Override',
-			),
-		),
-		'crossing_block' => array(
-			'label' => 'Crossing Block',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => '',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'type' => 'separator',
-			'separator' => ', ',
-			'stockprop_type_ids' => $properties_crossingblock_options,
-			'stockprop_display_options' => array(
-				'0' => 'type',
-				'1' => 'value',
-			),
-			'link_to_crossingblock' => 1,
-			'cb_display_options' => array(
-				'year' => 'year',
-				'season' => 'season',
-			),
-			'exclude' => 0,
-			'id' => 'crossing_block',
-			'table' => 'stock',
-			'field' => 'crossing_block',
-			'relationship' => 'none',
-		),
-		'all_dbxref' => array(
-			'label' => 'All Database References',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => '',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'type' => 'separator',
-			'separator' => ', ',
-			'exclude' => 0,
-			'id' => 'all_dbxref',
-			'table' => 'stock',
-			'field' => 'all_dbxref',
-			'relationship' => 'none',
-		),
-		'all_relationships' => array(
-			'label' => 'All Relationships',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => '',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'type' => 'separator',
-			'separator' => ', ',
-			'exclude' => 0,
-			'id' => 'all_relationships',
-			'table' => 'stock',
-			'field' => 'all_relationships',
-			'relationship' => 'none',
-		),
-		'all_properties' => array(
-			'label' => 'All Properties',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => '',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'type' => 'separator',
-			'separator' => ', ',
-			'exclude' => 0,
-			'id' => 'all_properties',
-			'table' => 'stock',
-			'field' => 'all_properties',
-			'relationship' => 'none',
-		),
-		'parent_number' => array(
-			'label' => 'Parent Number(s)',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => '',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'type' => 'separator',
-			'separator' => ', ',
-			'exclude' => 0,
-			'id' => 'parent_number',
-			'table' => 'stock',
-			'field' => 'parent_number',
-			'display_options' => array(
-				'parent_number' => 'parent_number',
-				'crossing_block' => 'crossing_block',
-			),
-			'relationship' => 'none',
-			'cb_year' => '0',
-			'use_cbyear_arg' => 0,
-			'cb_season' => '0',
-			'use_cbseason_arg' => 0,
-			'link_to_cb_parent_view' => 1,
-		),
-		'description' => array(
-			'label' => 'Description',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => '',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'exclude' => 0,
-			'id' => 'description',
-			'table' => 'stock',
-			'field' => 'description',
-			'relationship' => 'none',
-		),
-		'is_obsolete' => array(
-			'label' => 'Is Obsolete',
-			'alter' => array(
-				'alter_text' => 0,
-				'text' => '',
-				'make_link' => 0,
-				'path' => '',
-				'link_class' => '',
-				'alt' => '',
-				'prefix' => '',
-				'suffix' => '',
-				'target' => '',
-				'help' => '',
-				'trim' => 0,
-				'max_length' => '',
-				'word_boundary' => 1,
-				'ellipsis' => 1,
-				'html' => 0,
-				'strip_tags' => 0,
-			),
-			'empty' => '',
-			'hide_empty' => 0,
-			'empty_zero' => 0,
-			'exclude' => 0,
-			'id' => 'is_obsolete',
-			'table' => 'stock',
-			'field' => 'is_obsolete',
-			'relationship' => 'none',
-		),
-	));
-	$handler->override_option('sorts', array(
-		'genus' => array(
-			'order' => 'ASC',
-			'id' => 'genus',
-			'table' => 'organism',
-			'field' => 'genus',
-			'relationship' => 'none',
-		),
-		'species' => array(
-			'order' => 'ASC',
-			'id' => 'species',
-			'table' => 'organism',
-			'field' => 'species',
-			'relationship' => 'none',
-		),
-		'name' => array(
-			'order' => 'ASC',
-			'id' => 'name',
-			'table' => 'cvterm',
-			'field' => 'name',
-			'relationship' => 'none',
-		),
-		'name_1' => array(
-			'order' => 'ASC',
-			'id' => 'name_1',
-			'table' => 'stock',
-			'field' => 'name',
-			'relationship' => 'none',
-		),
-	));
-	$handler->override_option('filters', array(
-		'common_name' => array(
-			'operator' => '=',
-			'value' => '<select organism>',
-			'group' => '0',
-			'exposed' => TRUE,
-			'expose' => array(
-				'use_operator' => 0,
-				'operator' => 'common_name_op',
-				'identifier' => 'common_name',
-				'label' => 'Organism Common Name',
-				'optional' => 1,
-				'remember' => 0,
-			),
-			'case' => 0,
-			'id' => 'common_name',
-			'table' => 'organism',
-			'field' => 'common_name',
-			'override' => array(
-				'button' => 'Override',
-			),
-			'relationship' => 'none',
-		),
-		'genus' => array(
-			'operator' => 'contains',
-			'value' => 'All',
-			'group' => '0',
-			'exposed' => TRUE,
-			'expose' => array(
-				'use_operator' => 0,
-				'operator' => 'genus_op',
-				'identifier' => 'genus',
-				'label' => 'Organism Genus',
-				'optional' => 1,
-				'remember' => 0,
-			),
-			'case' => 0,
-			'id' => 'genus',
-			'table' => 'organism',
-			'field' => 'genus',
-			'override' => array(
-				'button' => 'Override',
-			),
-			'relationship' => 'none',
-		),
-		'name_1' => array(
-			'operator' => '=',
-			'value' => 'All',
-			'group' => '0',
-			'exposed' => TRUE,
-			'expose' => array(
-				'use_operator' => 0,
-				'operator' => 'name_1_op',
-				'identifier' => 'type',
-				'label' => 'Type',
-				'optional' => 1,
-				'remember' => 0,
-			),
-			'case' => 1,
-			'id' => 'name_1',
-			'table' => 'cvterm',
-			'field' => 'name',
-			'relationship' => 'none',
-			'override' => array(
-				'button' => 'Override',
-			),
-			'values_form_type' => 'select',
-		),
-		'crossing_block' => array(
-			'operator' => '=',
-			'value' => array(
-				'year' => '',
-				'season' => '',
-			),
-			'group' => '0',
-			'exposed' => TRUE,
-			'expose' => array(
-				'operator' => '',
-				'identifier' => 'crossing_block',
-				'label' => 'Crossing Block (Progeny)',
-				'optional' => 1,
-				'single' => 1,
-				'remember' => 0,
-			),
-			'id' => 'crossing_block',
-			'table' => 'stock',
-			'field' => 'crossing_block',
-			'relationship' => 'none',
-			'cb_year' => '',
-			'cb_season' => '',
-		),
-		'name' => array(
-			'operator' => 'word',
-			'value' => '',
-			'group' => '0',
-			'exposed' => TRUE,
-			'expose' => array(
-				'use_operator' => 0,
-				'operator' => 'name_op',
-				'identifier' => 'name',
-				'label' => 'Name Contains',
-				'optional' => 1,
-				'remember' => 0,
-			),
-			'case' => 0,
-			'id' => 'name',
-			'table' => 'stock',
-			'field' => 'name',
-			'relationship' => 'none',
-		),
-		'cross_number' => array(
-			'operator' => '=',
-			'value' => '',
-			'group' => '0',
-			'exposed' => TRUE,
-			'expose' => array(
-				'label' => 'Cross Number',
-				'identifier' => 'cross_number',
-				'type' => '',
-				'use_operator' => 0,
-				'operator' => 'cross_number_op',
-				'optional' => 1,
-			),
-			'id' => 'cross_number',
-			'table' => 'stock',
-			'field' => 'cross_number',
-			'db' => $cross_num_db_options,
-			'relationship' => 'none',
-		),
-		'is_germplasm' => array(
-			'operator' => '=',
-			'value' => '',
-			'group' => '0',
-			'exposed' => FALSE,
-			'expose' => array(
-				'operator' => FALSE,
-				'label' => '',
-			),
-			'id' => 'is_germplasm',
-			'table' => 'stock',
-			'field' => 'is_germplasm',
-			'relationship' => 'none',
-		),
-	));
-	$handler->override_option('access', array(
-		'type' => 'perm',
-		'perm' => 'access chado_stock content',
-	));
-	$handler->override_option('cache', array(
-		'type' => 'none',
-	));
-	$handler->override_option('title', 'Germplasm');
-	$handler->override_option('empty', 'Please use the filter the germplasm records so you see only the subset of interest. If you want to see all organisms simply leave the organism common name filter blank (Change from <i>None</i> to <i>Any</i>) and click Apply. It may take a while to load the results.
-
-		<b>The Organism Common Name filter must not be <i>None</i> in order for any results to be displayed. Either select the organism you are interested in or select <i>Any</i> if you are not interested in a single organism.</b>');
-	$handler->override_option('empty_format', '2');
-	$handler->override_option('items_per_page', 50);
-	$handler->override_option('use_pager', '1');
-	$handler->override_option('style_plugin', 'views_dynamic_columns');
-	$handler->override_option('style_options', array(
-		'grouping' => '',
-		'override' => 1,
-		'sticky' => 0,
-		'order' => 'asc',
-		'columns' => array(
-			'uniquename' => 'uniquename',
-			'name' => 'name',
-			'name_1' => 'name_1',
-			'common_name' => 'common_name',
-			'cross_number' => 'cross_number',
-			'accession_link' => 'accession_link',
-			'properties' => 'properties',
-			'crossing_block' => 'crossing_block',
-			'all_dbxref' => 'all_dbxref',
-			'all_relationships' => 'all_relationships',
-			'all_properties' => 'all_properties',
-			'parent_number' => 'parent_number',
-			'description' => 'description',
-			'is_obsolete' => 'is_obsolete',
-		),
-		'info' => array(
-			'uniquename' => array(
-				'sortable' => 1,
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 0,
-			),
-			'name' => array(
-				'sortable' => 1,
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 0,
-			),
-			'name_1' => array(
-				'sortable' => 1,
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 0,
-			),
-			'common_name' => array(
-				'sortable' => 1,
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 0,
-			),
-			'cross_number' => array(
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 0,
-			),
-			'accession_link' => array(
-				'sortable' => 1,
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 1,
-			),
-			'properties' => array(
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 1,
-			),
-			'crossing_block' => array(
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 1,
-			),
-			'all_dbxref' => array(
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 1,
-			),
-			'all_relationships' => array(
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 1,
-			),
-			'all_properties' => array(
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 0,
-			),
-			'parent_number' => array(
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 1,
-			),
-			'description' => array(
-				'sortable' => 0,
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 1,
-			),
-			'is_obsolete' => array(
-				'sortable' => 0,
-				'separator' => '',
-				'add_remove' => 1,
-				'hide' => 1,
-			),
-		),
-		'default' => '-1',
-	));
-	$handler = $view->new_display('page', 'Page', 'page_2');
-	$handler->override_option('path', 'germplasm');
-	$handler->override_option('menu', array(
-		'type' => 'normal',
-		'title' => 'Germplasm',
-		'description' => '',
-		'weight' => '0',
-		'name' => 'primary-links',
-	));
-	$handler->override_option('tab_options', array(
-		'type' => 'none',
-		'title' => '',
-		'description' => '',
-		'weight' => 0,
-		'name' => 'navigation',
-	));
-	$handler = $view->new_display('block', 'Block', 'block_1');
-	$handler->override_option('block_description', 'All Germplasm View');
-	$handler->override_option('block_caching', -1);
-	$views[$view->name] = $view;
+	$views['germplasm_all'] = germplasm_manage_germplasm_default_view($vars);
 
 	// Default View: Progeny for a given Crossing Block
+	// List all the progeny of a given crossing block; crossing block chosen in path
+	$views['crossingblock_progeny'] = germplasm_manage_crossingblock_progeny_default_view($vars);
+
+	// Default View: Parents for Crossing Block
+	// List all the parents of a given crossing block; crossing block chosen in path
+	$views['crossingblock_parents'] = germplasm_manage_crossingblock_parents_default_view($vars);
+
+	// Default View: Cross assigned parents
+	// This view is used exclusively in the add/cross_parents form to show the user what parents have already been assigned
+	$views['cross_assigned_parents'] = germplasm_manage_cross_assigned_parents_default_view($vars);
+
+	return $views;
+}
+
+/**
+ * Default View: All Germplasm
+ * This view lists all germplasm (ie: all stocks with a main database reference as set in the germplasm configuration)
+ *
+ * @param $vars
+ *   An array of variables for the default view to use including
+ *     - cross_num_db_options
+ *     - properties_synonym_options
+ *     - properties_crossingblock_options
+ *     - rels_maternal_options
+ *     - rels_paternal_options
+ *     - rels_maternal_type_id
+ *     - rels_paternal_type_id
+ * @return
+ *   A default view object
+ */
+function germplasm_manage_germplasm_default_view($vars) {
+
   $view = new view;
-  $view->name = 'crossingblock_progeny';
-  $view->description = 'List all the progeny of a given crossing block';
-  $view->tag = 'germplasm';
-  $view->view_php = '';
+  $view->name = 'germplasm_all';
+  $view->description = 'Generic search/browse for germplasm.';
+  $view->tag = 'chado default';
   $view->base_table = 'stock';
-  $view->is_cacheable = FALSE;
-  $view->api_version = 2;
+  $view->core = 0;
+  $view->api_version = '2';
   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
   $handler = $view->new_display('default', 'Defaults', 'default');
+  $handler->override_option('relationships', array(
+    'nid' => array(
+      'label' => 'Stock to Node',
+      'required' => 0,
+      'id' => 'nid',
+      'table' => 'chado_stock',
+      'field' => 'nid',
+      'relationship' => 'none',
+    ),
+  ));
   $handler->override_option('fields', array(
+    'nid' => array(
+      'label' => 'Nid',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'link_to_node' => 0,
+      'exclude' => 1,
+      'id' => 'nid',
+      'table' => 'node',
+      'field' => 'nid',
+      'relationship' => 'none',
+    ),
     'uniquename' => array(
       'label' => 'Unique Name',
       'alter' => array(
         'alter_text' => 0,
         'text' => '',
         'make_link' => 0,
-        'path' => 'node/[stock_nid]',
+        'path' => '',
         'link_class' => '',
         'alt' => '',
         'prefix' => '',
@@ -1233,7 +541,967 @@ function germplasm_manage_views_default_views() {
         'alter_text' => 0,
         'text' => '',
         'make_link' => 0,
-        'path' => 'node/[stock_nid]',
+        'path' => '',
+        'link_class' => '',
+        'alt' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'link_to_node' => 1,
+      'exclude' => 0,
+      'id' => 'name',
+      'table' => 'stock',
+      'field' => 'name',
+      'relationship' => 'none',
+    ),
+    'cross_number' => array(
+      'label' => 'Cross Number',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'type' => 'separator',
+      'separator' => ', ',
+      'stockprop_type_ids' => array(),
+      'display_options' => array(
+        'accession' => 'accession',
+        'link' => 'link',
+        'db_name' => 0,
+      ),
+      'exclude' => 0,
+      'id' => 'cross_number',
+      'table' => 'stock',
+      'field' => 'cross_number',
+      'db_ids' => $vars['cross_num_db_options'],
+      'relationship' => 'none',
+    ),
+    'properties' => array(
+      'label' => 'Synonyms',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'type' => 'separator',
+      'separator' => ', ',
+      'stockprop_type_ids' => $vars['properties_synonym_options'],
+      'stockprop_display_options' => array(
+        'value' => 'value',
+        'type' => 0,
+      ),
+      'exclude' => 0,
+      'id' => 'properties',
+      'table' => 'stock',
+      'field' => 'properties',
+      'relationship' => 'none',
+    ),
+    'name_1' => array(
+      'label' => 'Type',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'link_class' => '',
+        'alt' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'exclude' => 0,
+      'id' => 'name_1',
+      'table' => 'cvterm',
+      'field' => 'name',
+      'relationship' => 'none',
+      'override' => array(
+        'button' => 'Override',
+      ),
+    ),
+    'common_name' => array(
+      'label' => 'Organism',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'link_class' => '',
+        'alt' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'link_to_node' => 0,
+      'exclude' => 0,
+      'id' => 'common_name',
+      'table' => 'organism',
+      'field' => 'common_name',
+      'relationship' => 'none',
+    ),
+    'crossing_block' => array(
+      'label' => 'Crossing Block',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'type' => 'separator',
+      'separator' => ', ',
+      'stockprop_type_ids' => $vars['properties_crossingblock_options'],
+      'stockprop_display_options' => array(
+        0 => 'type',
+        1 => 'value',
+      ),
+      'link_to_crossingblock' => 1,
+      'cb_display_options' => array(
+        'year' => 'year',
+        'season' => 'season',
+      ),
+      'exclude' => 0,
+      'id' => 'crossing_block',
+      'table' => 'stock',
+      'field' => 'crossing_block',
+      'relationship' => 'none',
+    ),
+    'parent_number' => array(
+      'label' => 'Parent In Crossing Block',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'type' => 'separator',
+      'separator' => ', ',
+      'stockprop_type_ids' => array(),
+      'stockprop_display_options' => array(
+        0 => 'type',
+        1 => 'value',
+      ),
+      'display_options' => array(
+        'crossing_block' => 'crossing_block',
+        'parent_number' => 0,
+      ),
+      'exclude' => 0,
+      'id' => 'parent_number',
+      'table' => 'stock',
+      'field' => 'parent_number',
+      'relationship' => 'none',
+      'cb_year' => '0',
+      'use_cbyear_arg' => 0,
+      'cb_season' => '0',
+      'use_cbseason_arg' => 0,
+      'link_to_cb_parent_view' => 1,
+    ),
+    'relationships' => array(
+      'label' => 'Maternal Parent',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'type' => 'separator',
+      'separator' => ', ',
+      'stockrel_type_ids' => $vars['rels_maternal_options'],
+      'stockrel_display_options' => array(
+        0 => 'subject',
+        1 => 'type',
+        2 => 'object',
+      ),
+      'exclude' => 0,
+      'id' => 'relationships',
+      'table' => 'stock',
+      'field' => 'relationships',
+      'relationship' => 'none',
+      'stockrel_display_parts' => array(
+        'subject' => 'subject',
+        'type' => 0,
+        'object' => 0,
+      ),
+      'stockrel_display_rels' => 'object',
+    ),
+    'relationships_1' => array(
+      'label' => 'Paternal Parent',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'type' => 'separator',
+      'separator' => ', ',
+      'stockrel_type_ids' => $vars['rels_paternal_options'],
+      'stockrel_display_options' => array(
+        0 => 'subject',
+        1 => 'type',
+        2 => 'object',
+      ),
+      'exclude' => 0,
+      'id' => 'relationships_1',
+      'table' => 'stock',
+      'field' => 'relationships',
+      'relationship' => 'none',
+      'stockrel_display_parts' => array(
+        'subject' => 'subject',
+        'type' => 0,
+        'object' => 0,
+      ),
+      'stockrel_display_rels' => 'object',
+    ),
+    'all_dbxref' => array(
+      'label' => 'All Database References',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'type' => 'separator',
+      'separator' => ', ',
+      'exclude' => 0,
+      'id' => 'all_dbxref',
+      'table' => 'stock',
+      'field' => 'all_dbxref',
+      'relationship' => 'none',
+    ),
+    'all_properties' => array(
+      'label' => 'All Properties',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'type' => 'separator',
+      'separator' => ', ',
+      'exclude' => 0,
+      'id' => 'all_properties',
+      'table' => 'stock',
+      'field' => 'all_properties',
+      'relationship' => 'none',
+    ),
+    'all_relationships' => array(
+      'label' => 'All Relationships',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'type' => 'separator',
+      'separator' => ', ',
+      'exclude' => 0,
+      'id' => 'all_relationships',
+      'table' => 'stock',
+      'field' => 'all_relationships',
+      'relationship' => 'none',
+    ),
+    'is_obsolete' => array(
+      'label' => 'Is Obsolete',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'link_class' => '',
+        'alt' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'exclude' => 0,
+      'id' => 'is_obsolete',
+      'table' => 'stock',
+      'field' => 'is_obsolete',
+      'relationship' => 'none',
+    ),
+    'description' => array(
+      'label' => 'Description',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'link_class' => '',
+        'alt' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'exclude' => 0,
+      'id' => 'description',
+      'table' => 'stock',
+      'field' => 'description',
+      'relationship' => 'none',
+    ),
+  ));
+  $handler->override_option('sorts', array(
+    'genus' => array(
+      'order' => 'ASC',
+      'id' => 'genus',
+      'table' => 'organism',
+      'field' => 'genus',
+      'relationship' => 'none',
+    ),
+    'species' => array(
+      'order' => 'ASC',
+      'id' => 'species',
+      'table' => 'organism',
+      'field' => 'species',
+      'relationship' => 'none',
+    ),
+    'name' => array(
+      'order' => 'ASC',
+      'id' => 'name',
+      'table' => 'cvterm',
+      'field' => 'name',
+      'relationship' => 'none',
+    ),
+    'name_1' => array(
+      'order' => 'ASC',
+      'id' => 'name_1',
+      'table' => 'stock',
+      'field' => 'name',
+      'relationship' => 'none',
+    ),
+  ));
+  $handler->override_option('filters', array(
+    'common_name' => array(
+      'operator' => '=',
+      'value' => array(),
+      'group' => '0',
+      'exposed' => TRUE,
+      'expose' => array(
+        'use_operator' => 0,
+        'operator' => 'common_name_op',
+        'identifier' => 'common_name',
+        'label' => 'Organism Common Name',
+        'bef_filter_description' => '',
+        'bef_format' => 'bef',
+        'remember' => 0,
+        'bef_select_all_none' => 1,
+        'bef_collapsible' => 0,
+      ),
+      'case' => 1,
+      'id' => 'common_name',
+      'table' => 'organism',
+      'field' => 'common_name',
+      'override' => array(
+        'button' => 'Override',
+      ),
+      'relationship' => 'none',
+      'values_form_type' => 'select',
+      'multiple' => 1,
+      'optional' => 0,
+    ),
+    'type_id' => array(
+      'operator' => '=',
+      'value' => array(),
+      'group' => '0',
+      'exposed' => TRUE,
+      'expose' => array(
+        'use_operator' => 0,
+        'operator' => 'type_id_op',
+        'identifier' => 'type_id',
+        'label' => 'Type',
+        'bef_filter_description' => '',
+        'bef_format' => 'bef',
+        'remember' => 0,
+        'bef_select_all_none' => 1,
+        'bef_collapsible' => 0,
+      ),
+      'case' => 1,
+      'id' => 'type_id',
+      'table' => 'stock',
+      'field' => 'type_id',
+      'override' => array(
+        'button' => 'Override',
+      ),
+      'relationship' => 'none',
+      'values_form_type' => 'select',
+      'multiple' => 1,
+      'optional' => 0,
+      'show_all' => 0,
+      'agg' => array(
+        'records_with' => 1,
+        'aggregates_with' => 1,
+      ),
+    ),
+    'crossing_block' => array(
+      'operator' => '=',
+      'value' => array(
+        'year' => '',
+        'season' => '',
+      ),
+      'group' => '0',
+      'exposed' => TRUE,
+      'expose' => array(
+        'operator' => '',
+        'identifier' => 'crossing_block',
+        'label' => 'Crossing Block (Progeny)',
+        'bef_filter_description' => '',
+        'optional' => 1,
+        'single' => 1,
+        'remember' => 0,
+      ),
+      'id' => 'crossing_block',
+      'table' => 'stock',
+      'field' => 'crossing_block',
+      'relationship' => 'none',
+      'cb_year' => '',
+      'cb_season' => '',
+    ),
+    'name' => array(
+      'operator' => '~',
+      'value' => '',
+      'group' => '0',
+      'exposed' => TRUE,
+      'expose' => array(
+        'use_operator' => 0,
+        'operator' => 'name_op',
+        'identifier' => 'name',
+        'label' => 'Name Contains',
+        'bef_filter_description' => '',
+        'remember' => 0,
+      ),
+      'case' => 0,
+      'id' => 'name',
+      'table' => 'stock',
+      'field' => 'name',
+      'relationship' => 'none',
+      'override' => array(
+        'button' => 'Override',
+      ),
+      'agg' => array(
+        'records_with' => 1,
+        'aggregates_with' => 1,
+      ),
+    ),
+    'search_results' => array(
+      'operator' => '=',
+      'value' => '',
+      'group' => '0',
+      'exposed' => FALSE,
+      'expose' => array(
+        'operator' => FALSE,
+        'label' => '',
+      ),
+      'id' => 'search_results',
+      'table' => 'views',
+      'field' => 'search_results',
+      'relationship' => 'none',
+      'apply_button' => 'Search',
+      'no_results_text' => 'Please filter the germplasm records so you see only the subset of interest. If you want to see all organisms simply leave all organisms unchecked. Then click "Search".',
+    ),
+    'is_germplasm' => array(
+      'operator' => '=',
+      'value' => '',
+      'group' => '0',
+      'exposed' => FALSE,
+      'expose' => array(
+        'operator' => FALSE,
+        'label' => '',
+      ),
+      'id' => 'is_germplasm',
+      'table' => 'stock',
+      'field' => 'is_germplasm',
+      'relationship' => 'none',
+    ),
+  ));
+  $handler->override_option('access', array(
+    'type' => 'perm',
+    'perm' => 'access chado_stock content',
+  ));
+  $handler->override_option('cache', array(
+    'type' => 'none',
+  ));
+  $handler->override_option('title', 'Germplasm');
+  $handler->override_option('empty', 'There are no germplasm matching the current filters. Please widen your search by removing some of the filter criteria.');
+  $handler->override_option('empty_format', '2');
+  $handler->override_option('items_per_page', 50);
+  $handler->override_option('use_pager', '1');
+  $handler->override_option('style_plugin', 'views_dynamic_columns');
+  $handler->override_option('style_options', array(
+    'grouping' => '',
+    'override' => 1,
+    'sticky' => 0,
+    'order' => 'asc',
+    'summary' => '',
+    'columns' => array(
+      'nid' => 'nid',
+      'uniquename' => 'uniquename',
+      'name' => 'name',
+      'cross_number' => 'cross_number',
+      'properties' => 'properties',
+      'name_1' => 'name_1',
+      'common_name' => 'common_name',
+      'crossing_block' => 'crossing_block',
+      'parent_number' => 'parent_number',
+      'relationships' => 'relationships',
+      'relationships_1' => 'relationships_1',
+      'relationships_2' => 'relationships_2',
+      'all_dbxref' => 'all_dbxref',
+      'all_properties' => 'all_properties',
+      'all_relationships' => 'all_relationships',
+      'is_obsolete' => 'is_obsolete',
+      'description' => 'description',
+    ),
+    'info' => array(
+      'nid' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 0,
+        'hide' => 0,
+      ),
+      'uniquename' => array(
+        'sortable' => 1,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 0,
+      ),
+      'name' => array(
+        'sortable' => 1,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 0,
+      ),
+      'cross_number' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 0,
+      ),
+      'properties' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 0,
+      ),
+      'name_1' => array(
+        'sortable' => 1,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 0,
+      ),
+      'common_name' => array(
+        'sortable' => 1,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 0,
+      ),
+      'crossing_block' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 0,
+      ),
+      'parent_number' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 1,
+      ),
+      'relationships' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 0,
+      ),
+      'relationships_1' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 0,
+      ),
+      'relationships_2' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 1,
+      ),
+      'all_dbxref' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 1,
+      ),
+      'all_properties' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 1,
+      ),
+      'all_relationships' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 1,
+      ),
+      'is_obsolete' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 1,
+      ),
+      'description' => array(
+        'sortable' => 0,
+        'separator' => '',
+        'add_remove' => 1,
+        'hide' => 1,
+      ),
+    ),
+    'default' => '-1',
+  ));
+  $handler = $view->new_display('page', 'Page', 'page_2');
+  $handler->override_option('path', 'chado/germplasm');
+  $handler->override_option('menu', array(
+    'type' => 'normal',
+    'title' => 'Germplasm',
+    'description' => '',
+    'weight' => '0',
+    'name' => 'navigation',
+  ));
+  $handler->override_option('tab_options', array(
+    'type' => 'none',
+    'title' => '',
+    'description' => '',
+    'weight' => 0,
+    'name' => 'navigation',
+  ));
+
+  return $view;
+}
+
+/**
+ * Default View: Progeny for a given Crossing Block
+ * List all the progeny of a given crossing block; crossing block chosen in path
+ *
+ * @param $vars
+ *   An array of variables for the default view to use including
+ *     - cross_num_db_options
+ *     - properties_synonym_options
+ *     - properties_crossingblock_options
+ *     - rels_maternal_options
+ *     - rels_paternal_options
+ *     - rels_maternal_type_id
+ *     - rels_paternal_type_id
+ * @return
+ *   A default view object
+ */
+function germplasm_manage_crossingblock_progeny_default_view($vars) {
+
+  $view = new view;
+  $view->name = 'crossingblock_progeny';
+  $view->description = 'List all the progeny of a given crossing block; crossing block chosen in path';
+  $view->tag = 'chado default';
+  $view->base_table = 'stock';
+  $view->core = 0;
+  $view->api_version = '2';
+  $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
+  $handler = $view->new_display('default', 'Defaults', 'default');
+  $handler->override_option('relationships', array(
+    'nid' => array(
+      'label' => 'Stock to Node',
+      'required' => 0,
+      'id' => 'nid',
+      'table' => 'chado_stock',
+      'field' => 'nid',
+      'relationship' => 'none',
+    ),
+  ));
+  $handler->override_option('fields', array(
+    'nid' => array(
+      'label' => 'Nid',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'link_to_node' => 0,
+      'exclude' => 1,
+      'id' => 'nid',
+      'table' => 'node',
+      'field' => 'nid',
+      'relationship' => 'none',
+    ),
+    'uniquename' => array(
+      'label' => 'Unique Name',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'type' => 'separator',
+      'separator' => ', ',
+      'exclude' => 0,
+      'link_to_node' => 1,
+      'id' => 'uniquename',
+      'table' => 'stock',
+      'field' => 'uniquename',
+      'relationship' => 'none',
+    ),
+    'name' => array(
+      'label' => 'Name',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
         'link_class' => '',
         'alt' => '',
         'prefix' => '',
@@ -1352,7 +1620,7 @@ function germplasm_manage_views_default_views() {
       'table' => 'stock',
       'field' => 'dbxref',
       'relationship' => 'none',
-      'db_ids' => $cross_num_db_options,
+      'db_ids' => $vars['cross_num_db_options'],
     ),
     'properties' => array(
       'label' => 'Synonyms',
@@ -1379,7 +1647,7 @@ function germplasm_manage_views_default_views() {
       'empty_zero' => 0,
       'type' => 'separator',
       'separator' => ', ',
-      'stockprop_type_ids' => $properties_synonym_options,
+      'stockprop_type_ids' => $vars['properties_synonym_options'],
       'stockprop_display_options' => array(
         'value' => 'value',
         'type' => 0,
@@ -1446,11 +1714,11 @@ function germplasm_manage_views_default_views() {
       'empty_zero' => 0,
       'type' => 'separator',
       'separator' => ', ',
-      'stockrel_type_ids' => $rels_maternal_options,
+      'stockrel_type_ids' => $vars['rels_maternal_options'],
       'stockrel_display_options' => array(
-        '0' => 'subject',
-        '1' => 'type',
-        '2' => 'object',
+        0 => 'subject',
+        1 => 'type',
+        2 => 'object',
         'subject' => 'subject',
         'type' => 'type',
         'object' => 'object',
@@ -1474,8 +1742,10 @@ function germplasm_manage_views_default_views() {
         'text' => '',
         'make_link' => 0,
         'path' => '',
+        'absolute' => 0,
         'link_class' => '',
         'alt' => '',
+        'rel' => '',
         'prefix' => '',
         'suffix' => '',
         'target' => '',
@@ -1490,13 +1760,14 @@ function germplasm_manage_views_default_views() {
       'empty' => '',
       'hide_empty' => 0,
       'empty_zero' => 0,
+      'hide_alter_empty' => 1,
       'type' => 'separator',
       'separator' => ', ',
-      'stockrel_type_ids' => $rels_paternal_options,
+      'stockrel_type_ids' => $vars['rels_paternal_options'],
       'stockrel_display_options' => array(
-        '0' => 'subject',
-        '1' => 'type',
-        '2' => 'object',
+        0 => 'subject',
+        1 => 'type',
+        2 => 'object',
         'subject' => 'subject',
         'type' => 'type',
         'object' => 'object',
@@ -1593,74 +1864,42 @@ function germplasm_manage_views_default_views() {
     ),
   ));
   $handler->override_option('arguments', array(
-    'common_name' => array(
+    'genus' => array(
       'default_action' => 'ignore',
       'style_plugin' => 'default_summary',
       'style_options' => array(),
       'wildcard' => 'all',
       'wildcard_substitution' => 'All',
-      'title' => '%1 Crossing Block Progeny',
+      'title' => '',
       'breadcrumb' => '',
       'default_argument_type' => 'fixed',
       'default_argument' => '',
       'validate_type' => 'none',
       'validate_fail' => 'not found',
       'glossary' => 0,
+      'ignorecase' => 0,
       'limit' => '0',
-      'case' => 'ucwords',
-      'path_case' => 'ucwords',
-      'transform_dash' => 1,
-      'id' => 'common_name',
+      'case' => 'none',
+      'path_case' => 'none',
+      'transform_dash' => 0,
+      'id' => 'genus',
       'table' => 'organism',
-      'field' => 'common_name',
+      'field' => 'genus',
       'validate_user_argument_type' => 'uid',
-      'validate_user_roles' => array(
-        '2' => 0,
-        '3' => 0,
-        '5' => 0,
-        '8' => 0,
-        '6' => 0,
-        '9' => 0,
-        '7' => 0,
-        '4' => 0,
-      ),
-      'override' => array(
-        'button' => 'Override',
-      ),
+      'validate_user_roles' => array(),
       'relationship' => 'none',
       'default_options_div_prefix' => '',
-      'default_argument_fixed' => '',
+      'default_taxonomy_tid_term_page' => 0,
+      'default_taxonomy_tid_node' => 0,
+      'default_taxonomy_tid_limit' => 0,
+      'default_taxonomy_tid_vids' => array(),
       'default_argument_user' => 0,
+      'default_argument_fixed' => '',
       'default_argument_php' => '',
-      'validate_argument_node_type' => array(
-        'chado_analysis' => 0,
-        'chado_feature' => 0,
-        'chado_library' => 0,
-        'chado_organism' => 0,
-        'tripal_pub' => 0,
-        'chado_stock' => 0,
-        'panel' => 0,
-        'help_document' => 0,
-        'job_opportunity' => 0,
-        'page' => 0,
-        'recipe' => 0,
-        'story' => 0,
-        'variety_desc' => 0,
-        'webform' => 0,
-      ),
+      'validate_argument_node_type' => array(),
       'validate_argument_node_access' => 0,
       'validate_argument_nid_type' => 'nid',
-      'validate_argument_vocabulary' => array(
-        '10' => 0,
-        '11' => 0,
-        '13' => 0,
-        '12' => 0,
-        '30' => 0,
-        '26' => 0,
-        '27' => 0,
-        '28' => 0,
-        '29' => 0,
-      ),
+      'validate_argument_vocabulary' => array(),
       'validate_argument_type' => 'tid',
       'validate_argument_transform' => 0,
       'validate_user_restrict_roles' => 0,
@@ -1687,16 +1926,7 @@ function germplasm_manage_views_default_views() {
       'table' => 'stock',
       'field' => 'properties',
       'validate_user_argument_type' => 'uid',
-      'validate_user_roles' => array(
-        '2' => 0,
-        '3' => 0,
-        '5' => 0,
-        '8' => 0,
-        '6' => 0,
-        '9' => 0,
-        '7' => 0,
-        '4' => 0,
-      ),
+      'validate_user_roles' => array(),
       'override' => array(
         'button' => 'Override',
       ),
@@ -1705,40 +1935,15 @@ function germplasm_manage_views_default_views() {
       'default_argument_fixed' => '',
       'default_argument_user' => 0,
       'default_argument_php' => '',
-      'validate_argument_node_type' => array(
-        'webform' => 0,
-        'chado_analysis' => 0,
-        'chado_feature' => 0,
-        'chado_library' => 0,
-        'chado_organism' => 0,
-        'chado_stock' => 0,
-        'panel' => 0,
-        'help_document' => 0,
-        'job_opportunity' => 0,
-        'page' => 0,
-        'publication' => 0,
-        'recipe' => 0,
-        'story' => 0,
-        'variety_desc' => 0,
-      ),
+      'validate_argument_node_type' => array(),
       'validate_argument_node_access' => 0,
       'validate_argument_nid_type' => 'nid',
-      'validate_argument_vocabulary' => array(
-        '10' => 0,
-        '11' => 0,
-        '13' => 0,
-        '12' => 0,
-        '30' => 0,
-        '26' => 0,
-        '27' => 0,
-        '28' => 0,
-        '29' => 0,
-      ),
+      'validate_argument_vocabulary' => array(),
       'validate_argument_type' => 'tid',
       'validate_argument_transform' => 0,
       'validate_user_restrict_roles' => 0,
       'validate_argument_php' => '',
-      'stockprop_type_id' => $cb_year[0]->cvterm_id,
+      'stockprop_type_id' => '3663',
       'operator' => '=',
     ),
     'properties_1' => array(
@@ -1762,16 +1967,7 @@ function germplasm_manage_views_default_views() {
       'table' => 'stock',
       'field' => 'properties',
       'validate_user_argument_type' => 'uid',
-      'validate_user_roles' => array(
-        '2' => 0,
-        '3' => 0,
-        '5' => 0,
-        '8' => 0,
-        '6' => 0,
-        '9' => 0,
-        '7' => 0,
-        '4' => 0,
-      ),
+      'validate_user_roles' => array(),
       'override' => array(
         'button' => 'Override',
       ),
@@ -1780,91 +1976,51 @@ function germplasm_manage_views_default_views() {
       'default_argument_fixed' => '',
       'default_argument_user' => 0,
       'default_argument_php' => '',
-      'validate_argument_node_type' => array(
-        'webform' => 0,
-        'chado_analysis' => 0,
-        'chado_feature' => 0,
-        'chado_library' => 0,
-        'chado_organism' => 0,
-        'chado_stock' => 0,
-        'panel' => 0,
-        'help_document' => 0,
-        'job_opportunity' => 0,
-        'page' => 0,
-        'publication' => 0,
-        'recipe' => 0,
-        'story' => 0,
-        'variety_desc' => 0,
-      ),
+      'validate_argument_node_type' => array(),
       'validate_argument_node_access' => 0,
       'validate_argument_nid_type' => 'nid',
-      'validate_argument_vocabulary' => array(
-        '10' => 0,
-        '11' => 0,
-        '13' => 0,
-        '12' => 0,
-        '30' => 0,
-        '26' => 0,
-        '27' => 0,
-        '28' => 0,
-        '29' => 0,
-      ),
+      'validate_argument_vocabulary' => array(),
       'validate_argument_type' => 'tid',
       'validate_argument_transform' => 0,
       'validate_user_restrict_roles' => 0,
       'validate_argument_php' => '',
-      'stockprop_type_id' => $cb_season[0]->cvterm_id,
+      'stockprop_type_id' => '3664',
       'operator' => '=',
     ),
   ));
   $handler->override_option('filters', array(
-    'name' => array(
-      'operator' => 'contains',
-      'value' => 'All',
-      'group' => '0',
-      'exposed' => TRUE,
-      'expose' => array(
-        'use_operator' => 0,
-        'operator' => 'name_op',
-        'identifier' => 'type',
-        'label' => 'Type',
-        'optional' => 1,
-        'remember' => 0,
-      ),
-      'case' => 0,
-      'id' => 'name',
-      'table' => 'cvterm',
-      'field' => 'name',
-      'relationship' => 'none',
-      'override' => array(
-        'button' => 'Override',
-      ),
-      'values_form_type' => 'select',
-    ),
-    'dbxref' => array(
+    'type_id' => array(
       'operator' => '=',
-      'value' => '',
+      'value' => array(),
       'group' => '0',
       'exposed' => TRUE,
       'expose' => array(
-        'label' => 'Cross Number',
-        'identifier' => 'crossnum',
-        'type' => '',
         'use_operator' => 0,
-        'operator' => 'dbxref_op',
-        'optional' => 1,
+        'operator' => 'type_id_op',
+        'identifier' => 'type_id',
+        'label' => 'Type',
+        'bef_filter_description' => '',
+        'bef_format' => 'bef',
+        'remember' => 0,
+        'bef_select_all_none' => 1,
+        'bef_collapsible' => 0,
       ),
-      'id' => 'dbxref',
+      'case' => 1,
+      'id' => 'type_id',
       'table' => 'stock',
-      'field' => 'dbxref',
+      'field' => 'type_id',
       'relationship' => 'none',
-      'db' => $cross_num_db_options,
-      'override' => array(
-        'button' => 'Override',
+      'values_form_type' => 'select',
+      'multiple' => 1,
+      'optional' => 0,
+      'show_all' => 0,
+      'agg' => array(
+        'records_with' => 1,
+        'aggregates_with' => 1,
       ),
     ),
     'name_1' => array(
-      'operator' => 'contains',
+      'operator' => '~',
       'value' => '',
       'group' => '0',
       'exposed' => TRUE,
@@ -1873,7 +2029,7 @@ function germplasm_manage_views_default_views() {
         'operator' => 'name_1_op',
         'identifier' => 'name_1',
         'label' => 'Name Contains',
-        'optional' => 1,
+        'bef_filter_description' => '',
         'remember' => 0,
       ),
       'case' => 0,
@@ -1884,27 +2040,12 @@ function germplasm_manage_views_default_views() {
         'button' => 'Override',
       ),
       'relationship' => 'none',
+      'agg' => array(
+        'records_with' => 1,
+        'aggregates_with' => 1,
+      ),
     ),
     'relationships' => array(
-      'operator' => '=',
-      'value' => '',
-      'group' => '0',
-      'exposed' => TRUE,
-      'expose' => array(
-        'label' => 'Paternal Parent',
-        'identifier' => 'paternal_parent',
-        'use_operator' => 0,
-        'operator' => 'relationships_op',
-        'optional' => 1,
-      ),
-      'id' => 'relationships',
-      'table' => 'stock',
-      'field' => 'relationships',
-      'relationship' => 'none',
-      'type' => $dad_cv[0]->cvterm_id,
-      'fixed_position' => 'subject_id',
-    ),
-    'relationships_1' => array(
       'operator' => '=',
       'value' => '',
       'group' => '0',
@@ -1916,11 +2057,30 @@ function germplasm_manage_views_default_views() {
         'operator' => 'maternal_parent_op',
         'optional' => 1,
       ),
+      'id' => 'relationships',
+      'table' => 'stock',
+      'field' => 'relationships',
+      'relationship' => 'none',
+      'type' => $vars['rels_maternal_type_id'],
+      'fixed_position' => 'subject_id',
+    ),
+    'relationships_1' => array(
+      'operator' => '=',
+      'value' => '',
+      'group' => '0',
+      'exposed' => TRUE,
+      'expose' => array(
+        'label' => 'Paternal Parent',
+        'identifier' => 'paternal_parent',
+        'use_operator' => 0,
+        'operator' => 'relationships_op',
+        'optional' => 1,
+      ),
       'id' => 'relationships_1',
       'table' => 'stock',
       'field' => 'relationships',
       'relationship' => 'none',
-      'type' => $mom_cv[0]->cvterm_id,
+      'type' => $vars['rels_paternal_type_id'],
       'fixed_position' => 'subject_id',
     ),
   ));
@@ -2034,17 +2194,35 @@ function germplasm_manage_views_default_views() {
     'weight' => 0,
     'name' => 'navigation',
   ));
-	$views[$view->name] = $view;
 
-	// Default View: Parents for Crossing Block
-	$view = new view;
+  return $view;
+}
+
+/**
+ * Default View: Progeny for a given Crossing Block
+ * List all the parents of a given crossing block; crossing block chosen in path
+ *
+ * @param $vars
+ *   An array of variables for the default view to use including
+ *     - cross_num_db_options
+ *     - properties_synonym_options
+ *     - properties_crossingblock_options
+ *     - rels_maternal_options
+ *     - rels_paternal_options
+ *     - rels_maternal_type_id
+ *     - rels_paternal_type_id
+ * @return
+ *   A default view object
+ */
+function germplasm_manage_crossingblock_parents_default_view($vars) {
+
+  $view = new view;
   $view->name = 'crossingblock_parents';
   $view->description = 'List all the parents of a given crossing block; crossing block chosen in path';
-  $view->tag = 'germplasm';
-  $view->view_php = '';
+  $view->tag = 'chado default';
   $view->base_table = 'stock';
-  $view->is_cacheable = FALSE;
-  $view->api_version = 2;
+  $view->core = 0;
+  $view->api_version = '2';
   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
   $handler = $view->new_display('default', 'Defaults', 'default');
   $handler->override_option('fields', array(
@@ -2097,7 +2275,7 @@ function germplasm_manage_views_default_views() {
         'alter_text' => 0,
         'text' => '',
         'make_link' => 0,
-        'path' => 'node/[stock_nid]',
+        'path' => '',
         'link_class' => '',
         'alt' => '',
         'prefix' => '',
@@ -2127,7 +2305,7 @@ function germplasm_manage_views_default_views() {
         'alter_text' => 0,
         'text' => '',
         'make_link' => 0,
-        'path' => 'node/[stock_nid]',
+        'path' => '',
         'link_class' => '',
         'alt' => '',
         'prefix' => '',
@@ -2235,7 +2413,7 @@ function germplasm_manage_views_default_views() {
       'empty_zero' => 0,
       'type' => 'separator',
       'separator' => ', ',
-      'stockprop_type_ids' => $properties_synonym_options,
+      'stockprop_type_ids' => $vars['properties_synonym_options'],
       'stockprop_display_options' => array(
         'value' => 'value',
         'type' => 0,
@@ -2314,10 +2492,10 @@ function germplasm_manage_views_default_views() {
       'empty_zero' => 0,
       'type' => 'separator',
       'separator' => ', ',
-      'stockprop_type_ids' => $properties_crossingblock_options,
+      'stockprop_type_ids' => $vars['properties_crossingblock_options'],
       'stockprop_display_options' => array(
-        '0' => 'type',
-        '1' => 'value',
+        0 => 'type',
+        1 => 'value',
       ),
       'link_to_crossingblock' => 1,
       'cb_display_options' => array(
@@ -2438,71 +2616,42 @@ function germplasm_manage_views_default_views() {
     ),
   ));
   $handler->override_option('arguments', array(
-    'common_name' => array(
+    'genus' => array(
       'default_action' => 'ignore',
       'style_plugin' => 'default_summary',
       'style_options' => array(),
       'wildcard' => 'all',
       'wildcard_substitution' => 'All',
-      'title' => '%1 Crossing Block Parents',
+      'title' => '% Crossing Blocks',
       'breadcrumb' => '',
       'default_argument_type' => 'fixed',
       'default_argument' => '',
       'validate_type' => 'none',
       'validate_fail' => 'not found',
       'glossary' => 0,
+      'ignorecase' => 0,
       'limit' => '0',
-      'case' => 'ucwords',
-      'path_case' => 'ucwords',
-      'transform_dash' => 1,
-      'id' => 'common_name',
+      'case' => 'none',
+      'path_case' => 'none',
+      'transform_dash' => 0,
+      'id' => 'genus',
       'table' => 'organism',
-      'field' => 'common_name',
+      'field' => 'genus',
       'validate_user_argument_type' => 'uid',
-      'validate_user_roles' => array(
-        '2' => 0,
-        '3' => 0,
-        '5' => 0,
-        '8' => 0,
-        '6' => 0,
-        '9' => 0,
-        '7' => 0,
-        '4' => 0,
-      ),
+      'validate_user_roles' => array(),
       'relationship' => 'none',
       'default_options_div_prefix' => '',
-      'default_argument_fixed' => '',
+      'default_taxonomy_tid_term_page' => 0,
+      'default_taxonomy_tid_node' => 0,
+      'default_taxonomy_tid_limit' => 0,
+      'default_taxonomy_tid_vids' => array(),
       'default_argument_user' => 0,
+      'default_argument_fixed' => '',
       'default_argument_php' => '',
-      'validate_argument_node_type' => array(
-        'webform' => 0,
-        'chado_analysis' => 0,
-        'chado_feature' => 0,
-        'chado_library' => 0,
-        'chado_organism' => 0,
-        'chado_stock' => 0,
-        'panel' => 0,
-        'help_document' => 0,
-        'job_opportunity' => 0,
-        'page' => 0,
-        'publication' => 0,
-        'recipe' => 0,
-        'story' => 0,
-        'variety_desc' => 0,
-      ),
+      'validate_argument_node_type' => array(),
       'validate_argument_node_access' => 0,
       'validate_argument_nid_type' => 'nid',
-      'validate_argument_vocabulary' => array(
-        '10' => 0,
-        '11' => 0,
-        '13' => 0,
-        '12' => 0,
-        '30' => 0,
-        '26' => 0,
-        '27' => 0,
-        '28' => 0,
-        '29' => 0,
-      ),
+      'validate_argument_vocabulary' => array(),
       'validate_argument_type' => 'tid',
       'validate_argument_transform' => 0,
       'validate_user_restrict_roles' => 0,
@@ -2514,65 +2663,36 @@ function germplasm_manage_views_default_views() {
       'style_options' => array(),
       'wildcard' => 'all',
       'wildcard_substitution' => 'All',
-      'title' => '%1: %2 Crossing Block Parents',
+      'title' => '%2 %1 Crossing Block Parents',
       'breadcrumb' => '',
       'default_argument_type' => 'fixed',
       'default_argument' => '',
       'validate_type' => 'none',
       'validate_fail' => 'not found',
       'glossary' => 0,
+      'ignorecase' => 0,
       'limit' => '0',
-      'case' => 'ucwords',
-      'path_case' => 'ucwords',
-      'transform_dash' => 1,
+      'case' => 'none',
+      'path_case' => 'none',
+      'transform_dash' => 0,
       'id' => 'pnum_cb_year',
       'table' => 'stock',
       'field' => 'pnum_cb_year',
       'validate_user_argument_type' => 'uid',
-      'validate_user_roles' => array(
-        '2' => 0,
-        '3' => 0,
-        '5' => 0,
-        '8' => 0,
-        '6' => 0,
-        '9' => 0,
-        '7' => 0,
-        '4' => 0,
-      ),
+      'validate_user_roles' => array(),
       'relationship' => 'none',
       'default_options_div_prefix' => '',
-      'default_argument_fixed' => '',
+      'default_taxonomy_tid_term_page' => 0,
+      'default_taxonomy_tid_node' => 0,
+      'default_taxonomy_tid_limit' => 0,
+      'default_taxonomy_tid_vids' => array(),
       'default_argument_user' => 0,
+      'default_argument_fixed' => '',
       'default_argument_php' => '',
-      'validate_argument_node_type' => array(
-        'webform' => 0,
-        'chado_analysis' => 0,
-        'chado_feature' => 0,
-        'chado_library' => 0,
-        'chado_organism' => 0,
-        'chado_stock' => 0,
-        'panel' => 0,
-        'help_document' => 0,
-        'job_opportunity' => 0,
-        'page' => 0,
-        'publication' => 0,
-        'recipe' => 0,
-        'story' => 0,
-        'variety_desc' => 0,
-      ),
+      'validate_argument_node_type' => array(),
       'validate_argument_node_access' => 0,
       'validate_argument_nid_type' => 'nid',
-      'validate_argument_vocabulary' => array(
-        '10' => 0,
-        '11' => 0,
-        '13' => 0,
-        '12' => 0,
-        '30' => 0,
-        '26' => 0,
-        '27' => 0,
-        '28' => 0,
-        '29' => 0,
-      ),
+      'validate_argument_vocabulary' => array(),
       'validate_argument_type' => 'tid',
       'validate_argument_transform' => 0,
       'validate_user_restrict_roles' => 0,
@@ -2584,65 +2704,36 @@ function germplasm_manage_views_default_views() {
       'style_options' => array(),
       'wildcard' => 'all',
       'wildcard_substitution' => 'All',
-      'title' => '%1: %2 %3 Crossing Block Parents',
+      'title' => '%1 %2 %3 Crossing Block Parents',
       'breadcrumb' => '',
       'default_argument_type' => 'fixed',
       'default_argument' => '',
       'validate_type' => 'none',
       'validate_fail' => 'not found',
       'glossary' => 0,
+      'ignorecase' => 0,
       'limit' => '0',
-      'case' => 'ucwords',
-      'path_case' => 'ucwords',
-      'transform_dash' => 1,
+      'case' => 'none',
+      'path_case' => 'none',
+      'transform_dash' => 0,
       'id' => 'pnum_cb_season',
       'table' => 'stock',
       'field' => 'pnum_cb_season',
       'validate_user_argument_type' => 'uid',
-      'validate_user_roles' => array(
-        '2' => 0,
-        '3' => 0,
-        '5' => 0,
-        '8' => 0,
-        '6' => 0,
-        '9' => 0,
-        '7' => 0,
-        '4' => 0,
-      ),
+      'validate_user_roles' => array(),
       'relationship' => 'none',
       'default_options_div_prefix' => '',
-      'default_argument_fixed' => '',
+      'default_taxonomy_tid_term_page' => 0,
+      'default_taxonomy_tid_node' => 0,
+      'default_taxonomy_tid_limit' => 0,
+      'default_taxonomy_tid_vids' => array(),
       'default_argument_user' => 0,
+      'default_argument_fixed' => '',
       'default_argument_php' => '',
-      'validate_argument_node_type' => array(
-        'webform' => 0,
-        'chado_analysis' => 0,
-        'chado_feature' => 0,
-        'chado_library' => 0,
-        'chado_organism' => 0,
-        'chado_stock' => 0,
-        'panel' => 0,
-        'help_document' => 0,
-        'job_opportunity' => 0,
-        'page' => 0,
-        'publication' => 0,
-        'recipe' => 0,
-        'story' => 0,
-        'variety_desc' => 0,
-      ),
+      'validate_argument_node_type' => array(),
       'validate_argument_node_access' => 0,
       'validate_argument_nid_type' => 'nid',
-      'validate_argument_vocabulary' => array(
-        '10' => 0,
-        '11' => 0,
-        '13' => 0,
-        '12' => 0,
-        '30' => 0,
-        '26' => 0,
-        '27' => 0,
-        '28' => 0,
-        '29' => 0,
-      ),
+      'validate_argument_vocabulary' => array(),
       'validate_argument_type' => 'tid',
       'validate_argument_transform' => 0,
       'validate_user_restrict_roles' => 0,
@@ -2650,31 +2741,38 @@ function germplasm_manage_views_default_views() {
     ),
   ));
   $handler->override_option('filters', array(
-    'name' => array(
+    'type_id' => array(
       'operator' => '=',
-      'value' => 'All',
+      'value' => array(),
       'group' => '0',
       'exposed' => TRUE,
       'expose' => array(
         'use_operator' => 0,
-        'operator' => 'name_op',
-        'identifier' => 'type',
+        'operator' => 'type_id_op',
+        'identifier' => 'type_id',
         'label' => 'Type',
-        'optional' => 1,
+        'bef_filter_description' => '',
+        'bef_format' => 'bef',
         'remember' => 0,
+        'bef_select_all_none' => 1,
+        'bef_collapsible' => 0,
       ),
-      'case' => 0,
-      'id' => 'name',
-      'table' => 'cvterm',
-      'field' => 'name',
+      'case' => 1,
+      'id' => 'type_id',
+      'table' => 'stock',
+      'field' => 'type_id',
       'relationship' => 'none',
-      'override' => array(
-        'button' => 'Override',
-      ),
       'values_form_type' => 'select',
+      'multiple' => 1,
+      'optional' => 0,
+      'show_all' => 0,
+      'agg' => array(
+        'records_with' => 1,
+        'aggregates_with' => 1,
+      ),
     ),
     'name_1' => array(
-      'operator' => 'contains',
+      'operator' => '~',
       'value' => '',
       'group' => '0',
       'exposed' => TRUE,
@@ -2683,7 +2781,7 @@ function germplasm_manage_views_default_views() {
         'operator' => 'name_1_op',
         'identifier' => 'name_1',
         'label' => 'Name Contains',
-        'optional' => 1,
+        'bef_filter_description' => '',
         'remember' => 0,
       ),
       'case' => 0,
@@ -2694,6 +2792,10 @@ function germplasm_manage_views_default_views() {
         'button' => 'Override',
       ),
       'relationship' => 'none',
+      'agg' => array(
+        'records_with' => 1,
+        'aggregates_with' => 1,
+      ),
     ),
     'parent_number' => array(
       'operator' => '=',
@@ -2710,7 +2812,7 @@ function germplasm_manage_views_default_views() {
       'relationship' => 'none',
       'cb_year' => '<NONE>',
       'use_cbyear_arg' => 1,
-      'cb_season' => 'Fall',
+      'cb_season' => '<NONE>',
       'use_cbseason_arg' => 1,
     ),
   ));
@@ -2926,17 +3028,36 @@ function germplasm_manage_views_default_views() {
     'weight' => 0,
     'name' => 'navigation',
   ));
-	$views[$view->name] = $view;
 
-	// Default View: Cross assigned parents
-	$view = new view;
+  return $view;
+}
+
+/**
+ * Default View: Cross assigned parents
+ * This view is used exclusively in the add/cross_parents form to show the user what
+ * parents have already been assigned
+ *
+ * @param $vars
+ *   An array of variables for the default view to use including
+ *     - cross_num_db_options
+ *     - properties_synonym_options
+ *     - properties_crossingblock_options
+ *     - rels_maternal_options
+ *     - rels_paternal_options
+ *     - rels_maternal_type_id
+ *     - rels_paternal_type_id
+ * @return
+ *   A default view object
+ */
+function germplasm_manage_cross_assigned_parents_default_view($vars) {
+
+  $view = new view;
   $view->name = 'cross_assigned_parents';
-  $view->description = 'Lists the parents of the current crossing block. This is used when assigning parents.';
-  $view->tag = 'germplasm';
-  $view->view_php = '';
+  $view->description = 'This view is used exclusively in the add/cross_parents form to show the user what parents have already been assigned';
+  $view->tag = 'chado default';
   $view->base_table = 'stock';
-  $view->is_cacheable = FALSE;
-  $view->api_version = 2;
+  $view->core = 0;
+  $view->api_version = '2';
   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
   $handler = $view->new_display('default', 'Defaults', 'default');
   $handler->override_option('fields', array(
@@ -2965,23 +3086,22 @@ function germplasm_manage_views_default_views() {
       'empty_zero' => 0,
       'type' => 'separator',
       'separator' => ', ',
-      'display_options' => array(
-        'parent_number' => 'parent_number',
-        'crossing_block' => 0,
-      ),
       'exclude' => 0,
       'id' => 'parent_number',
       'table' => 'stock',
       'field' => 'parent_number',
       'relationship' => 'none',
+      'display_options' => array(
+        'parent_number' => 'parent_number',
+        'crossing_block' => 0,
+      ),
       'cb_year' => '0',
       'use_cbyear_arg' => 1,
       'cb_season' => '0',
       'use_cbseason_arg' => 1,
-      'link_to_cb_parent_view' => 0,
     ),
-    'name_1' => array(
-      'label' => 'Name',
+    'uniquename' => array(
+      'label' => 'Unique Name',
       'alter' => array(
         'alter_text' => 0,
         'text' => '',
@@ -3005,13 +3125,16 @@ function germplasm_manage_views_default_views() {
       'empty_zero' => 0,
       'link_to_node' => 1,
       'exclude' => 0,
-      'id' => 'name_1',
+      'id' => 'uniquename',
       'table' => 'stock',
-      'field' => 'name',
+      'field' => 'uniquename',
       'relationship' => 'none',
+      'override' => array(
+        'button' => 'Override',
+      ),
     ),
     'name' => array(
-      'label' => 'Type',
+      'label' => 'Name',
       'alter' => array(
         'alter_text' => 0,
         'text' => '',
@@ -3035,144 +3158,98 @@ function germplasm_manage_views_default_views() {
       'empty_zero' => 0,
       'exclude' => 0,
       'id' => 'name',
-      'table' => 'cvterm',
+      'table' => 'stock',
       'field' => 'name',
       'relationship' => 'none',
+    ),
+    'all_properties' => array(
+      'label' => 'All Properties',
+      'alter' => array(
+        'alter_text' => 0,
+        'text' => '',
+        'make_link' => 0,
+        'path' => '',
+        'absolute' => 0,
+        'link_class' => '',
+        'alt' => '',
+        'rel' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'target' => '',
+        'help' => '',
+        'trim' => 0,
+        'max_length' => '',
+        'word_boundary' => 1,
+        'ellipsis' => 1,
+        'html' => 0,
+        'strip_tags' => 0,
+      ),
+      'empty' => '',
+      'hide_empty' => 0,
+      'empty_zero' => 0,
+      'hide_alter_empty' => 1,
+      'type' => 'separator',
+      'separator' => ', ',
+      'exclude' => 0,
+      'id' => 'all_properties',
+      'table' => 'stock',
+      'field' => 'all_properties',
+      'relationship' => 'none',
+      'format' => array(
+        'format_string' => '[all_properties-cvterm_name]: [all_properties-value]',
+      ),
     ),
     'properties' => array(
       'id' => 'properties',
       'table' => 'stock',
       'field' => 'properties',
       'exclude' => TRUE,
-      'stockprop_type_ids' => $properties_synonym_options,
+      'stockprop_type_ids' => $vars['properties_synonym_options'],
       'label' => 'Synonyms',
     ),
-    'crossing_block' => array(
-      'label' => 'Progeny in Crossing Block',
-      'alter' => array(
-        'alter_text' => 0,
-        'text' => '',
-        'make_link' => 0,
-        'path' => '',
-        'link_class' => '',
-        'alt' => '',
-        'prefix' => '',
-        'suffix' => '',
-        'target' => '',
-        'help' => '',
-        'trim' => 0,
-        'max_length' => '',
-        'word_boundary' => 1,
-        'ellipsis' => 1,
-        'html' => 0,
-        'strip_tags' => 0,
-      ),
-      'empty' => '',
-      'hide_empty' => 0,
-      'empty_zero' => 0,
-      'type' => 'separator',
-      'separator' => ', ',
-      'stockprop_type_ids' => $properties_crossingblock_options,
-      'stockprop_display_options' => array(
-        '0' => 'type',
-        '1' => 'value',
-      ),
-      'link_to_crossingblock' => 1,
-      'cb_display_options' => array(
-        'year' => 'year',
-        'season' => 'season',
-      ),
-      'exclude' => 0,
-      'id' => 'crossing_block',
-      'table' => 'stock',
-      'field' => 'crossing_block',
-      'relationship' => 'none',
-    ),
-    'parent_number_1' => array(
-      'label' => 'Parent in Crossing Blocks',
-      'alter' => array(
-        'alter_text' => 0,
-        'text' => '',
-        'make_link' => 0,
-        'path' => '',
-        'link_class' => '',
-        'alt' => '',
-        'prefix' => '',
-        'suffix' => '',
-        'target' => '',
-        'help' => '',
-        'trim' => 0,
-        'max_length' => '',
-        'word_boundary' => 1,
-        'ellipsis' => 1,
-        'html' => 0,
-        'strip_tags' => 0,
-      ),
-      'empty' => '',
-      'hide_empty' => 0,
-      'empty_zero' => 0,
-      'type' => 'separator',
-      'separator' => ', ',
-      'display_options' => array(
-        'crossing_block' => 'crossing_block',
-        'parent_number' => 0,
-      ),
-      'exclude' => 0,
-      'id' => 'parent_number_1',
+  ));
+  $handler->override_option('sorts', array(
+    'parent_number' => array(
+      'order' => 'ASC',
+      'id' => 'parent_number',
       'table' => 'stock',
       'field' => 'parent_number',
       'relationship' => 'none',
       'cb_year' => '0',
-      'use_cbyear_arg' => 0,
+      'use_cbyear_arg' => 1,
       'cb_season' => '0',
-      'use_cbseason_arg' => 0,
-      'link_to_cb_parent_view' => 1,
+      'use_cbseason_arg' => 1,
     ),
   ));
   $handler->override_option('arguments', array(
     'pnum_cb_year' => array(
-      'default_action' => 'ignore',
+      'default_action' => 'default',
       'style_plugin' => 'default_summary',
       'style_options' => array(),
       'wildcard' => 'all',
       'wildcard_substitution' => 'All',
       'title' => '',
       'breadcrumb' => '',
-      'default_argument_type' => 'fixed',
+      'default_argument_type' => 'php',
       'default_argument' => '',
       'validate_type' => 'none',
       'validate_fail' => 'not found',
       'glossary' => 0,
       'limit' => '0',
-      'case' => 'none',
-      'path_case' => 'none',
+      'case' => 'lower',
+      'path_case' => 'lower',
       'transform_dash' => 0,
       'id' => 'pnum_cb_year',
       'table' => 'stock',
       'field' => 'pnum_cb_year',
       'validate_user_argument_type' => 'uid',
-      'validate_user_roles' => array(
-        '2' => 0,
-        '3' => 0,
-      ),
+      'validate_user_roles' => array(),
       'relationship' => 'none',
       'default_options_div_prefix' => '',
       'default_argument_fixed' => '',
       'default_argument_user' => 0,
       'default_argument_php' => 'return $_SESSION[\'crossingblock_year\'];',
-      'validate_argument_node_type' => array(
-        'publication' => 0,
-        'chado_analysis' => 0,
-        'tripal_bulk_loader' => 0,
-        'chado_feature' => 0,
-        'chado_library' => 0,
-        'chado_organism' => 0,
-        'tripal_project' => 0,
-        'chado_stock' => 0,
-        'panel' => 0,
-        'page' => 0,
-        'story' => 0,
-      ),
+      'validate_argument_node_type' => array(),
       'validate_argument_node_access' => 0,
       'validate_argument_nid_type' => 'nid',
       'validate_argument_vocabulary' => array(),
@@ -3180,6 +3257,9 @@ function germplasm_manage_views_default_views() {
       'validate_argument_transform' => 0,
       'validate_user_restrict_roles' => 0,
       'validate_argument_php' => '',
+      'override' => array(
+        'button' => 'Override',
+      ),
     ),
     'pnum_cb_season' => array(
       'default_action' => 'default',
@@ -3195,35 +3275,20 @@ function germplasm_manage_views_default_views() {
       'validate_fail' => 'not found',
       'glossary' => 0,
       'limit' => '0',
-      'case' => 'none',
-      'path_case' => 'none',
+      'case' => 'lower',
+      'path_case' => 'lower',
       'transform_dash' => 0,
       'id' => 'pnum_cb_season',
       'table' => 'stock',
       'field' => 'pnum_cb_season',
       'validate_user_argument_type' => 'uid',
-      'validate_user_roles' => array(
-        '2' => 0,
-        '3' => 0,
-      ),
+      'validate_user_roles' => array(),
       'relationship' => 'none',
       'default_options_div_prefix' => '',
       'default_argument_fixed' => '',
       'default_argument_user' => 0,
       'default_argument_php' => 'return $_SESSION[\'crossingblock_season\'];',
-      'validate_argument_node_type' => array(
-        'publication' => 0,
-        'chado_analysis' => 0,
-        'tripal_bulk_loader' => 0,
-        'chado_feature' => 0,
-        'chado_library' => 0,
-        'chado_organism' => 0,
-        'tripal_project' => 0,
-        'chado_stock' => 0,
-        'panel' => 0,
-        'page' => 0,
-        'story' => 0,
-      ),
+      'validate_argument_node_type' => array(),
       'validate_argument_node_access' => 0,
       'validate_argument_nid_type' => 'nid',
       'validate_argument_vocabulary' => array(),
@@ -3231,6 +3296,9 @@ function germplasm_manage_views_default_views() {
       'validate_argument_transform' => 0,
       'validate_user_restrict_roles' => 0,
       'validate_argument_php' => '',
+      'override' => array(
+        'button' => 'Override',
+      ),
     ),
     'organism_id' => array(
       'default_action' => 'default',
@@ -3244,32 +3312,23 @@ function germplasm_manage_views_default_views() {
       'default_argument' => '',
       'validate_type' => 'none',
       'validate_fail' => 'not found',
+      'break_phrase' => 0,
+      'not' => 0,
       'id' => 'organism_id',
       'table' => 'organism',
       'field' => 'organism_id',
       'validate_user_argument_type' => 'uid',
-      'validate_user_roles' => array(
-        '2' => 0,
-        '3' => 0,
-      ),
+      'validate_user_roles' => array(),
       'relationship' => 'none',
       'default_options_div_prefix' => '',
-      'default_argument_fixed' => '',
+      'default_taxonomy_tid_term_page' => 0,
+      'default_taxonomy_tid_node' => 0,
+      'default_taxonomy_tid_limit' => 0,
+      'default_taxonomy_tid_vids' => array(),
       'default_argument_user' => 0,
+      'default_argument_fixed' => '',
       'default_argument_php' => 'return $_SESSION[\'organism_id\'];',
-      'validate_argument_node_type' => array(
-        'publication' => 0,
-        'chado_analysis' => 0,
-        'tripal_bulk_loader' => 0,
-        'chado_feature' => 0,
-        'chado_library' => 0,
-        'chado_organism' => 0,
-        'tripal_project' => 0,
-        'chado_stock' => 0,
-        'panel' => 0,
-        'page' => 0,
-        'story' => 0,
-      ),
+      'validate_argument_node_type' => array(),
       'validate_argument_node_access' => 0,
       'validate_argument_nid_type' => 'nid',
       'validate_argument_vocabulary' => array(),
@@ -3277,6 +3336,9 @@ function germplasm_manage_views_default_views() {
       'validate_argument_transform' => 0,
       'validate_user_restrict_roles' => 0,
       'validate_argument_php' => '',
+      'override' => array(
+        'button' => 'Override',
+      ),
     ),
   ));
   $handler->override_option('filters', array(
@@ -3306,11 +3368,61 @@ function germplasm_manage_views_default_views() {
   $handler->override_option('cache', array(
     'type' => 'none',
   ));
-  $handler->override_option('empty', 'There are no parents assigned to the current crossing block.');
-  $handler->override_option('empty_format', '1');
   $handler->override_option('items_per_page', 0);
   $handler->override_option('style_plugin', 'table');
-	$views[$view->name] = $view;
+  $handler->override_option('style_options', array(
+    'grouping' => '',
+    'override' => 1,
+    'sticky' => 0,
+    'order' => 'asc',
+    'columns' => array(
+      'parent_number' => 'parent_number',
+      'stock_nid' => 'stock_nid',
+      'uniquename' => 'uniquename',
+      'name' => 'name',
+      'properties' => 'properties',
+      'all_properties' => 'all_properties',
+    ),
+    'info' => array(
+      'parent_number' => array(
+        'separator' => '',
+      ),
+      'stock_nid' => array(
+        'separator' => '',
+      ),
+      'uniquename' => array(
+        'sortable' => 1,
+        'separator' => '',
+      ),
+      'name' => array(
+        'sortable' => 1,
+        'separator' => '',
+      ),
+      'properties' => array(
+        'separator' => '',
+      ),
+      'all_properties' => array(
+        'separator' => '',
+      ),
+    ),
+    'default' => '-1',
+  ));
+  $handler = $view->new_display('page', 'Page', 'page_1');
+  $handler->override_option('path', 'node/add/crossingblock_parents/view');
+  $handler->override_option('menu', array(
+    'type' => 'none',
+    'title' => '',
+    'description' => '',
+    'weight' => 0,
+    'name' => 'navigation',
+  ));
+  $handler->override_option('tab_options', array(
+    'type' => 'none',
+    'title' => '',
+    'description' => '',
+    'weight' => 0,
+    'name' => 'navigation',
+  ));
 
-	return $views;
+  return $view;
 }
