@@ -1,7 +1,7 @@
 ; $Id$
 package = Tripal Extensions
 name = Germplasm Management
-version = 6.x-0.3.1b-1.0
+version = 6.x-1.0-tripalv1.0
 description = Provides germplasm management forms & views & a pedigree generator. Extends tripal_stock.
 core = 6.x
 

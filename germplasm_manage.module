@@ -4,7 +4,6 @@ module_load_include('inc', 'germplasm_manage', 'administration');
 module_load_include('inc', 'germplasm_manage', 'register_crosses_form');
 module_load_include('inc', 'germplasm_manage', 'parents_form');
 module_load_include('inc', 'germplasm_manage', 'generate_pedigree');
-//module_load_include('inc', 'germplasm_manage', 'crossing_block');
 
 ////////////////////////////////////////////////////////////////////////////
 
