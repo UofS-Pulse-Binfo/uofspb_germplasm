@@ -90,7 +90,7 @@ class views_handler_field_stock_dbxref_by_type extends tripal_views_handler_fiel
     $table['join']->additional_joins['db'] = array(
       'table' => 'db',
       'field' => 'db_id',
-      'left_table' => 'dbxref',
+      'left_table' => 'fk_dbxref_dbxref_id',
       'left_field' => 'db_id',
     );
   }
