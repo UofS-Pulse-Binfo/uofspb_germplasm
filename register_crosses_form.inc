@@ -15,7 +15,7 @@ function germplasm_manage_register_crosses_page() {
   $output = '';
 
   $output .= drupal_get_form('set_crossing_block_form');
-  
+
   if (!empty($_SESSION['organism_id']) && !empty($_SESSION['crossingblock_season']) && !empty($_SESSION['crossingblock_year'])) {
     $output .= drupal_get_form('bulk_register_crosses_form');
   }
@@ -25,7 +25,7 @@ function germplasm_manage_register_crosses_page() {
 
 /**
  * Implements hook_form
- * Purpose: This form allows users to enter up to 10 crosses (where a cross consists of a new stock with a 
+ * Purpose: This form allows users to enter up to 10 crosses (where a cross consists of a new stock with a
  *   maternal and paternal parent) at once. It basically executes the chado_stock_node_form and the
  *   tripal_stock_add_ONE_relationship_form for 2X for each cross entered.
  *
@@ -45,7 +45,7 @@ function bulk_register_crosses_form($form_state) {
 		'#collapsible' => TRUE,
 		'#collapsed' => FALSE
 	);
-	
+
 	$db_options = variable_get( 'germplasm_cross_dbs', array() );
 	$db_options[0] = 'Select a cross database';
 	ksort($db_options);
@@ -55,10 +55,32 @@ function bulk_register_crosses_form($form_state) {
 		'#default_value' => $_SESSION['cross_database_id'],
 		'#options' => $db_options,
 		'#required' => TRUE,
-	);	
-	
-  $stock_organism_options = tripal_organism_get_organism_options();
+	);
+
+  $stock_organism_options_resource = chado_query("SELECT o.organism_id, o.abbreviation FROM stock s
+    LEFT JOIN organism o ON o.organism_id=s.organism_id
+    GROUP BY o.organism_id, o.abbreviation");
+  while ($r = db_fetch_object($stock_organism_options_resource)) {
+    $stock_organism_options[$r->organism_id] = $r->abbreviation;
+  }
   if (!empty($_SESSION['organism_id'])) {
+
+    $options = tripal_core_chado_select(
+  	  'cvterm',
+  	  array('cvterm_id', 'name'),
+  	  array('cv_id'=> variable_get('chado_stock_types_cv', 'null') )
+  	);
+  	foreach ($options as $o) {
+  	  $type_options[$o->cvterm_id] = $o->name;
+  	}
+    $type_options[0] = 'Select a Type';
+    if ($node->nid == '') {
+      $type_default = 0;
+    }
+    else {
+      $type_default = $node->stock_type_id;
+    }
+
     for ($i=1; $i<=10; $i++) {
       $form["cross-$i"] = array(
         '#type' => 'fieldset',
@@ -71,19 +93,16 @@ function bulk_register_crosses_form($form_state) {
  		   	'#size' => 20,
       );
 
-      $type_options = tripal_cv_get_cvterm_options( variable_get('chado_stock_types_cv', 'null') );
-      $type_options[0] = 'Select a Type';
-      if ($node->nid == '') { $type_default = 0; } else { $type_default = $node->stock_type_id; } 
       $form["cross-$i"]["type-$i"] = array(
       	'#type' => 'select',
       	'#title' => t('Type'),
-      	'#options' => $type_options, 
+      	'#options' => $type_options,
       	'#default_value' => $type_default,
       );
 
       $form["cross-$i"]["maternal_parent-$i"] = array(
         '#type' => 'textfield',
-        '#title' => t('Maternal Parent'), 
+        '#title' => t('Maternal Parent'),
   			'#size' => 40,
       );
 
@@ -92,7 +111,6 @@ function bulk_register_crosses_form($form_state) {
         '#title' => t('Paternal Parent'),
   			'#size' => 40,
       );
-
     }
 
     $form['num_crosses'] = array(
@@ -111,7 +129,7 @@ function bulk_register_crosses_form($form_state) {
     );
   }
 
-    return $form;
+  return $form;
 }
 
 /**
@@ -153,15 +171,15 @@ function bulk_register_crosses_form_validate($form, &$form_state) {
     if ($missing_values) { continue; }
 
     //check parent boxes contain a valid value--------------
-    $elements = array("maternal_parent-$i", "paternal_parent-$i"); 
+    $elements = array("maternal_parent-$i", "paternal_parent-$i");
     foreach ($elements as $element) {
 
       // if parent textfield contains P\d+ then change to <synoynm_prefix>-P\d+ where synonym_prefix is based on session year and season
       if (preg_match('/^P(\d+)$/', $form_state['values'][$element], $matches)) {
         $synonym_prefix = '';
         if (preg_match('/[Ss]ummer/', $_SESSION['crossingblock_season'])) { $synonym_prefix = 'Sm'.$_SESSION['crossingblock_year']; }
-        if (preg_match('/[Ff]all/', $_SESSION['crossingblock_season'])) { $synonym_prefix = 'F'.$_SESSION['crossingblock_year']; }   
-        if (preg_match('/[Ww]inter/', $_SESSION['crossingblock_season'])) { $synonym_prefix = 'W'.$_SESSION['crossingblock_year']; } 
+        if (preg_match('/[Ff]all/', $_SESSION['crossingblock_season'])) { $synonym_prefix = 'F'.$_SESSION['crossingblock_year']; }
+        if (preg_match('/[Ww]inter/', $_SESSION['crossingblock_season'])) { $synonym_prefix = 'W'.$_SESSION['crossingblock_year']; }
         if (preg_match('/[Ss]pring/', $_SESSION['crossingblock_season'])) { $synonym_prefix = 'Sp'.$_SESSION['crossingblock_year']; }
         $form_state['values'][$element] = $synonym_prefix .'-P'. $matches[1];
       }
@@ -171,7 +189,7 @@ function bulk_register_crosses_form_validate($form, &$form_state) {
         $form_state['values'][$element],
         $_SESSION['organism_id']
       );
-      
+
       if (sizeof($results) > 1) {
         $links= array();
         for ($i=0; $i<sizeof($results); $i++) { $links[] = l($i+1, "node/".$results[$i]->nid); }
@@ -187,7 +205,7 @@ function bulk_register_crosses_form_validate($form, &$form_state) {
       }
 
     } //end of foreach parent/element
-    
+
     // determine whether a cross number was supplied without a cross database
     if (!empty($form_state['values']["crossnum-$i"])) {
     	if (preg_match('/none/', $form_state['values']['cross_db'])) {
@@ -208,24 +226,24 @@ function bulk_register_crosses_form_submit($form, $form_state) {
 
 	// Keep cross db as a session variable
 	$_SESSION['cross_database_id'] = $form_state['values']['cross_db'];
-	
+
   // Submit Each of the crosses
   module_load_include('inc', 'node', 'node.pages');
   global $user;
 
-  //determine cross database 
-  $cross_db = tripal_db_get_db_by_name($form_state['values']['cross_db']);    
+  //determine cross database
+  $cross_db = tripal_db_get_db_by_name($form_state['values']['cross_db']);
 
   $skipped = array();
   for ($i=1; $i<=10; $i++) {
 
     // ensure all values entered, else skip
-    if ( ($form_state['values']["type-$i"] == 0) 
-                  AND ($form_state['values']["maternal_parent-$i"] == 0) 
+    if ( ($form_state['values']["type-$i"] == 0)
+                  AND ($form_state['values']["maternal_parent-$i"] == 0)
               AND ($form_state['values']["paternal_parent-$i"] == 0) ) {
       $skipped[] = $i;
       continue;
-    } 
+    }
 
     //create main stock node by submitting form--------------------------------------------
     $stock_name = (!empty($form_state['values']["crossnum-$i"])) ? $form_state['values']["crossnum-$i"] : "stock$i";
@@ -237,7 +255,7 @@ function bulk_register_crosses_form_submit($form, $form_state) {
         'language' => '',
         'title' => $stock_name,
         'uniquename' => $stock_name,
-        'type_id' => $form_state['values']["type-$i"], 
+        'type_id' => $form_state['values']["type-$i"],
         'organism_id' => $_SESSION["organism_id"],
         'simulate_multipart' => FALSE,
     );
@@ -254,9 +272,9 @@ function bulk_register_crosses_form_submit($form, $form_state) {
         'op' => 'Save'
       ),
     );
-    drupal_execute('chado_stock_node_form', $node_form_state, (object)$node);  
-    $node = node_load($node_form_state['nid']); 
-  
+    drupal_execute('chado_stock_node_form', $node_form_state, (object)$node);
+    $node = node_load($node_form_state['nid']);
+
     // Create Main Db reference------------------------------------------------------
     $uniquename = variable_get( 'germplasm_prefix', 'GERM:') . $node->stock->stock_id;
     $insert_values = array(
@@ -265,11 +283,11 @@ function bulk_register_crosses_form_submit($form, $form_state) {
       'version' => 1
     );
     $success = tripal_core_chado_insert('dbxref', $insert_values);
-    
+
     if ($success) {
     // Update name/title = uniquename-----------------------------------------------
       $update_values = array(
-        'uniquename' => $uniquename, 
+        'uniquename' => $uniquename,
         'dbxref_id' => array(
           'accession' => $uniquename,
           'db_id' => variable_get('tripal_stock_main_dbxref_db', 0)
@@ -320,7 +338,7 @@ function bulk_register_crosses_form_submit($form, $form_state) {
     } else {
       drupal_set_message('Unable to Assing Crossing Block Season', 'error');
     }
-    
+
     // Add cross number dbxref---------------------------------------------------------
     if (!empty($form_state['values']["crossnum-$i"])) {
       $values = array(
@@ -355,7 +373,7 @@ function bulk_register_crosses_form_submit($form, $form_state) {
         drupal_set_message('Unable to Create Cross Number (Database Reference)', 'error');
       }
     }
-    
+
     // Create Maternal Relationship----------------------------------------------------
     $values = array(
       'subject_id' => $form_state['values']["maternal_parent-$i"],
@@ -372,7 +390,7 @@ function bulk_register_crosses_form_submit($form, $form_state) {
     } else {
       drupal_set_message('Unable to add Maternal Parent','error');
     }
-    
+
 		// Create Paternal Relationship----------------------------------------------------
     $values = array(
       'subject_id' => $form_state['values']["paternal_parent-$i"],
@@ -389,7 +407,7 @@ function bulk_register_crosses_form_submit($form, $form_state) {
     } else {
       drupal_set_message('Unable to add Paternal Parent','error');
     }
-    
+
   } //end of for each one added
 
   drupal_set_message('Skipping Blank Entries: #'.implode(', #', $skipped).'.');
@@ -398,11 +416,11 @@ function bulk_register_crosses_form_submit($form, $form_state) {
     drupal_goto('node/add/crosses');
   } else {
   	$organism = tripal_core_chado_select(
-  	  'organism', 
-  	  array('common_name'),
+  	  'organism',
+  	  array('genus'),
   	  array('organism_id'=>$_SESSION["organism_id"])
   	);
-    $organism_common_name = preg_replace('/\s+/', '-', $organism[0]->common_name);
+    $organism_common_name = preg_replace('/\s+/', '-', $organism[0]->genus);
     drupal_goto('Crossing_Block/'.$organism_common_name.'/'.$_SESSION["crossingblock_year"].'/'.$_SESSION["crossingblock_season"].'/Summary');
   }
 
@@ -417,9 +435,9 @@ function bulk_register_crosses_form_submit($form, $form_state) {
  */
 function theme_bulk_register_crosses_form($form) {
   $output = '';
-	
+
 	$output .= drupal_render($form['cross_db_fieldset']);
-	
+
   $output .= '<table>';
   $output .= '<tr><th>Cross Number</th><th>Type</th><th>Maternal Parent</th><th>Paternal Parent</th><th></th></tr>';
   for ($i=1; $i<=10; $i++) {

@@ -4,7 +4,7 @@
  * @Purpose: This form allows researchers to easily create crossing blocks
  *
  * This page is a composite of listing current parents for a given crossing block,
- * assigning alias' to already existing stocks to make them parents and creating 
+ * assigning alias' to already existing stocks to make them parents and creating
  * stocks simulatious to assign them as parents for a given crossing block.
  */
 function assign_crossing_parents_page() {
@@ -22,7 +22,7 @@ function assign_crossing_parents_page() {
     $output .= '<br /><br /><div id="feature-references" class="tripal_feature-info-box">';
     $output .= '<div class="tripal_expandableBox"><h3>Current Crossing Block Parents</h3></div>';
     $output .= '<div class="tripal_expandableBoxContent">';
-    
+
     if ($view) {
       $output .= $view->execute_display('page_1');
     } else {
@@ -40,7 +40,7 @@ function assign_crossing_parents_page() {
 
 /**
  * Implements hook_form()
- * @purpose: this form assigns an alias/synonym property to a 
+ * @purpose: this form assigns an alias/synonym property to a
  * selected stock based on the crossing block selected
  */
 function create_parent_alias_for_existing_stock_form($form_state) {
@@ -88,31 +88,31 @@ function create_parent_alias_for_existing_stock_form($form_state) {
   return $form;
 }
 
-/** 
+/**
  * Implements hook_form_validate()
  */
 function create_parent_alias_for_existing_stock_form_validate ($form, &$form_state) {
 
-  if (!preg_match('/^[1-9][0-9]*$/', $form_state['values']['parent_number'])) {
-    form_set_error('parent_number', 'The parent number must be an integer from 1-999');
+  if (!preg_match('/^[0-9]+$/', $form_state['values']['parent_number'])) {
+    form_set_error('parent_number', 'The parent number must be an integer from 0-999');
   }
 
-  $results = tripal_stock_get_stock_by_name_identifier($form_state['values']['stock_id'], $_SESSION['organism_id']); 
+  $results = tripal_stock_get_stock_by_name_identifier($form_state['values']['stock_id'], $_SESSION['organism_id']);
   if (sizeof($results) > 1) {
-      $links= array();       
+      $links= array();
       for ($i=0; $i<sizeof($results); $i++) { $links[] = l($i+1, "node/".$results[$i]->nid); }
       $message = "Too many lines match '".$form_state['values']['stock_id']."'! "
-                 . "Please refine your input to match ONLY ONE line. <br>"              
+                 . "Please refine your input to match ONLY ONE line. <br>"
                  . "To aid in this process, here are the lines that match your initial input: "
-                 .join(', ',$links);                                                            
-      form_set_error('stock_id', $message);                                                    
-  } elseif (sizeof($results) < 1) {                                                    
+                 .join(', ',$links);
+      form_set_error('stock_id', $message);
+  } elseif (sizeof($results) < 1) {
       form_set_error('stock_id', "There are no stocks matching your input. Please check your input for typos and/or search the germplasm ".l('here', 'stocks'));
-  } elseif (sizeof($results) == 1) {                                                   
-      $form_state['values']['stock_id'] = $results[0]->stock->stock_id;   
+  } elseif (sizeof($results) == 1) {
+      $form_state['values']['stock_id'] = $results[0]->stock->stock_id;
       $form_state['values']['stock_name'] = $results[0]->stock->name;
       $form_state['values']['stock_nid'] = $results[0]->nid;
-  } 
+  }
 
 }
 
@@ -123,13 +123,13 @@ function create_parent_alias_for_existing_stock_form_submit($form, $form_state) 
 
   $synonym = $form_state['values']['synonym_prefix'].$form_state['values']['parent_number'];
   $rank = 1+ tripal_get_max_chado_rank(
-    'stockprop', 
+    'stockprop',
     array(
       'stock_id'=> array(
         'type'=>'INT',
         'value'=>$form_state['values']['stock_id']
        )
-    ) 
+    )
   );
   $insert_values = array(
     'stock_id' => $form_state['values']['stock_id'],
@@ -148,14 +148,14 @@ function create_parent_alias_for_existing_stock_form_submit($form, $form_state) 
   }
 }
 
-/** 
+/**
  * Themeing function for create_parent_alias_for_existing_stock_form
  */
 function theme_create_parent_alias_for_existing_stock_form($form) {
   $output = '';
 
   $output .= '<fieldset><legend>Already Existing Germplasm</legend>';
-  $output .= '<p>If the germplasm you wish to assign as a parent to the current crossing block already exists, ' 
+  $output .= '<p>If the germplasm you wish to assign as a parent to the current crossing block already exists, '
          .'select it below and enter the parent number. This will add a synonym to that germplasm of the form '
        .'(season abbreviation)(year)-P(parent number)</p>';
 
@@ -168,7 +168,7 @@ function theme_create_parent_alias_for_existing_stock_form($form) {
 
   $output .= drupal_render($form['existing_parent']['submit']);
 
-  $output .= '</fieldset>';  
+  $output .= '</fieldset>';
   unset($form['existing_parent']);
   $output .= drupal_render($form);
 
@@ -202,11 +202,11 @@ function create_stock_and_parent_alias_form($form_state) {
   );
 
   $type_options = tripal_cv_get_cvterm_options( variable_get('chado_stock_types_cv', 'null') );
-  $type_options[0] = 'Select a Type'; 
+  $type_options[0] = 'Select a Type';
   $form['create_parent']['type'] = array(
-    '#type' => 'select',              
-    '#title' => t('Type of Germplasm'),   
-    '#options' => $type_options,      
+    '#type' => 'select',
+    '#title' => t('Type of Germplasm'),
+    '#options' => $type_options,
     '#description' => 'Choose the most accurate description of this germplasm. Additional details can be entered as properties.',
     '#required' => TRUE,
   );
@@ -220,12 +220,12 @@ function create_stock_and_parent_alias_form($form_state) {
       '#type' => 'hidden',
       '#value' => $synonym_prefix
     );
-    
+
   $form['create_parent']['parent_number'] = array(
     '#type' => 'textfield',
     '#title' => 'Parent Number',
     '#description' => 'This is a unique (to this crossing block) number to identify this parent',
-    '#required' => TRUE, 
+    '#required' => TRUE,
   );
 
   $form['create_parent']['submit'] = array(
@@ -241,7 +241,7 @@ function create_stock_and_parent_alias_form($form_state) {
  */
 function create_stock_and_parent_alias_form_submit($form, $form_state) {
   module_load_include('inc', 'node', 'node.pages');
-  global $user; 
+  global $user;
 
   //create main stock node by submitting form
   $node = array(
@@ -266,7 +266,7 @@ function create_stock_and_parent_alias_form_submit($form, $form_state) {
         'op' => 'Save'
       ),
   );
-  drupal_execute('chado_stock_node_form', $node_form_state, (object)$node);  
+  drupal_execute('chado_stock_node_form', $node_form_state, (object)$node);
   $node = node_load($node_form_state['nid']);
 
   // Create Main Db reference------------------------------------------------------
@@ -277,11 +277,11 @@ function create_stock_and_parent_alias_form_submit($form, $form_state) {
     'version' => 1
   );
   $success = tripal_core_chado_insert('dbxref', $insert_values);
-  
+
   if ($success) {
     // Update name/title = uniquename-----------------------------------------------
     $update_values = array(
-      'uniquename' => $uniquename, 
+      'uniquename' => $uniquename,
       'dbxref_id' => array(
         'accession' => $uniquename,
         'db_id' => variable_get('tripal_stock_main_dbxref_db', 0)
@@ -297,7 +297,7 @@ function create_stock_and_parent_alias_form_submit($form, $form_state) {
   } else {
     drupal_set_message('Unable to add main database reference!', 'error');
   }
-  
+
   // Add Alias/Synonym (stock property)------------------------------------------------
   $synonym = $form_state['values']['synonym_prefix'].$form_state['values']['parent_number'];
   $insert_values = array(

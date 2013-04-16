@@ -310,7 +310,7 @@ class views_handler_field_parent_number extends views_handler_field_stockprop_by
           $text[] = $item['crossingblock_season'].' '.$item['crossingblock_year'];
         }
 
-        if (!empty($text[0])) {
+        if (isset($text[0])) {
           if (sizeof($text) == 1) {
             $name = $text[0];
           }
