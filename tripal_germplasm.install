@@ -1,0 +1,58 @@
+<?php
+/**
+ * @file
+ * Installation of the germplasm module
+ */
+
+/**
+ * Implementation of hook_requirements().
+ */
+function tripal_germplasm_requirements($phase) {
+  $requirements = array();
+  if ($phase == 'install') {
+    // make sure chado is installed
+    if (!$GLOBALS["chado_is_installed"]) {
+      $requirements ['tripal_germplasm'] = array(
+        'title' => "tripal_germplasm",
+        'value' => "ERROR: Chado must be installed before this module can be enabled",
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+  }
+  return $requirements;
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function tripal_germplasm_schema() {
+  $schema['tripal_germplasm'] = array(
+    'fields' => array(
+      'vid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'stock_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+    ),
+    'indexes' => array(
+      'stock_id' => array('stock_id'),
+       'nid' => array('nid'),
+    ),
+    'unique' => array(
+      'stock_id' => array('stock_id'),
+    ),
+    'primary key' => array('vid'),
+  );
+
+  return $schema;
+}

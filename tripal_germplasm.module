@@ -1,0 +1,74 @@
+<?php
+/**
+ * @file
+ * Basic Functionality for the tripal germplasm module
+ */
+
+require_once 'includes/tripal_germplasm.chado_node.inc';
+require_once 'includes/tripal_germplasm.admin.inc';
+require_once 'includes/tripal_germplasm.parents_form.inc';
+require_once 'includes/tripal_germplasm.cross_progeny_form.inc';
+
+/**
+ * Implements hook_menu().
+ */
+function tripal_germplasm_menu() {
+  $items = array();
+
+  $items['admin/tripal/chado/tripal_germplasm'] = array(
+    'title' => 'Germplasm',
+    'description' => '',
+    //'page callback' => 'tripal_library_admin_libraries_listing',
+    'access arguments' => array('administer tripal'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['admin/tripal/chado/tripal_germplasm/help'] = array(
+    'title' => 'Help',
+    'description' => 'Basic Description of Tripal Germplasm Module Functionality',
+    'page callback' => 'theme',
+    'page arguments' => array('tripal_germplasm_help'),
+    'access arguments' => array('administer tripal'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10
+  );
+
+  $items['admin/tripal/chado/tripal_germplasm/configuration'] = array(
+    'title' => 'Settings',
+    'description' => 'Configure the Tripal Germplasm module',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('tripal_germplasm_admin_settings_form'),
+    'access arguments' => array('administer tripal'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 5
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function tripal_germplasm_theme($existing, $type, $theme, $path) {
+  $items = array();
+  $core_path = drupal_get_path('module', 'tripal_core');
+
+  $items['tripal_germplasm_help'] = array(
+    'template' => 'tripal_germplasm.help',
+    'variables' =>  array(NULL),
+    'path' => "$path/theme",
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function tripal_germplasm_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'tripal_germplasm') . '/includes',
+    'template path' => drupal_get_path('module', 'tripal_germplasm') . '/themes',
+  );
+}
