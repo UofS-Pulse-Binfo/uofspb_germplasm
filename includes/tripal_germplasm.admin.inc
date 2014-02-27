@@ -5,6 +5,15 @@
  */
 
 /**
+ * Admin Launchpad
+ */
+function tripal_germplasm_admin_germplasm_listing() {
+  $output = '';
+  
+  return $output;
+}
+
+/**
  * Purpose: Display Administrative Options
  *
  * @return HTML markup of the administrative options

@@ -15,15 +15,15 @@ require_once 'includes/tripal_germplasm.cross_progeny_form.inc';
 function tripal_germplasm_menu() {
   $items = array();
 
-  $items['admin/tripal/chado/tripal_germplasm'] = array(
+  $items['admin/tripal/extension/tripal_germplasm'] = array(
     'title' => 'Germplasm',
-    'description' => '',
-    //'page callback' => 'tripal_library_admin_libraries_listing',
+    'description' => 'Provides a germplasm content type which is a specialized version of a stock. Furthermore, functions, forms & views pertaining to managing a germplasm collection.',
+    'page callback' => 'tripal_germplasm_admin_germplasm_listing',
     'access arguments' => array('administer tripal'),
     'type' => MENU_NORMAL_ITEM,
   );
 
-  $items['admin/tripal/chado/tripal_germplasm/help'] = array(
+  $items['admin/tripal/extension/tripal_germplasm/help'] = array(
     'title' => 'Help',
     'description' => 'Basic Description of Tripal Germplasm Module Functionality',
     'page callback' => 'theme',
@@ -33,7 +33,7 @@ function tripal_germplasm_menu() {
     'weight' => 10
   );
 
-  $items['admin/tripal/chado/tripal_germplasm/configuration'] = array(
+  $items['admin/tripal/extension/tripal_germplasm/configuration'] = array(
     'title' => 'Settings',
     'description' => 'Configure the Tripal Germplasm module',
     'page callback' => 'drupal_get_form',
