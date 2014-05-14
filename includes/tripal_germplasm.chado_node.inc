@@ -719,7 +719,7 @@ function tripal_germplasm_node_access($node, $op, $account) {
   }
 
   // Actually determine permissions
-  if (in_array($type, node_permissions_get_configured_types())) {
+  if ($type == 'tripal_germplasm') {
 
     // Create
     if ($op == 'create' && user_access('create germplasm', $account)) {
@@ -750,7 +750,9 @@ function tripal_germplasm_node_access($node, $op, $account) {
     if (tripal_is_germplasm_variety($stock_type) && user_access('access varieties', $account)) {
       return NODE_ACCESS_ALLOW;
     }
+
+    return NODE_ACCESS_DENY;
   }
 
-  return NODE_ACCESS_DENY;
+  return NODE_ACCESS_IGNORE;
 }
