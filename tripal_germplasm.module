@@ -45,6 +45,16 @@ function tripal_germplasm_menu() {
     'weight' => 5
   );
 
+  $items['admin/tripal/extension/tripal_germplasm/sync'] = array(
+    'title' => ' Sync',
+    'description' => 'Sync germplasm from Chado with Drupal',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('chado_node_sync_form', 'tripal_germplasm', 'tripal_germplasm'),
+    'access arguments' => array('administer tripal'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 0
+  );
+
   return $items;
 }
 
@@ -59,6 +69,19 @@ function tripal_germplasm_theme($existing, $type, $theme, $path) {
     'template' => 'tripal_germplasm.help',
     'variables' =>  array(NULL),
     'path' => "$path/theme",
+  );
+
+  $items['node__tripal_germplasm'] = array(
+    'template' => 'node--chado-generic',
+    'render element' => 'node',
+    'base hook' => 'node',
+    'path' => "$core_path/theme/templates",
+  );
+
+  $items['tripal_germplasm_base'] = array(
+    'variables' => array('node' => NULL),
+    'template' => 'tripal_germplasm_base',
+    'path' => "$path/theme/templates",
   );
 
   return $items;

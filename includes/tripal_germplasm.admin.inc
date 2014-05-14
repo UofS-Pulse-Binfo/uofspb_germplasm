@@ -20,6 +20,8 @@ function tripal_germplasm_admin_germplasm_listing() {
  */
 function tripal_germplasm_admin_settings_form($form, $form_state) {
 
+  // PREFIX
+  // ---------------
 	$form['prefix'] = array(
 		'#type' => 'fieldset',
 		'#title' => t('Germplasm Prefix'),
@@ -61,6 +63,8 @@ function tripal_germplasm_admin_settings_form($form, $form_state) {
  		'#submit' => array('tripal_germplasm_admin_germplasm_prefix_form_submit')
 	);
 
+  // CVs
+  // ---------------
 	$form['cvs'] = array(
 	  '#type' => 'fieldset',
 	  '#title' => 'Germplasm Controlled Vocabularies'
@@ -97,6 +101,60 @@ function tripal_germplasm_admin_settings_form($form, $form_state) {
  		'#submit' => array('tripal_germplasm_admin_germplasm_cvs_form_submit')
 	);
 
+  // TYPES
+  // ---------------
+  $form['types'] = array(
+	  '#type' => 'fieldset',
+	  '#title' => 'Categories of Germplasm'
+	);
+
+  $cross_types = variable_get('germplasm_cross_type_ids', array());
+  if (!empty($cross_types)) { $cross_types = unserialize($cross_types); }
+
+  $variety_types = variable_get('germplasm_variety_type_ids', array());
+  if (!empty($variety_types)) { $variety_types = unserialize($variety_types); }
+    
+  if ($germplasm_type_cv_id > 0) {
+    $cvterms = chado_select_record('cvterm', array('cvterm_id','name'),array('cv_id' => $germplasm_type_cv_id));
+    foreach($cvterms as $cvt) {
+      $types[ $cvt->cvterm_id ] = $cvt->name;
+    }
+  }
+  else {
+    $types = array();
+  }
+  
+  $form['types']['cross_types'] = array(
+	  '#type' => 'checkboxes',
+	  '#title' => 'Cross Types',
+	  '#description' => 'The types of germplasm that are crosses under the breeding program (ie: backcross).',
+	  '#options' => $types,
+	  '#default_value' => $cross_types,
+    '#multiple' => TRUE,
+		'#required' => TRUE,
+		'#disabled' => ($germplasm_type_cv_id > 0) ? FALSE : TRUE,
+  );
+
+  $form['types']['variety_types'] = array(
+	  '#type' => 'checkboxes',
+	  '#title' => 'Variety Type',
+	  '#description' => 'The types of germplasm that are registered varieties.',
+	  '#options' => $types,
+	  '#default_value' => $variety_types,
+    '#multiple' => TRUE,
+		'#required' => TRUE,
+		'#disabled' => ($germplasm_type_cv_id > 0) ? FALSE : TRUE,
+  );
+  
+	$form['types']['submit'] = array(
+		'#type' => 'submit',
+		'#value' => 'Set Types',
+		'#validate' => array('tripal_germplasm_admin_germplasm_types_form_validate'),
+ 		'#submit' => array('tripal_germplasm_admin_germplasm_types_form_submit')
+	);
+    
+  // Parents
+  // ---------------
 	$form['parent'] = array(
 	  '#type' => 'fieldset',
 	  '#title' => 'Germplasm Parents'
@@ -138,6 +196,21 @@ function tripal_germplasm_admin_settings_form($form, $form_state) {
 		'#validate' => array('tripal_germplasm_admin_germplasm_parent_type_form_validate'),
  		'#submit' => array('tripal_germplasm_admin_germplasm_parent_type_form_submit')
 	);
+
+  // PAGE TITLES
+  // ---------------
+  $details = array(
+    'module' => 'tripal_germplasm',
+    'content_type' => 'tripal_germplasm',
+    'options' => array(
+      '[stock.name]' => 'Germplasm Name Only',
+      '[stock.uniquename]' => 'Germplasm Unique Name Only',
+      '[stock.name], [stock.uniquename] ([stock.type_id>cvterm.name]) [stock.organism_id>organism.genus] [stock.organism_id>organism.species]' => 'Unique Contraint: Includes the name, uniquename, type and scientific name'
+    ),
+    'unique_option' => '[stock.name], [stock.uniquename] ([stock.type_id>cvterm.name]) [stock.organism_id>organism.genus] [stock.organism_id>organism.species]'
+  );
+  chado_add_admin_form_set_title($form, $form_state, $details);
+
 /**
 	$form['cross_db'] = array(
 		'#type' => 'fieldset',
@@ -205,6 +278,25 @@ function tripal_germplasm_admin_germplasm_cvs_form_submit($form, $form_state) {
 	variable_set('germplasm_type_cv_id', $form_state['values']['stock_type']);
 	variable_set('germplasm_rel_type_cv_id', $form_state['values']['relationship_type']);
 
+}
+
+/**
+ *  Implements hook_form_validate().
+ * Purpose: provide admin with the ability to designate given stock types as "crosses"
+ */
+function tripal_germplasm_admin_germplasm_types_form_validate($form, $form_state) {
+
+}
+
+/**
+ *  Implements hook_form_submit().
+ * Purpose: provide admin with the ability to designate given stock types as "crosses"
+ */
+function tripal_germplasm_admin_germplasm_types_form_submit($form, $form_state) {
+
+	variable_set('germplasm_cross_type_ids', serialize($form_state['values']['cross_types']));
+	variable_set('germplasm_variety_type_ids', serialize($form_state['values']['variety_types']));
+  
 }
 
 /**

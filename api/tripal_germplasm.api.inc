@@ -32,6 +32,52 @@ function tripal_get_germplasm_relationship_type_cv_id() {
 }
 
 /**
+ * Retrieve a stock object that is the parent of the current stock
+ *
+ * @param $parent
+ *   This should be either 'maternal' or 'parernal' depending on which parent you want
+ * @param $child_stock
+ *   A chado stock object describing the child whose parent you want to retrieve
+ *
+ * @return
+ *   A chado stock object describing the parent of the current in stock
+ */
+function tripal_get_germplasm_parent($parent = 'maternal', $child_stock) {
+
+  $parent_rel_type_id = 0;
+  if ($parent == 'maternal') {
+    $parent_rel_type_id = variable_get('germplasm_mparent_rel_type_id', NULL);
+  }
+  elseif($parent == 'paternal') {
+    $parent_rel_type_id = variable_get('germplasm_pparent_rel_type_id', NULL);
+  }
+
+  if ($parent_rel_type_id > 0) {
+    $relationships = chado_select_record(
+      'stock_relationship',
+      array('subject_id'),
+      array('object_id' => $child_stock->stock_id, 'type_id' => $parent_rel_type_id)
+    );
+    if (!empty($relationships)) {
+      $stock = chado_generate_var(
+        'stock',
+        array('stock_id' => $relationships[0]->subject_id)
+      );
+      $stock = chado_expand_var($stock, 'node', 'stock');
+      return $stock;
+    }
+  }
+  else {
+    tripal_report_error(
+      'tripal_germplasm',
+      TRIPAL_ERROR,
+      'The %parent relationship type_id has not been set. It can be set at <a href=@url>Admin » Tripal » Extension Modules » Germplasm » Settings</a>.',
+      array('%parent' => $parent, '@url' => url('admin/tripal/extension/tripal_germplasm/configuration'))
+    );
+  }
+}
+
+/**
  * Determine whether a given germplasm is a cross
  *
  * @param $type
@@ -41,7 +87,35 @@ function tripal_get_germplasm_relationship_type_cv_id() {
  *   TRUE if the provided type has been indicated as a cross; FALSE otherwise
  */
 function tripal_is_germplasm_cross($type) {
-  return TRUE;
+
+  $cross_types = variable_get('germplasm_cross_type_ids', array());
+  if (!empty($cross_types)) { $cross_types = unserialize($cross_types); }
+  
+  // If we have the type_id supplied then just compare directly to the admin selection
+  if (isset($type['type_id'])) {
+    if (in_array($type['type_id'], $cross_types)) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+
+  // Otherwise we need to get the type_id based on the type name
+  // and then compare that to the admin selection
+  elseif (isset($type['name'])) {
+    $type_id = chado_select_record('cvterm', array('cvterm_id'), array('name' => $type['name']));
+    $type_id = (!empty($type_id)) ? $type_id[0]->cvterm_id : NULL;
+
+    if (in_array($type_id, $cross_types)) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  
+  return FALSE;
 }
 
 /**
@@ -54,7 +128,35 @@ function tripal_is_germplasm_cross($type) {
  *   TRUE if the provided type has been indicated as a variety; FALSE otherwise
  */
 function tripal_is_germplasm_variety($type) {
-  return TRUE;
+
+  $variety_types = variable_get('germplasm_variety_type_ids', array());
+  if (!empty($variety_types)) { $variety_types = unserialize($variety_types); }
+  
+  // If we have the type_id supplied then just compare directly to the admin selection
+  if (isset($type['type_id'])) {
+    if (in_array($type['type_id'], $variety_types)) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+
+  // Otherwise we need to get the type_id based on the type name
+  // and then compare that to the admin selection
+  elseif (isset($type['name'])) {
+    $type_id = chado_select_record('cvterm', array('cvterm_id'), array('name' => $type['name']));
+    $type_id = (!empty($type_id)) ? $type_id[0]->cvterm_id : NULL;
+
+    if (in_array($type_id, $variety_types)) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  
+  return FALSE;
 }
 
 /**

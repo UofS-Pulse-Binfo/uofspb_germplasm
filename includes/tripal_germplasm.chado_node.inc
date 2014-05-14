@@ -55,6 +55,30 @@ function tripal_germplasm_load($nodes) {
 
   $new_nodes = array();
   foreach ($nodes as $nid => $node) {
+    // Get the stock_id
+    $stock_id = db_query('SELECT stock_id FROM {tripal_germplasm} WHERE nid=:nid AND vid=:vid',array(':nid' => $node->nid,':vid' => $node->vid))->fetchField();
+    $node->stock_id = $stock_id;
+
+    // Add in the default stock details
+    $tmp = chado_stock_load(array($node->nid => $node));
+    $node = $tmp[$node->nid];
+
+    $node->title = chado_get_node_title($node);
+
+    // Germplasm-specific details
+    // ---------------------------
+    $node->germplasm = new stdClass();
+
+    // Parents
+    $maternal = tripal_get_germplasm_parent('maternal',$node->stock);
+    if (is_object($maternal)) {
+      $node->germplasm->maternal_parent = $maternal;
+    }
+    $paternal = tripal_get_germplasm_parent('paternal',$node->stock);
+    if (is_object($paternal)) {
+      $node->germplasm->paternal_parent = $paternal;
+    }
+
     $new_nodes[$nid] = $node;
   }
 
@@ -122,11 +146,12 @@ function tripal_germplasm_form($node, $form_state) {
     '#type' => 'fieldset',
   );
 
-  $form['core']['name'] = array(
+  $form['core']['sname'] = array(
     '#type' => 'textfield',
     '#title' => 'Name',
     '#description' => 'The name of the germplasm.',
-    '#required' => TRUE
+    '#required' => TRUE,
+    '#default_value' => $sname
   );
 
   $organism_options = tripal_get_organism_select_options();
@@ -135,6 +160,7 @@ function tripal_germplasm_form($node, $form_state) {
     '#title' => 'Scientific Name',
     '#description' => 'The genus and species of this germplasm.',
     '#options' => $organism_options,
+    '#default_value' => $organism_id,
     '#required' => TRUE
   );
 
@@ -144,6 +170,7 @@ function tripal_germplasm_form($node, $form_state) {
     '#title' => 'Type',
     '#description' => 'The type best matching this germplasm.',
     '#options' => $type_options,
+    '#default_value' => $type_id,
     '#required' => TRUE
   );
 
@@ -158,6 +185,7 @@ function tripal_germplasm_form($node, $form_state) {
     'base_key_value' => $stock_id,                   // the value of the above key
     'fieldset_title' => 'Relationships',             // the non-translated title for this fieldset
     'additional_instructions' => '',                  // a non-stranslated string providing additional instructions
+    'base_name_field' => 'name',
     'cv_id' => tripal_get_germplasm_relationship_type_cv_id()
   );
 
@@ -165,18 +193,63 @@ function tripal_germplasm_form($node, $form_state) {
   chado_add_node_form_relationships($form, $form_state, $details);
   $form['relationships']['#weight'] = 1;
 
+  $default_maternal = '';
+  $current_maternal_desc = '';
+  if (property_exists($node, 'stock')) {
+    $maternal_parent = tripal_get_germplasm_parent('maternal',$node->stock);
+    if (is_object($maternal_parent)) {
+
+      $form['relationships']['maternal_parent_id'] = array(
+        '#type' => 'hidden',
+        '#value' => $maternal_parent->stock_id
+      );
+
+      if (isset($maternal_parent->nid)) {
+        $default_maternal = '('.$maternal_parent->stock_id.') '.$maternal_parent->stock->name;
+        $current_maternal_desc = ' The current maternal parent is <em>' . l($maternal_parent->stock->name, 'node/' . $maternal_parent->nid) . '</em>.';
+      }
+      else {
+        $default_maternal = '('.$maternal_parent->stock_id.') '.$maternal_parent->name;
+        $current_maternal_desc = ' The current maternal parent is <em>' . $maternal_parent->name . '</em>.';
+      }
+    }
+  }
   $form['relationships']['maternal_parent'] = array(
     '#type' => 'textfield',
     '#title' => 'Maternal Parent',
-    '#description' => 'The name of the maternal parent of this germplasm.',
+    '#description' => 'The name of the maternal parent of this germplasm.' . $current_maternal_desc,
+    '#default_value' => $default_maternal,
+    '#autocomplete_path' => 'tripal_ajax/relationship_nodeform/stock/name/name_to_id',
     '#weight' => -10
   );
 
+  $default_paternal = '';
+  $current_paternal_desc = '';
+  if (property_exists($node, 'stock')) {
+    $paternal_parent = tripal_get_germplasm_parent('paternal',$node->stock);
+    if (is_object($paternal_parent)) {
+
+      $form['relationships']['paternal_parent_id'] = array(
+        '#type' => 'hidden',
+        '#value' => $paternal_parent->stock_id
+      );
+      if (isset($paternal_parent->nid)) {
+        $default_paternal = '('.$paternal_parent->stock_id.') '.$paternal_parent->stock->name;
+        $current_paternal_desc = ' The current paternal parent is <em>' . l($paternal_parent->stock->name, 'node/' . $paternal_parent->nid) . '</em>.';
+      }
+      else {
+        $default_paternal = '('.$paternal_parent->stock_id.') '.$paternal_parent->name;
+        $current_paternal_desc = ' The current paternal parent is <em>' . $paternal_parent->name . '</em>.';
+      }
+    }
+  }
   $form['relationships']['paternal_parent'] = array(
     '#type' => 'textfield',
     '#title' => 'Paternal Parent',
-    '#description' => 'The name of the paternal parent of this germplasm.',
-    '#weight' => -10
+    '#description' => 'The name of the paternal parent of this germplasm.' . $current_paternal_desc,
+    '#default_value' => $default_paternal,
+    '#autocomplete_path' => 'tripal_ajax/relationship_nodeform/stock/name/name_to_id',
+    '#weight' => -9
   );
 
 /**
@@ -221,6 +294,26 @@ function tripal_germplasm_form($node, $form_state) {
   );
 */
 
+  // PROPERTIES FORM
+  //---------------------------------------------
+  $prop_cv = tripal_get_default_cv('stockprop', 'type_id');
+  $cv_id = $prop_cv ? $prop_cv->cv_id : NULL;
+  $details = array(
+    'property_table' => 'stockprop',
+    'chado_id' => $stock_id,
+    'cv_id' => $cv_id
+  );
+  chado_add_node_form_properties($form, $form_state, $details);
+
+  // ADDITIONAL DBXREFS FORM
+  //---------------------------------------------
+  $details = array(
+    'linking_table' => 'stock_dbxref',
+    'base_foreign_key' => 'stock_id',
+    'base_key_value' => $stock_id
+  );
+  chado_add_node_form_dbxrefs($form, $form_state, $details);
+
   return $form;
 }
 
@@ -237,6 +330,17 @@ function tripal_germplasm_form($node, $form_state) {
  */
 function tripal_germplasm_validate(&$node, $form, &$form_state) {
 
+
+  // Ensure that the maternal/paternal_parent_id is set based on the autocomplete
+  if (!isset($node->maternal_parent_id) AND preg_match('/\((\d+)\).*/', $node->maternal_parent, $matches)) {
+    $form_state['values']['maternal_parent_id'] = $matches[1];
+    $node->maternal_parent_id = $matches[1];
+  }
+  if (!isset($node->paternal_parent_id) AND preg_match('/\((\d+)\).*/', $node->paternal_parent, $matches)) {
+    $form_state['values']['paternal_parent_id'] = $matches[1];
+    $node->paternal_parent_id = $matches[1];
+  }
+
 }
 
 /**
@@ -252,6 +356,111 @@ function tripal_germplasm_validate(&$node, $form, &$form_state) {
  * @ingroup tripal_germplasm
  */
 function tripal_germplasm_insert($node) {
+
+  if (!property_exists($node, 'is_sync')) {
+    // Create the chado stock
+    $stock = array(
+      'name' => $node->sname,
+      'uniquename' => uniqid(),
+      'organism_id' => $node->organism_id,
+      'type_id' => $node->type_id
+    );
+    $stock = chado_insert_record('stock', $stock);
+
+    // Update the stock with the new uniquename
+    // We can't set this initially since it depends on the stock_id
+    // which is only available after the stock is created
+    $prefix = variable_get('germplasm_prefix', 'GERM:');
+    $stock['uniquename'] = $prefix . $stock['stock_id'];
+    chado_update_record('stock', array('stock_id' => $stock['stock_id']), $stock);
+
+    // Generate the primary dbxref
+    $db_id = variable_get('tripal_stock_main_dbxref_db', 0);
+    if ($db_id > 0) {
+      $dbxref = tripal_insert_dbxref(array(
+        'db_id' => $db_id,
+        'accession' => $stock['uniquename'],
+      ));
+
+      // Update the stock to point to the new dbxref
+      if (is_object($dbxref)) {
+        $stock['dbxref_id'] = $dbxref->dbxref_id;
+        chado_update_record('stock', array('stock_id' => $stock['stock_id']), $stock);
+      }
+    }
+
+    // Set the maternal parent by adding it to the relationships to be processed below
+    $maternal_type_id = variable_get('germplasm_mparent_rel_type_id', NULL);
+    if (isset($node->maternal_parent_id) AND $maternal_type_id) {
+      // Remove any existing maternal parents
+      if (isset($node->relationship_table[$maternal_type_id])) {
+        foreach ($node->relationship_table[$maternal_type_id] as $k => $rel) {
+          if ($rel['object_id'] == $stock['stock_id']) {
+            unset($node->relationship_table[$maternal_type_id][$k]);
+          }
+        }
+      }
+      $node->relationship_table[$maternal_type_id][] = array(
+        'object_id' => $stock['stock_id'],
+        'subject_id' => $node->maternal_parent_id,
+        'type_id' => $maternal_type_id
+      );
+    }
+    // Set the paternal parent by adding it to the relationships to be processed below
+    $paternal_type_id = variable_get('germplasm_pparent_rel_type_id', NULL);
+    if (isset($node->paternal_parent_id) AND $paternal_type_id) {
+      // Remove any existing paternal parents
+      if (isset($node->relationship_table[$paternal_type_id])) {
+        foreach ($node->relationship_table[$paternal_type_id] as $k => $rel) {
+          if ($rel['object_id'] == $stock['stock_id']) {
+            unset($node->relationship_table[$paternal_type_id][$k]);
+          }
+        }
+      }
+      $node->relationship_table[$paternal_type_id][] = array(
+        'object_id' => $stock['stock_id'],
+        'subject_id' => $node->paternal_parent_id,
+        'type_id' => $maternal_type_id
+      );
+    }
+
+    // Update the properties
+    $details = array(
+      'property_table' => 'stockprop',
+      'base_table' => 'stock',
+      'foreignkey_name' => 'stock_id',
+      'foreignkey_value' => $stock['stock_id']
+    );
+    chado_update_node_form_properties($node, $details);
+
+    // Update the additional dbxrefs
+    $details = array(
+      'linking_table' => 'stock_dbxref',
+      'foreignkey_name' => 'stock_id',
+      'foreignkey_value' => $stock['stock_id']
+    );
+    chado_update_node_form_dbxrefs($node, $details);
+
+    // Update relationships
+    $details = array(
+      'relationship_table' => 'stock_relationship',
+      'foreignkey_value' => $stock['stock_id']
+    );
+    chado_update_node_form_relationships($node, $details);
+
+  }
+  else {
+    $stock = array('stock_id' => $node->stock_id);
+  }
+
+  // Insert the record to associate this germplasm with it's stock
+  $link = array(
+    'stock_id' => $stock['stock_id'],
+    'nid' => $node->nid,
+    'vid' => $node->vid
+  );
+  drupal_write_record('tripal_germplasm', $link);
+
 
 }
 
@@ -271,6 +480,85 @@ function tripal_germplasm_insert($node) {
  */
 function tripal_germplasm_update($node) {
 
+  $node->sname = trim($node->sname);
+
+  if ($node->revision) {
+    // there is no way to handle revisions in Chado but leave
+    // this here just to make not we've addressed it.
+  }
+
+  // don't need to update the dbxref since it's based on the stock_id
+
+  // Update stock
+  $stock = array(
+    'name' => $node->sname,
+    'organism_id' => $node->organism_id,
+    'type_id' => $node->type_id
+  );
+  chado_update_record('stock',array('stock_id' => $node->stock_id),$stock);
+
+  if ($node->stock_id > 0) {
+
+    // Set the maternal parent by adding it to the relationships to be processed below
+    $maternal_type_id = variable_get('germplasm_mparent_rel_type_id', NULL);
+    if (isset($node->maternal_parent_id) AND $maternal_type_id) {
+      // Remove any existing maternal parents
+      if (isset($node->relationship_table[$maternal_type_id])) {
+        foreach ($node->relationship_table[$maternal_type_id] as $k => $rel) {
+          if ($rel['object_id'] == $node->stock->stock_id) {
+            unset($node->relationship_table[$maternal_type_id][$k]);
+          }
+        }
+      }
+      $node->relationship_table[$maternal_type_id][] = array(
+        'object_id' => $node->stock->stock_id,
+        'subject_id' => $node->maternal_parent_id,
+        'type_id' => $maternal_type_id
+      );
+    }
+    // Set the paternal parent by adding it to the relationships to be processed below
+    $paternal_type_id = variable_get('germplasm_pparent_rel_type_id', NULL);
+    if (isset($node->paternal_parent_id) AND $paternal_type_id) {
+      // Remove any existing paternal parents
+      if (isset($node->relationship_table[$paternal_type_id])) {
+        foreach ($node->relationship_table[$paternal_type_id] as $k => $rel) {
+          if ($rel['object_id'] == $node->stock->stock_id) {
+            unset($node->relationship_table[$paternal_type_id][$k]);
+          }
+        }
+      }
+      $node->relationship_table[$paternal_type_id][] = array(
+        'object_id' => $node->stock->stock_id,
+        'subject_id' => $node->paternal_parent_id,
+        'type_id' => $maternal_type_id
+      );
+    }
+
+    // Update the properties
+    $details = array(
+      'property_table' => 'stockprop',
+      'base_table' => 'stock',
+      'foreignkey_name' => 'stock_id',
+      'foreignkey_value' => $node->stock_id
+    );
+    chado_update_node_form_properties($node, $details);
+
+    // Update the additional dbxrefs
+    $details = array(
+      'linking_table' => 'stock_dbxref',
+      'foreignkey_name' => 'stock_id',
+      'foreignkey_value' => $node->stock_id
+    );
+    chado_update_node_form_dbxrefs($node, $details);
+
+    // Update relationships
+    $details = array(
+      'relationship_table' => 'stock_relationship',
+      'foreignkey_value' => $node->stock_id
+    );
+    chado_update_node_form_relationships($node, $details);
+
+  }
 }
 
 /**
@@ -289,4 +577,180 @@ function tripal_germplasm_update($node) {
  */
 function tripal_germplasm_delete($node) {
 
+  // Set stock in chado: is_obsolete = TRUE
+  chado_query("DELETE FROM {stock} WHERE stock_id = :stock_id", array(':stock_id' => $node->stock->stock_id));
+
+  //remove Tripal Germplasm drupal node link for all revisions
+  db_query("DELETE FROM {tripal_germplasm} WHERE nid = :nid", array(':nid' => $node->nid));
+
+}
+
+/**
+ * Implements hook_node_view(). Acts on all content types.
+ *
+ * @ingroup tripal_germplasm
+ */
+function tripal_germplasm_node_view($node, $view_mode, $langcode) {
+
+  switch ($node->type) {
+    case 'tripal_germplasm':
+      if ($view_mode == 'full') {
+
+        $node->content['#tripal_generic_node_template'] = TRUE;
+
+        $node->content['tripal_germplasm_base'] = array(
+          '#markup' => theme('tripal_germplasm_base', array('node' => $node)),
+          '#tripal_toc_id'    => 'base',
+          '#tripal_toc_title' => 'Overview',
+          '#weight' => -100,
+        );
+
+        $node->content['tripal_stock_collections'] = array(
+          '#markup' => theme('tripal_stock_collections', array('node' => $node)),
+          '#tripal_toc_id'    => 'collections',
+          '#tripal_toc_title' => 'Stock Collections',
+        );
+        $node->content['tripal_stock_properties'] = array(
+          '#markup' => theme('tripal_stock_properties', array('node' => $node)),
+          '#tripal_toc_id'    => 'properties',
+          '#tripal_toc_title' => 'Properties',
+        );
+        $node->content['tripal_stock_references'] = array(
+          '#markup' => theme('tripal_stock_references', array('node' => $node)),
+          '#tripal_toc_id'    => 'references',
+          '#tripal_toc_title' => 'Cross References',
+        );
+        $node->content['tripal_stock_relationships'] = array(
+          '#markup' => theme('tripal_stock_relationships', array('node' => $node)),
+          '#tripal_toc_id'    => 'relationships',
+          '#tripal_toc_title' => 'Relationships',
+        );
+        $node->content['tripal_stock_synonyms'] = array(
+          '#markup' => theme('tripal_stock_synonyms', array('node' => $node)),
+          '#tripal_toc_id'    => 'synonyms',
+          '#tripal_toc_title' => 'Synonyms',
+        );
+        $node->content['tripal_stock_publications'] = array(
+          '#markup' => theme('tripal_stock_publications', array('node' => $node)),
+          '#tripal_toc_id'    => 'publications',
+          '#tripal_toc_title' => 'Publications',
+        );
+      }
+      break;
+  }
+}
+
+/**
+ * Implements hook_chado_node_sync_create_new_node().
+ * Used when sync'ing germplasm
+ */
+function tripal_germplasm_chado_node_sync_create_new_node($new_node, $record) {
+
+  $new_node->is_sync = TRUE;
+
+  $new_node->stock_id = $record->stock_id;
+  $new_node->organism_id = $record->organism_id;
+  $new_node->sname = $record->name;
+  $new_node->uniquename = $record->uniquename;
+  $new_node->type_id = $record->type_id;
+
+  return $new_node;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function tripal_germplasm_permission() {
+  $perms = array();
+
+  $perms['access germplasm'] = array(
+    'title' => 'Access Non-Crosses',
+    'description' => 'Provides access to all germplasm that is not considered a cross.',
+  );
+
+  $perms['access crosses'] = array(
+    'title' => 'Access Crosses',
+    'description' => 'Provides access to breeding program specific germplasm such as crosses.',
+    'retrict access' => TRUE,
+  );
+
+  $perms['access varieties'] = array(
+    'title' => 'Access Varieties',
+    'description' => 'Provides access to registered varieties.',
+  );
+
+  $perms['edit germplasm'] = array(
+    'title' => 'Edit Germplasm',
+    'description' => 'Allow users to update the information for particular germplasm.',
+    'retrict access' => TRUE,
+  );
+
+  $perms['create germplasm'] = array(
+    'title' => 'Create Germplasm',
+    'description' => 'Allow users to create germplasm',
+  );
+
+  $perms['delete germplasm'] = array(
+    'title' => 'Delete Germplasm',
+    'description' => 'Allow users to delete germplasm.',
+    'retrict access' => TRUE,
+  );
+  
+  return $perms;
+}
+
+/**
+ * Implements hook_node_access().
+ */
+function tripal_germplasm_node_access($node, $op, $account) {
+  $type = is_string($node) ? $node : $node->type;
+
+  // Determine the stock type
+  if (isset($node->stock)) {
+    if (is_object($node->stock->type_id)) {
+      $stock_type = array('type_id' => $node->stock->type_id->cvterm_id);
+    }
+    else {
+      $stock_type = array('type_id' => $node->stock->type_id);
+    }
+  }
+  else {
+    $stock_type = array();
+  }
+
+  // Actually determine permissions
+  if (in_array($type, node_permissions_get_configured_types())) {
+
+    // Create
+    if ($op == 'create' && user_access('create germplasm', $account)) {
+      return NODE_ACCESS_ALLOW;
+    }
+    
+    // Edit
+    if ($op == 'update' && user_access('edit germplasm', $account)) {
+      return NODE_ACCESS_ALLOW;
+    }
+    
+    // Delete
+    if ($op == 'delete' && user_access('delete germplasm', $account)) {
+      return NODE_ACCESS_ALLOW;
+    }
+    
+    // Access Crosses
+    if (tripal_is_germplasm_cross($stock_type) && user_access('access crosses', $account)) {
+      return NODE_ACCESS_ALLOW;
+    }
+    
+    // Access non-cross Germplasm
+    if (!tripal_is_germplasm_cross($stock_type) && user_access('access germplasm', $account)) {
+      return NODE_ACCESS_ALLOW;
+    }
+    
+    // Access Varieties
+    if (tripal_is_germplasm_variety($stock_type) && user_access('access varieties', $account)) {
+      return NODE_ACCESS_ALLOW;
+    }
+  }
+
+  return NODE_ACCESS_DENY;
 }
