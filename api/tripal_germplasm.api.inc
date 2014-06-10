@@ -169,7 +169,35 @@ function tripal_is_germplasm_variety($type) {
  *   TRUE if the provided type has been indicated as a RIL; FALSE otherwise
  */
 function tripal_is_germplasm_ril($type) {
-  return TRUE;
+
+  $ril_types = variable_get('germplasm_ril_type_ids', array());
+  if (!empty($ril_types)) { $ril_types = unserialize($ril_types); }
+  
+  // If we have the type_id supplied then just compare directly to the admin selection
+  if (isset($type['type_id'])) {
+    if (in_array($type['type_id'], $ril_types)) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+
+  // Otherwise we need to get the type_id based on the type name
+  // and then compare that to the admin selection
+  elseif (isset($type['name'])) {
+    $type_id = chado_select_record('cvterm', array('cvterm_id'), array('name' => $type['name']));
+    $type_id = (!empty($type_id)) ? $type_id[0]->cvterm_id : NULL;
+
+    if (in_array($type_id, $ril_types)) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  
+  return FALSE;
 }
 
 /**

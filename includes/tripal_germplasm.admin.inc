@@ -113,7 +113,10 @@ function tripal_germplasm_admin_settings_form($form, $form_state) {
 
   $variety_types = variable_get('germplasm_variety_type_ids', array());
   if (!empty($variety_types)) { $variety_types = unserialize($variety_types); }
-    
+
+  $ril_types = variable_get('germplasm_ril_type_ids', array());
+  if (!empty($ril_types)) { $ril_types = unserialize($ril_types); }
+      
   if ($germplasm_type_cv_id > 0) {
     $cvterms = chado_select_record('cvterm', array('cvterm_id','name'),array('cv_id' => $germplasm_type_cv_id));
     foreach($cvterms as $cvt) {
@@ -145,7 +148,18 @@ function tripal_germplasm_admin_settings_form($form, $form_state) {
 		'#required' => TRUE,
 		'#disabled' => ($germplasm_type_cv_id > 0) ? FALSE : TRUE,
   );
-  
+
+   $form['types']['ril_types'] = array(
+	  '#type' => 'checkboxes',
+	  '#title' => 'Recombinant Imbred Line (RIL) Type',
+	  '#description' => 'The types of germplasm that are Recombinant Imbred Lines.',
+	  '#options' => $types,
+	  '#default_value' => $ril_types,
+    '#multiple' => TRUE,
+		'#required' => TRUE,
+		'#disabled' => ($germplasm_type_cv_id > 0) ? FALSE : TRUE,
+  );
+   
 	$form['types']['submit'] = array(
 		'#type' => 'submit',
 		'#value' => 'Set Types',
@@ -296,6 +310,7 @@ function tripal_germplasm_admin_germplasm_types_form_submit($form, $form_state) 
 
 	variable_set('germplasm_cross_type_ids', serialize($form_state['values']['cross_types']));
 	variable_set('germplasm_variety_type_ids', serialize($form_state['values']['variety_types']));
+  variable_set('germplasm_ril_type_ids', serialize($form_state['values']['ril_types']));
   
 }
 

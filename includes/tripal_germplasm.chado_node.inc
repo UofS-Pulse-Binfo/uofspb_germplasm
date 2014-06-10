@@ -115,6 +115,17 @@ function tripal_germplasm_form($node, $form_state) {
   $stock_id = 0;
   $type_id = 0;
   $organism_id = 0;
+  $default_maternal = '';
+  $current_maternal_desc = '';
+  $default_paternal = '';
+  $current_paternal_desc = '';
+  $default_ril_cross_num = '';
+  $default_date_registered = NULL;
+  $default_market_class = '';
+  $default_cb_year = date("Y");
+  $default_cb_season = 'Summer';
+
+dpm($node, 'node');
 
   // 1) if we are editing an existing node then the stock is already part of the node
   if (property_exists($node, 'stock')) {
@@ -122,6 +133,64 @@ function tripal_germplasm_form($node, $form_state) {
     $stock_id = $node->stock->stock_id;
     $type_id = $node->stock->type_id->cvterm_id;
     $organism_id = $node->stock->organism_id->organism_id;
+
+    $maternal_parent = tripal_get_germplasm_parent('maternal',$node->stock);
+    if (is_object($maternal_parent)) {
+      if (isset($maternal_parent->nid)) {
+        $default_maternal = '('.$maternal_parent->stock_id.') '.$maternal_parent->stock->name;
+        $current_maternal_desc = ' The current maternal parent is <em>' . l($maternal_parent->stock->name, 'node/' . $maternal_parent->nid) . '</em>.';
+      }
+      else {
+        $default_maternal = '('.$maternal_parent->stock_id.') '.$maternal_parent->name;
+        $current_maternal_desc = ' The current maternal parent is <em>' . $maternal_parent->name . '</em>.';
+      }
+    }
+
+    $paternal_parent = tripal_get_germplasm_parent('paternal',$node->stock);
+    if (is_object($paternal_parent)) {
+      if (isset($paternal_parent->nid)) {
+        $default_paternal = '('.$paternal_parent->stock_id.') '.$paternal_parent->stock->name;
+        $current_paternal_desc = ' The current paternal parent is <em>' . l($paternal_parent->stock->name, 'node/' . $paternal_parent->nid) . '</em>.';
+      }
+      else {
+        $default_paternal = '('.$paternal_parent->stock_id.') '.$paternal_parent->name;
+        $current_paternal_desc = ' The current paternal parent is <em>' . $paternal_parent->name . '</em>.';
+      }
+    }
+
+
+    $rel = chado_generate_var(
+      'stock_relationship',
+      array(
+        'type_id' => array('name' => 'is_selection_of'),
+        'subject_id' => $node->stock->stock_id
+      ),
+      array(
+        'include_fk' => array('object_id' => TRUE)
+      )
+    );
+    if (isset($rel->object_id)) {
+      $default_ril_cross_num = '(' . $rel->object_id->stock_id . ') ' . $rel->object_id->name;
+    }
+
+    $properties = chado_generate_var('stockprop',array('stock_id' => $node->stock->stock_id));
+    dpm($properties, 'properties');
+    foreach ($properties as $property) {
+      switch ($property->type_id->name) {
+        case 'variety_year_released':   
+          $default_date_registered = $property->value;
+          break;
+        case 'market_class':
+          $default_market_class = $property->value;
+          break;
+        case 'crossingblock_year':
+          $default_cb_year = $property->value;
+          break;
+        case 'crossingblock_season':
+          $default_cb_season = $property->value;
+          break;
+      }
+    }
   }
 
   // 2) if we are re constructing the form from a failed validation or ajax callback
@@ -131,6 +200,13 @@ function tripal_germplasm_form($node, $form_state) {
     $stock_id = $form_state['values']['stock_id'];
     $type_id = $form_state['values']['type_id'];
     $organism_id = $form_state['values']['organism_id'];
+
+    $default_ril_cross_num = $form_state['values']['ril_cross_number'];
+    $default_date_registered = $form_state['values']['date_registered'];
+    $default_market_class = $form_state['values']['market_class'];
+    $default_cb_year = $form_state['values']['cb_year'];
+    $default_cb_season = $form_state['values']['cb_season'];
+
   }
 
   // 3) if we are re building the form from after submission (from ajax call) then
@@ -140,6 +216,12 @@ function tripal_germplasm_form($node, $form_state) {
     $stock_id = $form_state['input']['stock_id'];
     $type_id = $form_state['input']['type_id'];
     $organism_id = $form_state['input']['organism_id'];
+
+    $default_ril_cross_num = $form_state['input']['ril_cross_number'];
+    $default_date_registered = $form_state['input']['date_registered'];
+    $default_market_class = $form_state['input']['market_class'];
+    $default_cb_year = $form_state['input']['cb_year'];
+    $default_cb_season = $form_state['input']['cb_season'];
   }
 
   $form['core'] = array(
@@ -174,6 +256,44 @@ function tripal_germplasm_form($node, $form_state) {
     '#required' => TRUE
   );
 
+  // Parents
+  //-------------------------
+  $form['parents'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Parents',
+    '#description' => 'The parents of the current germplasm (if known).'
+  );
+  
+  if (isset($maternal_parent->stock_id)) {
+    $form['parents']['maternal_parent_id'] = array(
+      '#type' => 'hidden',
+      '#value' => $maternal_parent->stock_id
+    );
+  }
+  $form['parents']['maternal_parent'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Maternal Parent',
+    '#description' => 'The name of the maternal parent of this germplasm.' . $current_maternal_desc,
+    '#default_value' => $default_maternal,
+    '#autocomplete_path' => 'tripal_ajax/relationship_nodeform/stock/name/name_to_id',
+    '#weight' => -10
+  );
+
+  if (isset($paternal_parent->stock_id)) {
+    $form['parents']['paternal_parent_id'] = array(
+      '#type' => 'hidden',
+      '#value' => $paternal_parent->stock_id
+    );
+  }
+  $form['parents']['paternal_parent'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Paternal Parent',
+    '#description' => 'The name of the paternal parent of this germplasm.' . $current_paternal_desc,
+    '#default_value' => $default_paternal,
+    '#autocomplete_path' => 'tripal_ajax/relationship_nodeform/stock/name/name_to_id',
+    '#weight' => -9
+  );
+
   // Relationships
   //-------------------------
   $details = array(
@@ -192,67 +312,9 @@ function tripal_germplasm_form($node, $form_state) {
   // Finally, and add the additional form elements to the form
   chado_add_node_form_relationships($form, $form_state, $details);
   $form['relationships']['#weight'] = 1;
+  $form['relationships']['#collapsible'] = TRUE;
+  $form['relationships']['#collapsed'] = TRUE;
 
-  $default_maternal = '';
-  $current_maternal_desc = '';
-  if (property_exists($node, 'stock')) {
-    $maternal_parent = tripal_get_germplasm_parent('maternal',$node->stock);
-    if (is_object($maternal_parent)) {
-
-      $form['relationships']['maternal_parent_id'] = array(
-        '#type' => 'hidden',
-        '#value' => $maternal_parent->stock_id
-      );
-
-      if (isset($maternal_parent->nid)) {
-        $default_maternal = '('.$maternal_parent->stock_id.') '.$maternal_parent->stock->name;
-        $current_maternal_desc = ' The current maternal parent is <em>' . l($maternal_parent->stock->name, 'node/' . $maternal_parent->nid) . '</em>.';
-      }
-      else {
-        $default_maternal = '('.$maternal_parent->stock_id.') '.$maternal_parent->name;
-        $current_maternal_desc = ' The current maternal parent is <em>' . $maternal_parent->name . '</em>.';
-      }
-    }
-  }
-  $form['relationships']['maternal_parent'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Maternal Parent',
-    '#description' => 'The name of the maternal parent of this germplasm.' . $current_maternal_desc,
-    '#default_value' => $default_maternal,
-    '#autocomplete_path' => 'tripal_ajax/relationship_nodeform/stock/name/name_to_id',
-    '#weight' => -10
-  );
-
-  $default_paternal = '';
-  $current_paternal_desc = '';
-  if (property_exists($node, 'stock')) {
-    $paternal_parent = tripal_get_germplasm_parent('paternal',$node->stock);
-    if (is_object($paternal_parent)) {
-
-      $form['relationships']['paternal_parent_id'] = array(
-        '#type' => 'hidden',
-        '#value' => $paternal_parent->stock_id
-      );
-      if (isset($paternal_parent->nid)) {
-        $default_paternal = '('.$paternal_parent->stock_id.') '.$paternal_parent->stock->name;
-        $current_paternal_desc = ' The current paternal parent is <em>' . l($paternal_parent->stock->name, 'node/' . $paternal_parent->nid) . '</em>.';
-      }
-      else {
-        $default_paternal = '('.$paternal_parent->stock_id.') '.$paternal_parent->name;
-        $current_paternal_desc = ' The current paternal parent is <em>' . $paternal_parent->name . '</em>.';
-      }
-    }
-  }
-  $form['relationships']['paternal_parent'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Paternal Parent',
-    '#description' => 'The name of the paternal parent of this germplasm.' . $current_paternal_desc,
-    '#default_value' => $default_paternal,
-    '#autocomplete_path' => 'tripal_ajax/relationship_nodeform/stock/name/name_to_id',
-    '#weight' => -9
-  );
-
-/**
   // Cross
   //-------------------------
   $form['cross'] = array(
@@ -263,6 +325,27 @@ function tripal_germplasm_form($node, $form_state) {
     '#collapsed' => !tripal_is_germplasm_cross(array('type_id' => $type_id))
   );
 
+  // Crossing Block Year
+  $form['cross']['cb_year'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Crossing Block Year',
+    '#description' => 'The year this cross was made in (ie: '.date("Y").').',
+    '#default_value' => $default_cb_year
+  );
+
+  $form['cross']['cb_season'] = array(
+    '#type' => 'select',
+    '#title' => 'Crossing Block Season',
+    '#description' => 'The season this cross was made in.',
+    '#options' => array(
+      'Spring' => 'Spring',
+      'Summer' => 'Summer',
+      'Fall' => 'Fall',
+      'Winter' => 'Winter'
+    ),
+    '#default_value' => $default_cb_season
+  );
+  
   // Variety
   //-------------------------
   $form['variety'] = array(
@@ -271,6 +354,22 @@ function tripal_germplasm_form($node, $form_state) {
     '#weight' => 3,
     '#collapsible' => TRUE,
     '#collapsed' => !tripal_is_germplasm_variety(array('type_id' => $type_id))
+  );
+
+  // Date Registered
+  $form['variety']['date_registered'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Date Registered',
+    '#description' => 'The date this variety was registered.',
+    '#default_value' => $default_date_registered
+  );
+  
+  // Market Class 
+  $form['variety']['market_class'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Market Class',
+    '#description' => 'The market class of this variety.',
+    '#default_value' => $default_market_class
   );
 
   // RIL
@@ -283,8 +382,22 @@ function tripal_germplasm_form($node, $form_state) {
     '#collapsed' => !tripal_is_germplasm_ril(array('type_id' => $type_id))
   );
 
+
+  // Original Cross Number
+  $form['ril']['ril_cross_number'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Original Cross Number',
+    '#description' => 'The cross number the RIL originated from',
+    '#default_value' => $default_ril_cross_num,
+    '#autocomplete_path' => 'tripal_ajax/relationship_nodeform/stock/name/name_to_id'
+  );
+  
+  // Date Deposited with number of lines
+  // @TODO: Add compound form element with two textfields to enter two properties concurrently
+  
   // Accession
   //-------------------------
+  /**
   $form['accession'] = array(
     '#type' => 'fieldset',
     '#title' => 'Accession Details',
@@ -292,6 +405,9 @@ function tripal_germplasm_form($node, $form_state) {
     '#collapsible' => TRUE,
     '#collapsed' => !tripal_is_germplasm_accession(array('type_id' => $type_id))
   );
+
+  // Dbxrefs
+  // @TODO: Create a compound form field to enter both the db.name and accession
 */
 
   // PROPERTIES FORM
@@ -299,12 +415,15 @@ function tripal_germplasm_form($node, $form_state) {
   $prop_cv = tripal_get_default_cv('stockprop', 'type_id');
   $cv_id = $prop_cv ? $prop_cv->cv_id : NULL;
   $details = array(
+    'fieldset_title' => 'Additional Properties',
     'property_table' => 'stockprop',
     'chado_id' => $stock_id,
     'cv_id' => $cv_id
   );
   chado_add_node_form_properties($form, $form_state, $details);
-
+  $form['properties']['#collapsible'] = TRUE;
+  $form['properties']['#collapsed'] = TRUE;
+  
   // ADDITIONAL DBXREFS FORM
   //---------------------------------------------
   $details = array(
@@ -313,6 +432,8 @@ function tripal_germplasm_form($node, $form_state) {
     'base_key_value' => $stock_id
   );
   chado_add_node_form_dbxrefs($form, $form_state, $details);
+  $form['addtl_dbxrefs']['#collapsible'] = TRUE;
+  $form['addtl_dbxrefs']['#collapsed'] = TRUE;
 
   return $form;
 }
@@ -424,6 +545,8 @@ function tripal_germplasm_insert($node) {
       );
     }
 
+    // @TODO: Actually save type-specific data (ie: market class, date released, etc.)
+    
     // Update the properties
     $details = array(
       'property_table' => 'stockprop',
@@ -534,6 +657,8 @@ function tripal_germplasm_update($node) {
       );
     }
 
+    // @TODO: Actually save type-specific data (ie: market class, date released, etc.)
+    
     // Update the properties
     $details = array(
       'property_table' => 'stockprop',
