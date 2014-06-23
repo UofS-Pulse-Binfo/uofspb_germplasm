@@ -32,6 +32,30 @@ function tripal_get_germplasm_relationship_type_cv_id() {
 }
 
 /**
+ * Retrieve the cvtmerm ID of the crossingblock property types
+ *
+ * @param $part
+ *   Either 'year' or 'season depending on the type of crossing block property
+ *
+ * @return
+ *   The cvterm ID of the property requested
+ */
+function tripal_get_germplasm_crossingblock_type_id($part) {
+  if ($part == 'season' OR $part == 'year') {
+    $type_name = 'crossingblock_' . $part;
+    $result = chado_select_record('cvterm',array('cvterm_id'), array('name' => $type_name));
+    if (is_array($result)) {
+      $type_id = array_pop($result);
+      $type_id = $type_id->cvterm_id;
+      return $type_id;
+    }
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
  * Retrieve a stock object that is the parent of the current stock
  *
  * @param $parent
@@ -77,6 +101,39 @@ function tripal_get_germplasm_parent($parent = 'maternal', $child_stock) {
   }
 }
 
+/**
+ * Get the cvterm_id for the maternal/paternal parent relationship type
+ * as set in the Tripal Germplasm settings.
+ *
+ * @param $parent
+ *   This should be either 'maternal' or 'parernal' depending on which parent you want
+ *
+ * @return
+ *   The cvterm_id of the relationship type specified
+ */
+function tripal_get_germplasm_parent_type_id($parent) {
+  $parent_rel_type_id = 0;
+  
+  if ($parent == 'maternal') {
+    $parent_rel_type_id = variable_get('germplasm_mparent_rel_type_id', NULL);
+  }
+  elseif($parent == 'paternal') {
+    $parent_rel_type_id = variable_get('germplasm_pparent_rel_type_id', NULL);
+  }
+
+  if ($parent_rel_type_id > 0) {
+    return $parent_rel_type_id;
+  }
+  else {
+    return FALSE;
+    tripal_report_error(
+      'tripal_germplasm',
+      TRIPAL_ERROR,
+      'The %parent relationship type_id has not been set. It can be set at <a href=@url>Admin » Tripal » Extension Modules » Germplasm » Settings</a>.',
+      array('%parent' => $parent, '@url' => url('admin/tripal/extension/tripal_germplasm/configuration'))
+    );
+  }
+}
 /**
  * Determine whether a given germplasm is a cross
  *

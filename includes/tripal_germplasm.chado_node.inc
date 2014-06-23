@@ -102,6 +102,10 @@ function tripal_germplasm_load($nodes) {
 function tripal_germplasm_form($node, $form_state) {
   $form = array();
 
+  // Options
+  $organism_options = tripal_get_organism_select_options();
+  $type_options = tripal_get_germplasm_type_select_options();
+
   // Default values can come in the following ways:
   //
   // 1) as elements of the $node object.  This occurs when editing an existing stock
@@ -113,8 +117,8 @@ function tripal_germplasm_form($node, $form_state) {
   // set form field defaults
   $sname = '';
   $stock_id = 0;
-  $type_id = 0;
-  $organism_id = 0;
+  $type_id = key($type_options);
+  $organism_id = key($organism_options);
   $default_maternal = '';
   $current_maternal_desc = '';
   $default_paternal = '';
@@ -122,10 +126,8 @@ function tripal_germplasm_form($node, $form_state) {
   $default_ril_cross_num = '';
   $default_date_registered = NULL;
   $default_market_class = '';
-  $default_cb_year = date("Y");
-  $default_cb_season = 'Summer';
-
-dpm($node, 'node');
+  $default_cb_year = '';
+  $default_cb_season = 0;
 
   // 1) if we are editing an existing node then the stock is already part of the node
   if (property_exists($node, 'stock')) {
@@ -173,11 +175,11 @@ dpm($node, 'node');
       $default_ril_cross_num = '(' . $rel->object_id->stock_id . ') ' . $rel->object_id->name;
     }
 
-    $properties = chado_generate_var('stockprop',array('stock_id' => $node->stock->stock_id));
-    dpm($properties, 'properties');
+    $properties = chado_generate_var('stockprop',array('stock_id' => $node->stock->stock_id), array('return_array' => TRUE));
+    $properties = (is_array($properties)) ? $properties : array();
     foreach ($properties as $property) {
       switch ($property->type_id->name) {
-        case 'variety_year_released':   
+        case 'variety_year_released':
           $default_date_registered = $property->value;
           break;
         case 'market_class':
@@ -236,7 +238,6 @@ dpm($node, 'node');
     '#default_value' => $sname
   );
 
-  $organism_options = tripal_get_organism_select_options();
   $form['core']['organism_id'] = array(
     '#type' => 'select',
     '#title' => 'Scientific Name',
@@ -246,24 +247,141 @@ dpm($node, 'node');
     '#required' => TRUE
   );
 
-  $type_options = tripal_get_germplasm_type_select_options();
   $form['core']['type_id'] = array(
     '#type' => 'select',
     '#title' => 'Type',
     '#description' => 'The type best matching this germplasm.',
     '#options' => $type_options,
     '#default_value' => $type_id,
-    '#required' => TRUE
+    '#required' => TRUE,
+    '#ajax' => array(
+      'callback' => 'ajax_tripal_germplasm_node_form_type_specific_options',
+      'wrapper' => 'type-specific-options',
+    ),
   );
 
-  // Parents
+  // TYPE-SPECIFIC OPTIONS
+  //////////////////////////////////////
+
+  $form['type_specific'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div id="type-specific-options">',
+    '#suffix' => '</div>'
+  );
+
+  // Cross
   //-------------------------
+  $form['type_specific']['cross'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Type-specific: Cross',
+    '#weight' => 2,
+    '#prefix' => '<div id="type-specific-options">',
+    '#suffix' => '</div>'
+  );
+  if (!tripal_is_germplasm_cross(array('type_id' => $type_id))) {
+    $form['type_specific']['cross']['#prefix'] = '<span style="display:none">';
+    $form['type_specific']['cross']['#suffix'] = '</span>';
+  }
+
+  // Crossing Block Year
+  $form['type_specific']['cross']['cb_year'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Crossing Block Year',
+    '#description' => 'The year this cross was made in (ie: '.date("Y").').',
+    '#default_value' => $default_cb_year
+  );
+
+  $form['type_specific']['cross']['cb_season'] = array(
+    '#type' => 'select',
+    '#title' => 'Crossing Block Season',
+    '#description' => 'The season this cross was made in.',
+    '#options' => array(
+      0 => '',
+      'Spring' => 'Spring',
+      'Summer' => 'Summer',
+      'Fall' => 'Fall',
+      'Winter' => 'Winter'
+    ),
+    '#default_value' => $default_cb_season
+  );
+
+  // Variety
+  //-------------------------
+  $form['type_specific']['variety'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Type-specific: Variety',
+    '#weight' => 3,
+  );
+  if (!tripal_is_germplasm_variety(array('type_id' => $type_id))) {
+    $form['type_specific']['variety']['#prefix'] = '<span style="display:none">';
+    $form['type_specific']['variety']['#suffix'] = '</span>';
+  }
+
+  // Date Registered
+  $form['type_specific']['variety']['date_registered'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Date Registered',
+    '#description' => 'The date this variety was registered.',
+    '#default_value' => $default_date_registered
+  );
+
+  // Market Class
+  $form['type_specific']['variety']['market_class'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Market Class',
+    '#description' => 'The market class of this variety.',
+    '#default_value' => $default_market_class
+  );
+
+  // RIL
+  //-------------------------
+  $form['type_specific']['ril'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Type-specific: RIL',
+    '#weight' => 4,
+    '#prefix' => '<div id="type-specific-options">',
+    '#suffix' => '</div>'
+  );
+  if (!tripal_is_germplasm_ril(array('type_id' => $type_id))) {
+    $form['type_specific']['ril']['#prefix'] = '<span style="display:none">';
+    $form['type_specific']['ril']['#suffix'] = '</span>';
+  }
+
+  // Original Cross Number
+  $form['type_specific']['ril']['ril_cross_number'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Original Cross Number',
+    '#description' => 'The cross number the RIL originated from',
+    '#default_value' => $default_ril_cross_num,
+    '#autocomplete_path' => 'tripal_ajax/relationship_nodeform/stock/name/name_to_id'
+  );
+
+  // Date Deposited with number of lines
+  // @TODO: Add compound form element with two textfields to enter two properties concurrently
+
+  // Accession
+  //-------------------------
+  /**
+  $form['accession'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Accession Details',
+    '#weight' => 5,
+    '#collapsible' => TRUE,
+    '#collapsed' => !tripal_is_germplasm_accession(array('type_id' => $type_id)),
+  );
+
+  // Dbxrefs
+  // @TODO: Create a compound form field to enter both the db.name and accession
+*/
+
+  // Parents
+  //////////////////////////////////////
   $form['parents'] = array(
     '#type' => 'fieldset',
     '#title' => 'Parents',
     '#description' => 'The parents of the current germplasm (if known).'
   );
-  
+
   if (isset($maternal_parent->stock_id)) {
     $form['parents']['maternal_parent_id'] = array(
       '#type' => 'hidden',
@@ -294,6 +412,13 @@ dpm($node, 'node');
     '#weight' => -9
   );
 
+  // ADDITIONAL CHADO OPTIONS
+  //////////////////////////////////////
+  $form['chado_node_api'] = array(
+    '#type' => 'vertical_tabs',
+    '#weight' => 50
+  );
+
   // Relationships
   //-------------------------
   $details = array(
@@ -314,108 +439,16 @@ dpm($node, 'node');
   $form['relationships']['#weight'] = 1;
   $form['relationships']['#collapsible'] = TRUE;
   $form['relationships']['#collapsed'] = TRUE;
-
-  // Cross
-  //-------------------------
-  $form['cross'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Cross Details',
-    '#weight' => 2,
-    '#collapsible' => TRUE,
-    '#collapsed' => !tripal_is_germplasm_cross(array('type_id' => $type_id))
-  );
-
-  // Crossing Block Year
-  $form['cross']['cb_year'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Crossing Block Year',
-    '#description' => 'The year this cross was made in (ie: '.date("Y").').',
-    '#default_value' => $default_cb_year
-  );
-
-  $form['cross']['cb_season'] = array(
-    '#type' => 'select',
-    '#title' => 'Crossing Block Season',
-    '#description' => 'The season this cross was made in.',
-    '#options' => array(
-      'Spring' => 'Spring',
-      'Summer' => 'Summer',
-      'Fall' => 'Fall',
-      'Winter' => 'Winter'
-    ),
-    '#default_value' => $default_cb_season
-  );
-  
-  // Variety
-  //-------------------------
-  $form['variety'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Variety Details',
-    '#weight' => 3,
-    '#collapsible' => TRUE,
-    '#collapsed' => !tripal_is_germplasm_variety(array('type_id' => $type_id))
-  );
-
-  // Date Registered
-  $form['variety']['date_registered'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Date Registered',
-    '#description' => 'The date this variety was registered.',
-    '#default_value' => $default_date_registered
-  );
-  
-  // Market Class 
-  $form['variety']['market_class'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Market Class',
-    '#description' => 'The market class of this variety.',
-    '#default_value' => $default_market_class
-  );
-
-  // RIL
-  //-------------------------
-  $form['ril'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'RIL Details',
-    '#weight' => 4,
-    '#collapsible' => TRUE,
-    '#collapsed' => !tripal_is_germplasm_ril(array('type_id' => $type_id))
-  );
-
-
-  // Original Cross Number
-  $form['ril']['ril_cross_number'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Original Cross Number',
-    '#description' => 'The cross number the RIL originated from',
-    '#default_value' => $default_ril_cross_num,
-    '#autocomplete_path' => 'tripal_ajax/relationship_nodeform/stock/name/name_to_id'
-  );
-  
-  // Date Deposited with number of lines
-  // @TODO: Add compound form element with two textfields to enter two properties concurrently
-  
-  // Accession
-  //-------------------------
-  /**
-  $form['accession'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Accession Details',
-    '#weight' => 5,
-    '#collapsible' => TRUE,
-    '#collapsed' => !tripal_is_germplasm_accession(array('type_id' => $type_id))
-  );
-
-  // Dbxrefs
-  // @TODO: Create a compound form field to enter both the db.name and accession
-*/
+  $form['relationships']['#group'] = 'chado_node_api';
+  unset($form['relationships']['#prefix']);
+  unset($form['relationships']['#suffix']);
 
   // PROPERTIES FORM
   //---------------------------------------------
   $prop_cv = tripal_get_default_cv('stockprop', 'type_id');
   $cv_id = $prop_cv ? $prop_cv->cv_id : NULL;
   $details = array(
-    'fieldset_title' => 'Additional Properties',
+    'fieldset_title' => 'Properties',
     'property_table' => 'stockprop',
     'chado_id' => $stock_id,
     'cv_id' => $cv_id
@@ -423,7 +456,10 @@ dpm($node, 'node');
   chado_add_node_form_properties($form, $form_state, $details);
   $form['properties']['#collapsible'] = TRUE;
   $form['properties']['#collapsed'] = TRUE;
-  
+  $form['properties']['#group'] = 'chado_node_api';
+   unset($form['properties']['#prefix']);
+  unset($form['properties']['#suffix']);
+
   // ADDITIONAL DBXREFS FORM
   //---------------------------------------------
   $details = array(
@@ -432,8 +468,12 @@ dpm($node, 'node');
     'base_key_value' => $stock_id
   );
   chado_add_node_form_dbxrefs($form, $form_state, $details);
+  $form['addtl_dbxrefs']['#title'] = 'External Accessions';
   $form['addtl_dbxrefs']['#collapsible'] = TRUE;
   $form['addtl_dbxrefs']['#collapsed'] = TRUE;
+  $form['addtl_dbxrefs']['#group'] = 'chado_node_api';
+  unset($form['addtl_dbxrefs']['#prefix']);
+  unset($form['addtl_dbxrefs']['#suffix']);
 
   return $form;
 }
@@ -462,6 +502,19 @@ function tripal_germplasm_validate(&$node, $form, &$form_state) {
     $node->paternal_parent_id = $matches[1];
   }
 
+  // Ensure RIL Original Cross is based on autocomplete
+  if (!isset($node->ril_cross_number_id) AND preg_match('/\((\d+)\).*/', $node->ril_cross_number, $matches)) {
+    $form_state['values']['ril_cross_number_id'] = $matches[1];
+    $node->ril_cross_number_id = $matches[1];
+  }
+}
+
+/**
+ * AJAX Callback: replace the Type-specific options when the type drop-down
+ * on the node form is changed
+ */
+function ajax_tripal_germplasm_node_form_type_specific_options($form, $form_state) {
+  return $form['type_specific'];
 }
 
 /**
@@ -545,18 +598,70 @@ function tripal_germplasm_insert($node) {
       );
     }
 
-    // @TODO: Actually save type-specific data (ie: market class, date released, etc.)
-    
     // Update the properties
+    // -----------------------
+    $properties = chado_retrieve_node_form_properties($node);
+
+    // Crossing Block Year
+    $type_id = tripal_get_germplasm_crossingblock_type_id('year');
+    if (!empty($type_id)) {
+      if (!empty($node->cb_year)) {
+        $properties[$type_id] = array($node->cb_year);
+      }
+      else {
+        unset($properties[$type_id]);
+      }
+    }
+    else {
+      drupal_set_message('Unable to save Crossing Block Year','error');
+      tripal_report_error('tripal_germplasm',TRIPAL_ERROR,'Unable to save crossing block year when updating germplasm record. Specifically unable to find the crossingblock_year stock property');
+    }
+    // Crossing Block Season
+    $type_id = tripal_get_germplasm_crossingblock_type_id('season');
+    if (!empty($type_id)) {
+      if (!empty($node->cb_season)) {
+        $properties[$type_id] = array($node->cb_season);
+      }
+      else {
+        unset($properties[$type_id]);
+      }
+    }
+    else {
+      drupal_set_message('Unable to save Crossing Block Season','error');
+      tripal_report_error('tripal_germplasm',TRIPAL_ERROR,'Unable to save crossing block season when updating germplasm record. Specifically unable to find the crossingblock_season stock property');
+    }
+    // Variety Date Registered
+    $type = tripal_get_cvterm(array('name' => 'variety_year_released'));
+    if (isset($type->cvterm_id)) {
+      $type_id = $type->cvterm_id;
+      if (!empty($node->date_registered)) {
+        $properties[$type_id] = array($node->date_registered);
+      }
+      else {
+        unset($properties[$type_id]);
+      }
+    }
+    // Market Class
+    $type = tripal_get_cvterm(array('name' => 'market_class'));
+    if (isset($type->cvterm_id)) {
+      $type_id = $type->cvterm_id;
+      if (!empty($node->market_class)) {
+        $properties[$type_id] = array($node->market_class);
+      }
+      else {
+        unset($properties[$type_id]);
+      }
+    }
     $details = array(
       'property_table' => 'stockprop',
       'base_table' => 'stock',
       'foreignkey_name' => 'stock_id',
       'foreignkey_value' => $stock['stock_id']
     );
-    chado_update_node_form_properties($node, $details);
+    chado_update_node_form_properties($node, $details,$properties);
 
     // Update the additional dbxrefs
+    // -----------------------
     $details = array(
       'linking_table' => 'stock_dbxref',
       'foreignkey_name' => 'stock_id',
@@ -565,11 +670,41 @@ function tripal_germplasm_insert($node) {
     chado_update_node_form_dbxrefs($node, $details);
 
     // Update relationships
+    // -----------------------
+    $relationships = chado_retrieve_node_form_relationships($node);
+
+    // RIL Original Cross Number
+    // The RIL is_selection_of ORIGINAL CROSS
+    $type = tripal_get_cvterm(array('name' => 'is_selection_of'));
+    if (isset($type->cvterm_id)) {
+      $type_id = $type->cvterm_id;
+      if (!empty($node->ril_cross_number_id)) {
+        // We need to find the existing relationship where the current
+        // stock is the subject and update it
+        $found = FALSE;
+        if (isset($relationships[$type_id])) {
+          foreach ($relationships[$type_id] as $id => $details) {
+            if ($details['subject_id'] == $node->stock_id) {
+              $found = TRUE;
+              $relationships[$type_id][$id]['object_id'] = $node->ril_cross_number_id;
+            }
+          }
+        }
+        if (!$found) {
+          $relationships[$type_id] = array(
+            uniqid() => array(
+              'subject_id' => $stock['stock_id'],
+              'object_id' =>  $node->ril_cross_number_id
+            )
+          );
+        }
+      }
+    }
     $details = array(
       'relationship_table' => 'stock_relationship',
       'foreignkey_value' => $stock['stock_id']
     );
-    chado_update_node_form_relationships($node, $details);
+    chado_update_node_form_relationships($node, $details, $relationships);
 
   }
   else {
@@ -657,18 +792,70 @@ function tripal_germplasm_update($node) {
       );
     }
 
-    // @TODO: Actually save type-specific data (ie: market class, date released, etc.)
-    
     // Update the properties
+    // -----------------------
+    $properties = chado_retrieve_node_form_properties($node);
+
+    // Crossing Block Year
+    $type_id = tripal_get_germplasm_crossingblock_type_id('year');
+    if (!empty($type_id)) {
+      if (!empty($node->cb_year)) {
+        $properties[$type_id] = array($node->cb_year);
+      }
+      else {
+        unset($properties[$type_id]);
+      }
+    }
+    else {
+      drupal_set_message('Unable to save Crossing Block Year','error');
+      tripal_report_error('tripal_germplasm',TRIPAL_ERROR,'Unable to save crossing block year when updating germplasm record. Specifically unable to find the crossingblock_year stock property');
+    }
+    // Crossing Block Season
+    $type_id = tripal_get_germplasm_crossingblock_type_id('season');
+    if (!empty($type_id)) {
+      if (!empty($node->cb_season)) {
+        $properties[$type_id] = array($node->cb_season);
+      }
+      else {
+        unset($properties[$type_id]);
+      }
+    }
+    else {
+      drupal_set_message('Unable to save Crossing Block Season','error');
+      tripal_report_error('tripal_germplasm',TRIPAL_ERROR,'Unable to save crossing block season when updating germplasm record. Specifically unable to find the crossingblock_season stock property');
+    }
+    // Variety Date Registered
+    $type = tripal_get_cvterm(array('name' => 'variety_year_released'));
+    if (isset($type->cvterm_id)) {
+      $type_id = $type->cvterm_id;
+      if (!empty($node->date_registered)) {
+        $properties[$type_id] = array($node->date_registered);
+      }
+      else {
+        unset($properties[$type_id]);
+      }
+    }
+    // Market Class
+    $type = tripal_get_cvterm(array('name' => 'market_class'));
+    if (isset($type->cvterm_id)) {
+      $type_id = $type->cvterm_id;
+      if (!empty($node->market_class)) {
+        $properties[$type_id] = array($node->market_class);
+      }
+      else {
+        unset($properties[$type_id]);
+      }
+    }
     $details = array(
       'property_table' => 'stockprop',
       'base_table' => 'stock',
       'foreignkey_name' => 'stock_id',
       'foreignkey_value' => $node->stock_id
     );
-    chado_update_node_form_properties($node, $details);
+    chado_update_node_form_properties($node, $details,$properties);
 
     // Update the additional dbxrefs
+    // -----------------------
     $details = array(
       'linking_table' => 'stock_dbxref',
       'foreignkey_name' => 'stock_id',
@@ -677,11 +864,41 @@ function tripal_germplasm_update($node) {
     chado_update_node_form_dbxrefs($node, $details);
 
     // Update relationships
+    // -----------------------
+    $relationships = chado_retrieve_node_form_relationships($node);
+
+    // RIL Original Cross Number
+    // The RIL is_selection_of ORIGINAL CROSS
+    $type = tripal_get_cvterm(array('name' => 'is_selection_of'));
+    if (isset($type->cvterm_id)) {
+      $type_id = $type->cvterm_id;
+      if (!empty($node->ril_cross_number_id)) {
+        // We need to find the existing relationship where the current
+        // stock is the subject and update it
+        $found = FALSE;
+        if (isset($relationships[$type_id])) {
+          foreach ($relationships[$type_id] as $id => $details) {
+            if ($details['subject_id'] == $node->stock_id) {
+              $found = TRUE;
+              $relationships[$type_id][$id]['object_id'] = $node->ril_cross_number_id;
+            }
+          }
+        }
+        if (!$found) {
+          $relationships[$type_id] = array(
+            uniqid() => array(
+              'subject_id' => $node->stock_id,
+              'object_id' =>  $node->ril_cross_number_id
+            )
+          );
+        }
+      }
+    }
     $details = array(
       'relationship_table' => 'stock_relationship',
       'foreignkey_value' => $node->stock_id
     );
-    chado_update_node_form_relationships($node, $details);
+    chado_update_node_form_relationships($node, $details, $relationships);
 
   }
 }
@@ -820,7 +1037,7 @@ function tripal_germplasm_permission() {
     'description' => 'Allow users to delete germplasm.',
     'retrict access' => TRUE,
   );
-  
+
   return $perms;
 }
 
@@ -850,27 +1067,27 @@ function tripal_germplasm_node_access($node, $op, $account) {
     if ($op == 'create' && user_access('create germplasm', $account)) {
       return NODE_ACCESS_ALLOW;
     }
-    
+
     // Edit
     if ($op == 'update' && user_access('edit germplasm', $account)) {
       return NODE_ACCESS_ALLOW;
     }
-    
+
     // Delete
     if ($op == 'delete' && user_access('delete germplasm', $account)) {
       return NODE_ACCESS_ALLOW;
     }
-    
+
     // Access Crosses
     if (tripal_is_germplasm_cross($stock_type) && user_access('access crosses', $account)) {
       return NODE_ACCESS_ALLOW;
     }
-    
+
     // Access non-cross Germplasm
     if (!tripal_is_germplasm_cross($stock_type) && user_access('access germplasm', $account)) {
       return NODE_ACCESS_ALLOW;
     }
-    
+
     // Access Varieties
     if (tripal_is_germplasm_variety($stock_type) && user_access('access varieties', $account)) {
       return NODE_ACCESS_ALLOW;
