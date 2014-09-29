@@ -55,15 +55,19 @@ function tripal_germplasm_load($nodes) {
 
   $new_nodes = array();
   foreach ($nodes as $nid => $node) {
+
     // Get the stock_id
     $stock_id = db_query('SELECT stock_id FROM {tripal_germplasm} WHERE nid=:nid AND vid=:vid',array(':nid' => $node->nid,':vid' => $node->vid))->fetchField();
     $node->stock_id = $stock_id;
 
-    // Add in the default stock details
-    $tmp = chado_stock_load(array($node->nid => $node));
-    $node = $tmp[$node->nid];
-
-    $node->title = chado_get_node_title($node);
+    // Stock details
+    // @see chado_stock_load()
+    // -----------------------
+    $values = array('stock_id' => $stock_id);
+    $stock = chado_generate_var('stock', $values);
+    $stock = chado_expand_var($stock, 'field', 'stock.uniquename');
+    $stock = chado_expand_var($stock, 'field', 'stock.description');
+    $nodes[$nid]->stock = $stock;
 
     // Germplasm-specific details
     // ---------------------------
@@ -78,6 +82,9 @@ function tripal_germplasm_load($nodes) {
     if (is_object($paternal)) {
       $node->germplasm->paternal_parent = $paternal;
     }
+
+    // Now get the title
+    $node->title = chado_get_node_title($node);
 
     $new_nodes[$nid] = $node;
   }
@@ -139,7 +146,7 @@ function tripal_germplasm_form($node, $form_state) {
     $maternal_parent = tripal_get_germplasm_parent('maternal',$node->stock);
     if (is_object($maternal_parent)) {
       if (isset($maternal_parent->nid)) {
-        $default_maternal = '('.$maternal_parent->stock_id.') '.$maternal_parent->stock->name;
+        $default_maternal = '('.$maternal_parent->stock->stock_id.') '.$maternal_parent->stock->name;
         $current_maternal_desc = ' The current maternal parent is <em>' . l($maternal_parent->stock->name, 'node/' . $maternal_parent->nid) . '</em>.';
       }
       else {
@@ -151,7 +158,7 @@ function tripal_germplasm_form($node, $form_state) {
     $paternal_parent = tripal_get_germplasm_parent('paternal',$node->stock);
     if (is_object($paternal_parent)) {
       if (isset($paternal_parent->nid)) {
-        $default_paternal = '('.$paternal_parent->stock_id.') '.$paternal_parent->stock->name;
+        $default_paternal = '('.$paternal_parent->stock->stock_id.') '.$paternal_parent->stock->name;
         $current_paternal_desc = ' The current paternal parent is <em>' . l($paternal_parent->stock->name, 'node/' . $paternal_parent->nid) . '</em>.';
       }
       else {
