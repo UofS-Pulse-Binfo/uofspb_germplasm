@@ -113,7 +113,7 @@ function tripal_get_germplasm_parent($parent = 'maternal', $child_stock) {
  */
 function tripal_get_germplasm_parent_type_id($parent) {
   $parent_rel_type_id = 0;
-  
+
   if ($parent == 'maternal') {
     $parent_rel_type_id = variable_get('germplasm_mparent_rel_type_id', NULL);
   }
@@ -147,7 +147,7 @@ function tripal_is_germplasm_cross($type) {
 
   $cross_types = variable_get('germplasm_cross_type_ids', array());
   if (!empty($cross_types)) { $cross_types = unserialize($cross_types); }
-  
+
   // If we have the type_id supplied then just compare directly to the admin selection
   if (isset($type['type_id'])) {
     if (in_array($type['type_id'], $cross_types)) {
@@ -171,7 +171,7 @@ function tripal_is_germplasm_cross($type) {
       return FALSE;
     }
   }
-  
+
   return FALSE;
 }
 
@@ -188,7 +188,7 @@ function tripal_is_germplasm_variety($type) {
 
   $variety_types = variable_get('germplasm_variety_type_ids', array());
   if (!empty($variety_types)) { $variety_types = unserialize($variety_types); }
-  
+
   // If we have the type_id supplied then just compare directly to the admin selection
   if (isset($type['type_id'])) {
     if (in_array($type['type_id'], $variety_types)) {
@@ -212,7 +212,7 @@ function tripal_is_germplasm_variety($type) {
       return FALSE;
     }
   }
-  
+
   return FALSE;
 }
 
@@ -229,7 +229,7 @@ function tripal_is_germplasm_ril($type) {
 
   $ril_types = variable_get('germplasm_ril_type_ids', array());
   if (!empty($ril_types)) { $ril_types = unserialize($ril_types); }
-  
+
   // If we have the type_id supplied then just compare directly to the admin selection
   if (isset($type['type_id'])) {
     if (in_array($type['type_id'], $ril_types)) {
@@ -253,7 +253,7 @@ function tripal_is_germplasm_ril($type) {
       return FALSE;
     }
   }
-  
+
   return FALSE;
 }
 
@@ -268,4 +268,94 @@ function tripal_is_germplasm_ril($type) {
  */
 function tripal_is_germplasm_accession($type) {
   return TRUE;
+}
+
+
+/**
+ * Handles autocomplete for germplasm names.
+ *
+ * This is used repeatedly in the node add/edit form.
+ *
+ * @param $organism_genus
+ *    The genus of the preferred organism. Results from all organisms will still
+ *    be listed but the preferred organism results will be displayed first.
+ * @param $string
+ *    The part of the string already typed in the textfield
+ *
+ * @ingroup tripal_core
+ */
+function tripal_germplasm_name_to_id_callback($string, $organism_genus) {
+  $matches = array();
+
+  if ($organism_genus == 'ALL') {
+    $organism_genus = '';
+  }
+
+  // Stores the Drupal db_select() queries used to build the results.
+  // Only the first 20 results are returned therefore once that number is
+  // reached, no subsequent queries are executed.
+  $queries = array();
+
+  // $string is the uniquename.
+  // Assume they entered the entire uniquename since it was likely copy/pasted.
+  $queries['uniquename'] = db_select('chado.stock', 'c');
+  $queries['uniquename']->join('chado.organism', 'o', 'c.organism_id = o.organism_id');
+  $queries['uniquename']
+    ->fields('c', array('stock_id', 'name', 'uniquename'))
+    ->fields('o', array('genus','species'))
+    ->condition('c.uniquename', $string, '=');
+
+  // $string is part of the name from the preferred organism.
+  $queries['name_preferred'] = db_select('chado.stock', 'c');
+  $queries['name_preferred']->join('chado.organism', 'o', 'c.organism_id = o.organism_id');
+  $queries['name_preferred']
+    ->fields('c', array('stock_id', 'name', 'uniquename'))
+    ->fields('o', array('genus','species'))
+    ->condition('c.name', '%' . db_like($string) . '%', 'LIKE')
+    ->condition('o.genus', $organism_genus, '=')
+    ->orderBy('char_length(c.name)','ASC')
+    ->orderBy('o.genus','ASC');
+
+  // $string is part of the name of any other organism.
+  $queries['name_other'] = db_select('chado.stock', 'c');
+  $queries['name_other']->join('chado.organism', 'o', 'c.organism_id = o.organism_id');
+  $queries['name_other']
+    ->fields('c', array('stock_id', 'name', 'uniquename'))
+    ->fields('o', array('genus','species'))
+    ->condition('c.name', '%' . db_like($string) . '%', 'LIKE')
+    ->condition('o.genus', $organism_genus, '!=')
+    ->orderBy('char_length(c.name)','ASC')
+    ->orderBy('o.genus','ASC');
+
+
+  // Now compile results based on the above queries.
+  foreach ($queries as $query) {
+
+    $result = $query->execute();
+    foreach ($result as $row) {
+      if (strlen($row->name) > 50) {
+        $key = '('.$row->stock_id.') ' . substr($row->name, 0, 50) . '...';
+      }
+      else {
+        $key = '('.$row->stock_id.') ' . $row->name;
+      }
+      $matches[$key] = format_string(
+        '@genus: @name (@uniquename)',
+        array(
+          '@genus' => check_plain($row->genus),
+          '@name' => check_plain($row->name),
+          '@uniquename' => check_plain($row->uniquename),
+        )
+      );
+
+      // If we already have 20 results then break;
+      if (count($matches) > 20) { break; }
+    }
+
+    // Need to break the outer loop too.
+    if (count($matches) > 20) { break; }
+  }
+
+  // return for JS
+  drupal_json_output($matches);
 }
