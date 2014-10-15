@@ -284,7 +284,7 @@ function tripal_is_germplasm_accession($type) {
  *
  * @ingroup tripal_core
  */
-function tripal_germplasm_name_to_id_callback($string, $organism_genus) {
+function tripal_germplasm_name_to_id_callback($organism_genus, $string) {
   $matches = array();
 
   if ($organism_genus == 'ALL') {

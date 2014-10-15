@@ -56,10 +56,10 @@ function tripal_germplasm_menu() {
   );
 
   // Name autocomplete.
-  $items['tripal_ajax/tripal_germplasm/name_to_id/%/%'] = array(
+  $items['tripal_ajax/tripal_germplasm/name_to_id/%'] = array(
     'page callback' => 'tripal_germplasm_name_to_id_callback',
-    'page arguments' => array(4, 3),
-    'access arguments' => array('access germplasm'),
+    'page arguments' => array(3),
+    'access arguments' => array('access content'),
     'type' => MENU_CALLBACK
   );
 
