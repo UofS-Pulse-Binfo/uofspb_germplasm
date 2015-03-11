@@ -4,7 +4,7 @@
  * Basic Functionality for the tripal germplasm module
  */
 
-require_once 'includes/tripal_germplasm.chado_node.inc';
+//require_once 'includes/tripal_germplasm.chado_node.inc';
 require_once 'includes/tripal_germplasm.admin.inc';
 
 require_once 'api/tripal_germplasm.api.inc';
@@ -41,16 +41,6 @@ function tripal_germplasm_menu() {
     'access arguments' => array('administer tripal'),
     'type' => MENU_LOCAL_TASK,
     'weight' => 5
-  );
-
-  $items['admin/tripal/extension/tripal_germplasm/sync'] = array(
-    'title' => ' Sync',
-    'description' => 'Sync germplasm from Chado with Drupal',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('chado_node_sync_form', 'tripal_germplasm', 'tripal_germplasm'),
-    'access arguments' => array('administer tripal'),
-    'type' => MENU_LOCAL_TASK,
-    'weight' => 0
   );
 
   // Name autocomplete.

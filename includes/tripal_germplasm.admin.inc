@@ -116,7 +116,7 @@ function tripal_germplasm_admin_settings_form($form, $form_state) {
 
   $ril_types = variable_get('germplasm_ril_type_ids', array());
   if (!empty($ril_types)) { $ril_types = unserialize($ril_types); }
-      
+
   if ($germplasm_type_cv_id > 0) {
     $cvterms = chado_select_record('cvterm', array('cvterm_id','name'),array('cv_id' => $germplasm_type_cv_id));
     foreach($cvterms as $cvt) {
@@ -126,7 +126,7 @@ function tripal_germplasm_admin_settings_form($form, $form_state) {
   else {
     $types = array();
   }
-  
+
   $form['types']['cross_types'] = array(
 	  '#type' => 'checkboxes',
 	  '#title' => 'Cross Types',
@@ -159,14 +159,14 @@ function tripal_germplasm_admin_settings_form($form, $form_state) {
 		'#required' => TRUE,
 		'#disabled' => ($germplasm_type_cv_id > 0) ? FALSE : TRUE,
   );
-   
+
 	$form['types']['submit'] = array(
 		'#type' => 'submit',
 		'#value' => 'Set Types',
 		'#validate' => array('tripal_germplasm_admin_germplasm_types_form_validate'),
  		'#submit' => array('tripal_germplasm_admin_germplasm_types_form_submit')
 	);
-    
+
   // Parents
   // ---------------
 	$form['parent'] = array(
@@ -211,48 +211,6 @@ function tripal_germplasm_admin_settings_form($form, $form_state) {
  		'#submit' => array('tripal_germplasm_admin_germplasm_parent_type_form_submit')
 	);
 
-  // PAGE TITLES
-  // ---------------
-  $details = array(
-    'module' => 'tripal_germplasm',
-    'content_type' => 'tripal_germplasm',
-    'options' => array(
-      '[stock.name]' => 'Germplasm Name Only',
-      '[stock.uniquename]' => 'Germplasm Unique Name Only',
-      '[stock.name], [stock.uniquename] ([stock.type_id>cvterm.name]) [stock.organism_id>organism.genus] [stock.organism_id>organism.species]' => 'Unique Contraint: Includes the name, uniquename, type and scientific name'
-    ),
-    'unique_option' => '[stock.name], [stock.uniquename] ([stock.type_id>cvterm.name]) [stock.organism_id>organism.genus] [stock.organism_id>organism.species]'
-  );
-  chado_add_admin_form_set_title($form, $form_state, $details);
-
-/**
-	$form['cross_db'] = array(
-		'#type' => 'fieldset',
-		'#title' => t('Cross Databases'),
-		'#description' => t('All Cross Numbers are stored as database references.'
-											 .' This ensures that all cross numbers are linked together'
-											 .' and their source recorded. It\'s assumed but not ensured'
-											 .' that all cross numbers within a given database are unique.'
-											 .' Check the box beside any databases listed below that are'
-											 .' used to store cross numbers. This selection will be used'
-											 .' to populate any select box allowing users to select the'
-											 .' cross number database.'),
-	);
-
- 	$form['cross_db']['cross_databases'] = array(
- 		'#type' => 'checkboxes',
- 		'#title' => t('Available Databases'),
- 		'#options' => tripal_db_get_db_options(),
- 		'#default_value' => array_keys(variable_get( 'germplasm_cross_dbs', array() )),
- 	);
-
- 	$form['cross_db']['submit'] = array(
- 		'#type' => 'submit',
- 		'#value' => 'Set Cross Databases',
- 		'#validate' => array('tripal_germplasm_admin_cross_databases_form_validate'),
- 		'#submit' => array('tripal_germplasm_admin_cross_databases_form_submit')
- 	);
-*/
 	return $form;
 }
 
@@ -311,7 +269,7 @@ function tripal_germplasm_admin_germplasm_types_form_submit($form, $form_state) 
 	variable_set('germplasm_cross_type_ids', serialize($form_state['values']['cross_types']));
 	variable_set('germplasm_variety_type_ids', serialize($form_state['values']['variety_types']));
   variable_set('germplasm_ril_type_ids', serialize($form_state['values']['ril_types']));
-  
+
 }
 
 /**

@@ -23,36 +23,12 @@ function tripal_germplasm_requirements($phase) {
 }
 
 /**
- * Implementation of hook_schema().
+ * Convert all existing tripal germplas nodes back to tripal stock nodes.
  */
-function tripal_germplasm_schema() {
-  $schema['tripal_germplasm'] = array(
-    'fields' => array(
-      'vid' => array(
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      'nid' => array(
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      'stock_id' => array(
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-    ),
-    'indexes' => array(
-      'stock_id' => array('stock_id'),
-       'nid' => array('nid'),
-    ),
-    'unique' => array(
-      'stock_id' => array('stock_id'),
-    ),
-    'primary key' => array('vid'),
-  );
+function tripal_germplasm_update_7000() {
 
-  return $schema;
+  db_query('INSERT INTO {chado_stock} (nid, vid, stock_id) SELECT nid, vid, stock_id from {tripal_germplasm}');
+  db_query("UPDATE {node} SET type='chado_stock' WHERE type='tripal_germplasm'");
+  db_drop_table('tripal_germplasm');
+
 }
