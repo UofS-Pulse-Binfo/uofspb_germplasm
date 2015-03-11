@@ -6,8 +6,6 @@
 
 require_once 'includes/tripal_germplasm.chado_node.inc';
 require_once 'includes/tripal_germplasm.admin.inc';
-require_once 'includes/tripal_germplasm.parents_form.inc';
-require_once 'includes/tripal_germplasm.cross_progeny_form.inc';
 
 require_once 'api/tripal_germplasm.api.inc';
 
