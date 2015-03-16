@@ -6,8 +6,9 @@
 
 //require_once 'includes/tripal_germplasm.chado_node.inc';
 require_once 'includes/tripal_germplasm.admin.inc';
-
+require_once 'includes/tripal_germplasm.stock_node.inc';
 require_once 'api/tripal_germplasm.api.inc';
+require_once 'theme/tripal_germplasm.theme.inc';
 
 /**
  * Implements hook_menu().

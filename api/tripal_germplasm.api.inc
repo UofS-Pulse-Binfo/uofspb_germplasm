@@ -134,6 +134,84 @@ function tripal_get_germplasm_parent_type_id($parent) {
     );
   }
 }
+
+/**
+ * Retrieve all the progeny for a given parent stock.
+ *
+ * @parent_stock
+ *   The stock chado variable of the parent of interest.
+ * @param $parent_type
+ *   A string indicating which parent the previous stock is (ie: maternal,
+ *   paternal, all)
+ */
+function tripal_get_germplasm_progeny($parent_stock, $parent_type) {
+  $progeny = array();
+
+  if ($parent_type == 'maternal' OR $parent_type == 'paternal') {
+
+    $current_type = tripal_get_germplasm_parent_type_id($parent_type);
+    $other_parent_type = ($parent_type == 'maternal') ? 'paternal' : 'maternal';
+    $other_type = tripal_get_germplasm_parent_type_id($other_parent_type);
+
+    $sql = "SELECT
+              prog.stock_id as progeny_stock_id,
+              prog.name as progeny_name,
+              prog.uniquename as progeny_uniquename,
+              prog_node.nid as progeny_nid,
+              otherp.stock_id as other_parent_stock_id,
+              otherp.name as other_parent_name,
+              otherp.uniquename as other_parent_uniquename,
+              otherp_node.nid as other_parent_nid
+            FROM {stock_relationship} sr_mat
+            LEFT JOIN {stock prog} ON prog.stock_id=sr_mat.object_id
+            LEFT JOIN chado_stock prog_node ON prog_node.stock_id=prog.stock_id
+            LEFT JOIN {stock_relationship} sr_otherp ON sr_otherp.object_id=sr_mat.object_id
+            LEFT JOIN {stock} otherp ON otherp.stock_id=sr_otherp.subject_id
+            LEFT JOIN chado_stock otherp_node ON otherp_node.stock_id=otherp.stock_id
+            WHERE
+              sr_mat.subject_id=:current_stock_id
+              AND sr_mat.type_id=:current_type_id
+              AND sr_otherp.type_id=:other_type_id
+            ORDER BY prog.name ASC";
+    $rels = chado_query($sql, array(
+      ':current_stock_id' => $parent_stock->stock_id,
+      ':current_type_id' => $current_type,
+      ':other_type_id' => $other_type
+    ));
+    $progeny = array();
+    foreach ($rels as $rel) {
+      $progeny[] = array(
+        'progeny' => array(
+          'stock_id' => $rel->progeny_stock_id,
+          'name' => $rel->progeny_name,
+          'uniquename' => $rel->progeny_uniquename,
+          'nid' => $rel->progeny_nid
+        ),
+        $other_parent_type => array(
+          'stock_id' => $rel->other_parent_stock_id,
+          'name' => $rel->other_parent_name,
+          'uniquename' => $rel->other_parent_uniquename,
+          'nid' => $rel->other_parent_nid
+        ),
+        $parent_type => array(
+          'stock_id' => $parent_stock->stock_id,
+          'name' => $parent_stock->name,
+          'uniquename' => $parent_stock->uniquename,
+          'nid' => $parent_stock->nid
+        )
+      );
+    }
+
+  }
+  else {
+    $progeny = array_merge(
+      tripal_get_germplasm_progeny($parent_stock, 'maternal'),
+      tripal_get_germplasm_progeny($parent_stock, 'paternal')
+    );
+  }
+  return $progeny;
+}
+
 /**
  * Determine whether a given germplasm is a cross
  *
