@@ -30,24 +30,9 @@ function tripal_germplasm_theme_registry_alter(&$theme_registry) {
 }
 
 /**
- * Proprocess: tripal_stock_base.tpl.php
- */
-function tripal_germplasm_preprocess_tripal_stock_base (&$vars) {
-
-  // Load Germplasm specific details
-  tripal_germplasm_node_load($vars['node']);
-
-}
-
-/**
  * Preprocess: tripal_stock_relationships.tpl.php
  */
 function tripal_germplasm_preprocess_tripal_stock_relationships (&$vars) {
-
-  // Load Germplasm specific details
-  if (!isset($vars['node']->germplasm)) {
-    tripal_germplasm_node_load($vars['node']);
-  }
 
   // Add parental relationship type information.
   foreach(array('maternal', 'paternal') as $parent_type) {

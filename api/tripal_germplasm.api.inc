@@ -350,6 +350,95 @@ function tripal_is_germplasm_accession($type) {
 
 
 /**
+ * Add a relationship to the Chado Node API generated relationship table.
+ *
+ * This is expected to be done in hook_node_validate() by modules altering
+ * a node form by providing more friendly relationship-specific form fields.
+ * By adding the values of your custom element to the Chado Node API
+ * relationship table at validate stage you can allow the API to handle saving
+ * these changes to the database and ensure there are no conflicts between your
+ * form elements and those created by the API.
+ *
+ * @param $form_state
+ *   This is the form state of the form being validated. Keep in mind that you
+ *   must have an &$form_state in your validate function parameters in order
+ *   for the changes to be saved.
+ * @param $relationship
+ *   An array with the subject_id, type_id and object_id of the relationship
+ *   you would like to add/update.
+ * @param $side2update
+ *   This should be either subject_id or object_id and corresponds to the one
+ *   your form element expects to change.
+ */
+function tripal_germplasm_add_relationship_chado_node_form_reltable(&$form_state, $relationship, $side2update) {
+
+    $static_side = ($side2update == 'subject_id') ? 'object_id' : 'subject_id';
+
+    if ($relationship['type_id']) {
+      // If the relationship type is already set we need to cycle through
+      // the existing relationships to replace any matching relationships.
+      // We use the side2update to determine which side is staying the same
+      // and can thus be used to find a match.
+      if (isset($form_state['values']['relationship_table'][ $relationship['type_id'] ])) {
+        $one_found = FALSE;
+        foreach ($form_state['values']['relationship_table'][ $relationship['type_id'] ] as $key => $values) {
+          if ($values[$static_side] == $relationship[$static_side]) {
+            $form_state['values']['relationship_table'][ $relationship['type_id'] ][$key][$side2update] = $relationship[$side2update];
+            $one_found = TRUE;
+            break;
+          }
+        }
+
+        // If we've cycled through all the relationships and didn't find a
+        // matching relationship, then we need to add one.
+        $form_state['values']['relationship_table'][ $relationship['type_id'] ][] = $relationship;
+      }
+      // Otherwise we can just add the relationship directly :).
+      else {
+        $form_state['values']['relationship_table'][ $relationship['type_id'] ][] = $relationship;
+      }
+    }
+}
+
+/**
+ * Remove a relationship from the Chado Node API generated relationship table.
+ *
+ * This is expected to be done in hook_node_validate() by modules altering
+ * a node form by providing more friendly relationship-specific form fields.
+ * By removing the values of your custom element from the Chado Node API
+ * relationship table at validate stage you can allow the API to handle saving
+ * these changes to the database and ensure there are no conflicts between your
+ * form elements and those created by the API.
+ *
+ * @param $form_state
+ *   This is the form state of the form being validated. Keep in mind that you
+ *   must have an &$form_state in your validate function parameters in order
+ *   for the changes to be saved.
+ * @param $relationship
+ *   An array with the subject_id, type_id and object_id of the relationship
+ *   you would like to remove. Simply make the value NULL for the member you are
+ *   removing.
+ * @param $static_side
+ *   This should be either subject_id or object_id and corresponds to the
+ *   current stock you are editing.
+ */
+function tripal_germplasm_remove_relationship_chado_node_form_reltable (&$form_state, $relationship, $static_side) {
+
+    if (isset($form_state['values']['relationship_table'][ $relationship['type_id'] ])) {
+
+      // Simply cycle through the pre-existing relationships and
+      // if you find one where the static side value is the same as in the
+      // supplied relationship and the type matches then unset it.
+      foreach ($form_state['values']['relationship_table'][ $relationship['type_id'] ] as $key => $values) {
+        if ($values[$static_side] == $relationship[$static_side]) {
+          unset($form_state['values']['relationship_table'][ $relationship['type_id'] ][$key]);
+        }
+      }
+
+    }
+}
+
+/**
  * Handles autocomplete for germplasm names.
  *
  * This is used repeatedly in the node add/edit form.
