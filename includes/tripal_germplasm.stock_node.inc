@@ -61,6 +61,7 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
   //    ajax callbacks from non submit form elements
   // 3) in the $form_state['input'] array which occurs on ajax callbacks from submit
   //    form elements and the form is being rebuilt
+  $type_id = NULL;
   $default_maternal = '';
   $current_maternal_desc = '';
   $default_paternal = '';
@@ -140,6 +141,8 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
   // then use the $form_state['values'] values
   if (array_key_exists('values', $form_state)) {
 
+    $type_id = $form_state['values']['type_id'];
+
     $default_ril_cross_num = $form_state['values']['ril_cross_number'];
     $default_date_registered = $form_state['values']['date_registered'];
     $default_market_class = $form_state['values']['market_class'];
@@ -151,6 +154,8 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
   // 3) if we are re building the form from after submission (from ajax call) then
   // the values are in the $form_state['input'] array
   if (array_key_exists('input', $form_state) and !empty($form_state['input'])) {
+
+    $type_id = $form_state['values']['type_id'];
 
     $default_ril_cross_num = $form_state['input']['ril_cross_number'];
     $default_date_registered = $form_state['input']['date_registered'];
@@ -169,7 +174,7 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
     '#weight' => -10
   );
 
-  $core_elements = array('sname', 'uniquename', 'type_id', 'organism_id');
+  $core_elements = array('sname', 'type_id', 'organism_id');
   foreach ($core_elements as $element_name) {
     $form['core'][$element_name] = $form[$element_name];
     unset($form[$element_name]);
@@ -178,10 +183,17 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
   // Hide notes.
   $form['stock_description']['#type'] = 'hidden';
 
-  // Collapse main database reference.
-  $form['database_reference']['#collapsible'] = TRUE;
-  $form['database_reference']['#collapsed'] = TRUE;
-  $form['database_reference']['#title'] = 'Main Database Reference';
+  // Hide uniquename & main database reference since these will be set for them.
+  $form['uniquename']['#type'] = 'hidden';
+  $form['uniquename']['#required'] = FALSE;
+  $form['uniquename']['#value'] = (isset($node->stock)) ? $node->stock->uniquename : uniqid('GERM:');
+  $form['database_reference']['#type'] = 'hidden';
+
+  // Add ajax to the type.
+  $form['core']['type_id']['#ajax'] = array(
+    'callback' => 'ajax_tripal_germplasm_node_form_type_specific_options',
+    'wrapper' => 'type-specific-options',
+  );
 
   //---------------------------------------------
   // Change the dbxref, properties & relationships forms to be in vertical tabs.
@@ -208,7 +220,6 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
 
   //---------------------------------------------
   // Type-specific Additions.
-
   $form['type_specific'] = array(
     '#type' => 'markup',
     '#prefix' => '<div id="type-specific-options">',
@@ -367,6 +378,10 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
     $form['parents']['paternal_parent']['#autocomplete_path'] = 'tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
   }
 
+  // Make Chado Node API relationship table use our autocomplete.
+  $form['relationships']['relationship_table']['new']['object_name']['#autocomplete_path'] = $form['parents']['maternal_parent']['#autocomplete_path'];
+  $form['relationships']['relationship_table']['new']['subject_name']['#autocomplete_path'] = $form['parents']['maternal_parent']['#autocomplete_path'];
+
 }
 
 /**
@@ -405,27 +420,30 @@ function tripal_germplasm_node_validate($node, $form, &$form_state) {
         'relationship' => array(
           'subject_id' => NULL,
           'type_id' => variable_get('germplasm_mparent_rel_type_id', NULL),
-          'object_id' => $node->stock_id
+          'object_id' => NULL, //NOTE: Don't just use node->stock_id since this is not avail. on create
         ),
-        'static_side' => 'object_id'
+        'static_side' => 'object_id',
+        'delete_if_empty' => TRUE
       ),
       'paternal_parent' => array(
         'title' => 'Paternal Parent',
         'relationship' => array(
           'subject_id' => NULL,
           'type_id' => variable_get('germplasm_pparent_rel_type_id', NULL),
-          'object_id' => $node->stock_id
+          'object_id' => NULL, //NOTE: Don't just use node->stock_id since this is not avail. on create
         ),
-        'static_side' => 'object_id'
+        'static_side' => 'object_id',
+        'delete_if_empty' => TRUE
       ),
       'ril_cross_number' => array(
         'title' => 'Original Cross Number',
         'relationship' => array(
-          'subject_id' => $node->stock_id,
+          'subject_id' => NULL, //NOTE: Don't just use node->stock_id since this is not avail. on create
           'type_id' => $selection_type_id,
           'object_id' => NULL
         ),
-        'static_side' => 'subject_id'
+        'static_side' => 'subject_id',
+        'delete_if_empty' => FALSE
       ),
     );
     foreach ($relationship_fields as $field_name => $fields) {
@@ -448,12 +466,18 @@ function tripal_germplasm_node_validate($node, $form, &$form_state) {
       // If the maternal parent form element is empty, we might need to remove
       // a pre-existing parent.
       else {
+        if ($fields['delete_if_empty'] AND isset($node->stock_id)) {
 
-        tripal_germplasm_remove_relationship_chado_node_form_reltable(
-          $form_state,
-          $fields['relationship'],
-          $fields['static_side']
-        );
+          // First we need to set the static side
+          $fields['relationship'][$fields['static_side']] = $node->stock_id;
+
+          // Only then can we delete.
+          tripal_germplasm_remove_relationship_chado_node_form_reltable(
+            $form_state,
+            $fields['relationship'],
+            $fields['static_side']
+          );
+        }
       }
     }
 
@@ -531,19 +555,47 @@ function tripal_germplasm_node_validate($node, $form, &$form_state) {
 
 /**
  * Implements hook_node_update().
- *
-function tripal_germplasm_node_update($node) {
+ */
+function tripal_germplasm_node_insert($node) {
   if ($node->type == 'chado_stock') {
 
-    dpm($node, 'node in update');
-    // Save maternal parent.
-    if (!empty($node->maternal_parent_id)) {
+    $stock_id = db_query("SELECT stock_id from chado_stock WHERE nid=:nid", array(':nid' => $node->nid))->fetchField();
 
-    }
-    // If we don't have a maternal parent make sure there wasn't one added
-    // by the relationship chado node api.
-    else {
+    // Update the stock with the new uniquename
+    // We can't set this initially since it depends on the stock_id
+    // which is only available after the stock is created
+    $stock = array();
+    $prefix = variable_get('germplasm_prefix', 'GERM:');
+    $stock['uniquename'] = $prefix . $stock_id;
+    chado_update_record('stock', array('stock_id' => $stock_id), $stock);
 
+    // Generate the primary dbxref
+    $db_id = variable_get('tripal_stock_main_dbxref_db', 0);
+    if ($db_id > 0) {
+      $dbxref = tripal_insert_dbxref(array(
+        'db_id' => $db_id,
+        'accession' => $stock['uniquename'],
+      ));
+
+      // Update the stock to point to the new dbxref
+      if (is_object($dbxref)) {
+        $stock['dbxref_id'] = $dbxref->dbxref_id;
+        chado_update_record('stock', array('stock_id' => $stock_id), $stock);
+      }
     }
   }
-}*/
+}
+
+/**
+ * Implements hook_node_view().
+ */
+function tripal_germplasm_node_view($node, $view_mode, $langcode) {
+
+  // Remove the tabs for properties, sysnonyms and references
+  // since they are included in the overview.
+  unset(
+    $node->content['tripal_stock_properties'],
+    $node->content['tripal_stock_synonyms'],
+    $node->content['tripal_stock_references']
+  );
+}

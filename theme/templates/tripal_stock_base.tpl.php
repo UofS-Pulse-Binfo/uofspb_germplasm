@@ -7,6 +7,12 @@ $main_db_reference = $stock->dbxref_id;
 $stock = chado_expand_var($stock, 'field', 'stock.description');
 $stock = chado_expand_var($stock, 'field', 'stock.uniquename'); ?>
 
+<style>
+th {
+  width: 200px;
+}
+</style>
+
 <div class="tripal_stock-data-block-desc tripal-data-block-desc"></div> <?php
 
 // the $headers array is an array of fields to use as the colum headers.
@@ -22,12 +28,14 @@ $headers = array();
 // https://api.drupal.org/api/drupal/includes%21theme.inc/function/theme_table/7
 $rows = array();
 
+// Generic Info
+// ====================================
 // Organism
 $organism = $stock->organism_id->genus ." " . $stock->organism_id->species ." (" . $stock->organism_id->common_name .")";
 if (property_exists($stock->organism_id, 'nid')) {
   $organism = l("<i>" . $stock->organism_id->genus . " " . $stock->organism_id->species . "</i> (" . $stock->organism_id->common_name .")", "node/".$stock->organism_id->nid, array('html' => TRUE));
 }
-$rows[] = array(
+$rows['generic'][] = array(
   array(
     'data' => 'Scientific Name',
     'header' => TRUE
@@ -35,8 +43,19 @@ $rows[] = array(
   $organism
 );
 
+// Stock Type
+$rows['generic'][] = array(
+  array(
+    'data' => 'Type',
+    'header' => TRUE,
+  ),
+  ucwords(preg_replace('/_/', ' ', $stock->type_id->name))
+);
+
+// Names
+// ====================================
 // Stock Unique Name
-$rows[] = array(
+$rows['names'][] = array(
   array(
     'data' => 'Accession',
     'header' => TRUE,
@@ -45,7 +64,7 @@ $rows[] = array(
 );
 
 // Stock Name
-$rows[] = array(
+$rows['names'][] = array(
   array(
     'data' => 'Name',
     'header' => TRUE,
@@ -54,15 +73,19 @@ $rows[] = array(
   $stock->name
 );
 
-// Stock Type
-$rows[] = array(
-  array(
-    'data' => 'Type',
-    'header' => TRUE,
-  ),
-  ucwords(preg_replace('/_/', ' ', $stock->type_id->name))
-);
+// Synonyms
+if (!empty($synonyms)) {
+  $rows['names'][] = array(
+    array(
+      'data' => 'Synonyms',
+      'header' => TRUE,
+    ),
+    implode(', ', $synonyms)
+  );
+}
 
+// Parentage
+// ====================================
 // Maternal Parent
 if (isset($node->germplasm->maternal_parent)) {
   if (isset($node->germplasm->maternal_parent->nid)) {
@@ -72,7 +95,7 @@ if (isset($node->germplasm->maternal_parent)) {
     $maternal_parent_name = $node->germplasm->maternal_parent->stock->name;
   }
 
-  $rows[] = array(
+  $rows['parents'][] = array(
     array(
       'data' => 'Maternal Parent',
       'header' => TRUE,
@@ -90,7 +113,7 @@ if (isset($node->germplasm->paternal_parent)) {
     $paternal_parent_name = $node->germplasm->paternal_parent->stock->name;
   }
 
-  $rows[] = array(
+  $rows['parents'][] = array(
     array(
       'data' => 'Paternal Parent',
       'header' => TRUE,
@@ -99,10 +122,22 @@ if (isset($node->germplasm->paternal_parent)) {
   );
 }
 
+// Properties
+// ====================================
+foreach ($properties as $type => $props) {
+    $rows['properties'][] = array(
+    array(
+      'data' => ucwords(preg_replace('/_/', ' ', $type)),
+      'header' => TRUE,
+    ),
+    implode(', ', $props)
+  );
+}
+
 // allow site admins to see the stock ID
 if (user_access('administer tripal')) {
   // stock ID
-  $rows[] = array(
+  $rows['names'][] = array(
     array(
       'data' => 'Stock ID',
       'header' => TRUE,
@@ -114,7 +149,9 @@ if (user_access('administer tripal')) {
     ),
   );
 }
+
 // Is Obsolete Row
+/**
 if($stock->is_obsolete == TRUE){
   $rows[] = array(
     array(
@@ -123,27 +160,30 @@ if($stock->is_obsolete == TRUE){
     ),
   );
 }
+*/
 
-// the $table array contains the headers and rows array as well as other
-// options for controlling the display of the table.  Additional
-// documentation can be found here:
-// https://api.drupal.org/api/drupal/includes%21theme.inc/function/theme_table/7
-$table = array(
-  'header' => $headers,
-  'rows' => $rows,
-  'attributes' => array(
-    'id' => 'tripal_stock-table-base',
-    'class' => 'tripal-data-table'
-  ),
-  'sticky' => FALSE,
-  'caption' => '',
-  'colgroups' => array(),
-  'empty' => '',
-);
+foreach ($rows as $table_name => $row_subset) {
+  // the $table array contains the headers and rows array as well as other
+  // options for controlling the display of the table.  Additional
+  // documentation can be found here:
+  // https://api.drupal.org/api/drupal/includes%21theme.inc/function/theme_table/7
+  $table = array(
+    'header' => $headers,
+    'rows' => $row_subset,
+    'attributes' => array(
+      'id' => 'tripal_stock-table-base-' . $table_name,
+      'class' => 'tripal-data-table'
+    ),
+    'sticky' => FALSE,
+    'caption' => '',
+    'colgroups' => array(),
+    'empty' => '',
+  );
 
-// once we have our table array structure defined, we call Drupal's theme_table()
-// function to generate the table.
-print theme_table($table);
+  // once we have our table array structure defined, we call Drupal's theme_table()
+  // function to generate the table.
+  print theme_table($table);
+}
 
 // add in the description if there is one
 if (property_exists($stock, 'description')) { ?>

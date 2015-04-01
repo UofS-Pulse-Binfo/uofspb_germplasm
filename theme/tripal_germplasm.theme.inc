@@ -32,6 +32,34 @@ function tripal_germplasm_theme_registry_alter(&$theme_registry) {
 /**
  * Preprocess: tripal_stock_relationships.tpl.php
  */
+function tripal_germplasm_preprocess_tripal_stock_base (&$vars) {
+
+  // Expand the properties.
+  $vars['node']->stock = chado_expand_var($vars['node']->stock, 'table','stockprop');
+
+  // Process them so they're easier to list.
+  $vars['properties'] = array();
+  $vars['synonyms'] = array();
+  if (isset($vars['node']->stock->stockprop)) {
+    foreach($vars['node']->stock->stockprop as $prop) {
+      if ($prop->type_id->name == 'synonym') {
+        $vars['synonyms'][] = $prop->value;
+      }
+      else {
+        if (empty($prop->value)) {
+          $vars['properties'][ $prop->type_id->name ][] = 'Yes';
+        }
+        else {
+          $vars['properties'][ $prop->type_id->name ][] = $prop->value;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Preprocess: tripal_stock_relationships.tpl.php
+ */
 function tripal_germplasm_preprocess_tripal_stock_relationships (&$vars) {
 
   // Add parental relationship type information.

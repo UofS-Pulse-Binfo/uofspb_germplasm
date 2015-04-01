@@ -162,16 +162,15 @@ function tripal_get_germplasm_progeny($parent_stock, $parent_type) {
               otherp.name as other_parent_name,
               otherp.uniquename as other_parent_uniquename,
               otherp_node.nid as other_parent_nid
-            FROM {stock_relationship} sr_mat
-            LEFT JOIN {stock prog} ON prog.stock_id=sr_mat.object_id
-            LEFT JOIN chado_stock prog_node ON prog_node.stock_id=prog.stock_id
-            LEFT JOIN {stock_relationship} sr_otherp ON sr_otherp.object_id=sr_mat.object_id
-            LEFT JOIN {stock} otherp ON otherp.stock_id=sr_otherp.subject_id
-            LEFT JOIN chado_stock otherp_node ON otherp_node.stock_id=otherp.stock_id
+            FROM {stock_relationship} sr_main
+            LEFT JOIN {stock} prog ON prog.stock_id=sr_main.object_id
+            FULL OUTER JOIN chado_stock prog_node ON prog_node.stock_id=prog.stock_id
+            FULL OUTER JOIN {stock_relationship} sr_otherp ON sr_otherp.subject_id=sr_main.object_id AND sr_otherp.type_id=:other_type_id
+            FULL OUTER JOIN {stock} otherp ON otherp.stock_id=sr_otherp.subject_id
+            FULL OUTER JOIN chado_stock otherp_node ON otherp_node.stock_id=otherp.stock_id
             WHERE
-              sr_mat.subject_id=:current_stock_id
-              AND sr_mat.type_id=:current_type_id
-              AND sr_otherp.type_id=:other_type_id
+              sr_main.subject_id=:current_stock_id
+              AND sr_main.type_id=:current_type_id
             ORDER BY prog.name ASC";
     $rels = chado_query($sql, array(
       ':current_stock_id' => $parent_stock->stock_id,
@@ -382,7 +381,7 @@ function tripal_germplasm_add_relationship_chado_node_form_reltable(&$form_state
       if (isset($form_state['values']['relationship_table'][ $relationship['type_id'] ])) {
         $one_found = FALSE;
         foreach ($form_state['values']['relationship_table'][ $relationship['type_id'] ] as $key => $values) {
-          if ($values[$static_side] == $relationship[$static_side]) {
+          if (($values[$static_side] == $relationship[$static_side]) OR $relationship[$static_side] === NULL) {
             $form_state['values']['relationship_table'][ $relationship['type_id'] ][$key][$side2update] = $relationship[$side2update];
             $one_found = TRUE;
             break;
@@ -391,7 +390,9 @@ function tripal_germplasm_add_relationship_chado_node_form_reltable(&$form_state
 
         // If we've cycled through all the relationships and didn't find a
         // matching relationship, then we need to add one.
-        $form_state['values']['relationship_table'][ $relationship['type_id'] ][] = $relationship;
+        if (!$one_found) {
+          $form_state['values']['relationship_table'][ $relationship['type_id'] ][] = $relationship;
+        }
       }
       // Otherwise we can just add the relationship directly :).
       else {
@@ -430,7 +431,7 @@ function tripal_germplasm_remove_relationship_chado_node_form_reltable (&$form_s
       // if you find one where the static side value is the same as in the
       // supplied relationship and the type matches then unset it.
       foreach ($form_state['values']['relationship_table'][ $relationship['type_id'] ] as $key => $values) {
-        if ($values[$static_side] == $relationship[$static_side]) {
+        if (($values[$static_side] == $relationship[$static_side]) OR ($relationship[$static_side] === NULL)) {
           unset($form_state['values']['relationship_table'][ $relationship['type_id'] ][$key]);
         }
       }
