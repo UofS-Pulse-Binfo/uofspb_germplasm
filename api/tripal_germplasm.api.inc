@@ -165,7 +165,7 @@ function tripal_get_germplasm_progeny($parent_stock, $parent_type) {
             FROM {stock_relationship} sr_main
             LEFT JOIN {stock} prog ON prog.stock_id=sr_main.object_id
             FULL OUTER JOIN chado_stock prog_node ON prog_node.stock_id=prog.stock_id
-            FULL OUTER JOIN {stock_relationship} sr_otherp ON sr_otherp.subject_id=sr_main.object_id AND sr_otherp.type_id=:other_type_id
+            FULL OUTER JOIN {stock_relationship} sr_otherp ON sr_otherp.object_id=sr_main.object_id AND sr_otherp.type_id=:other_type_id
             FULL OUTER JOIN {stock} otherp ON otherp.stock_id=sr_otherp.subject_id
             FULL OUTER JOIN chado_stock otherp_node ON otherp_node.stock_id=otherp.stock_id
             WHERE
