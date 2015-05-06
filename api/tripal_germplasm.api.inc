@@ -391,12 +391,14 @@ function tripal_germplasm_add_relationship_chado_node_form_reltable(&$form_state
         // If we've cycled through all the relationships and didn't find a
         // matching relationship, then we need to add one.
         if (!$one_found) {
-          $form_state['values']['relationship_table'][ $relationship['type_id'] ][] = $relationship;
+          $key = 'TEMP' . uniqid();
+          $form_state['values']['relationship_table'][ $relationship['type_id'] ][$key] = $relationship;
         }
       }
       // Otherwise we can just add the relationship directly :).
       else {
-        $form_state['values']['relationship_table'][ $relationship['type_id'] ][] = $relationship;
+        $key = 'TEMP' . uniqid();
+        $form_state['values']['relationship_table'][ $relationship['type_id'] ][$key] = $relationship;
       }
     }
 }

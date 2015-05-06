@@ -30,7 +30,7 @@ function tripal_germplasm_theme_registry_alter(&$theme_registry) {
 }
 
 /**
- * Preprocess: tripal_stock_relationships.tpl.php
+ * Preprocess: tripal_stock_base.tpl.php
  */
 function tripal_germplasm_preprocess_tripal_stock_base (&$vars) {
 

@@ -75,22 +75,5 @@ function tripal_germplasm_theme($existing, $type, $theme, $path) {
     'path' => "$core_path/theme/templates",
   );
 
-  $items['tripal_germplasm_base'] = array(
-    'variables' => array('node' => NULL),
-    'template' => 'tripal_germplasm_base',
-    'path' => "$path/theme/templates",
-  );
-
   return $items;
-}
-
-/**
- * Implements hook_views_api().
- */
-function tripal_germplasm_views_api() {
-  return array(
-    'api' => 3,
-    'path' => drupal_get_path('module', 'tripal_germplasm') . '/includes',
-    'template path' => drupal_get_path('module', 'tripal_germplasm') . '/themes',
-  );
 }
