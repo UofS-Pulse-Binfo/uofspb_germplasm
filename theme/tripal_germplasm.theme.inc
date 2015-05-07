@@ -35,20 +35,23 @@ function tripal_germplasm_theme_registry_alter(&$theme_registry) {
 function tripal_germplasm_preprocess_tripal_stock_base (&$vars) {
 
   // Expand the properties.
-  $vars['node']->stock = chado_expand_var($vars['node']->stock, 'table','stockprop');
+  $vars['node']->stock = chado_expand_var($vars['node']->stock, 'table','stockprop', array('return_array' => TRUE));
 
   // Process them so they're easier to list.
   $vars['properties'] = array();
   $vars['synonyms'] = array();
   if (isset($vars['node']->stock->stockprop)) {
     foreach($vars['node']->stock->stockprop as $prop) {
+      // If it's a synonym then break it out for special consideration.
       if ($prop->type_id->name == 'synonym') {
         $vars['synonyms'][] = $prop->value;
       }
       else {
+        // If it has an empty value then assume its a presence/absent property.
         if (empty($prop->value)) {
           $vars['properties'][ $prop->type_id->name ][] = 'Yes';
         }
+        // Otherwise, good ol' average property, comming up!
         else {
           $vars['properties'][ $prop->type_id->name ][] = $prop->value;
         }
