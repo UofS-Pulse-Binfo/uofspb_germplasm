@@ -52,7 +52,14 @@ function tripal_germplasm_cmp_progeny_name($a, $b) {
  * easier to enter germplasm.
  */
 function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state, $form_id) {
+  $form['#node']->stock = chado_expand_var($form['#node']->stock, 'table', 'stockprop', array('return_array' => TRUE));
   $node = $form['#node'];
+
+  // Gather information about special fields.
+  //---------------------------------------------
+  $special_fields = module_invoke_all('special_germplasm_node_fields');
+  $form_state['germplasm']['special_fields'] = $special_fields;
+  //dpm($special_fields, 'special_fields');
 
   ///////////////////////////////////////////////
   // DEFAULT VALUES
@@ -62,15 +69,7 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
   // 3) in the $form_state['input'] array which occurs on ajax callbacks from submit
   //    form elements and the form is being rebuilt
   $type_id = NULL;
-  $default_maternal = '';
-  $current_maternal_desc = '';
-  $default_paternal = '';
-  $current_paternal_desc = '';
-  $default_ril_cross_num = '';
-  $default_date_registered = NULL;
-  $default_market_class = '';
-  $default_cb_year = '';
-  $default_cb_season = 0;
+
 
   // 1) as elements of the $node object.  This occurs when editing an existing stock
   if (property_exists($node, 'stock')) {
@@ -78,84 +77,6 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
     $stock_id = $node->stock->stock_id;
     $type_id = $node->stock->type_id->cvterm_id;
     $organism_id = $node->stock->organism_id->organism_id;
-
-    $type = tripal_get_cvterm(array('name' => 'is_selection_of'));
-    $selection_type_id = NULL;
-    if (isset($type->cvterm_id)) {
-      $selection_type_id = $type->cvterm_id;
-    }
-    $relationship_types = array(
-      'object_id' => array(
-        tripal_get_germplasm_parent_type_id('maternal') => 'is_maternal_parent_of',
-        tripal_get_germplasm_parent_type_id('paternal') => 'is_paternal_parent_of',
-      ),
-      'subject_id' => array(
-        $selection_type_id => 'is_selection_of'
-      ),
-    );
-
-
-    $maternal_parent = tripal_get_germplasm_parent('maternal',$node->stock);
-    if (is_object($maternal_parent)) {
-      if (isset($maternal_parent->nid)) {
-        $default_maternal = '('.$maternal_parent->stock->stock_id.') '.$maternal_parent->stock->name;
-        $current_maternal_desc = ' The current maternal parent is <em>' . l($maternal_parent->stock->name, 'node/' . $maternal_parent->nid) . '</em>.';
-      }
-      else {
-        $default_maternal = '('.$maternal_parent->stock_id.') '.$maternal_parent->name;
-        $current_maternal_desc = ' The current maternal parent is <em>' . $maternal_parent->name . '</em>.';
-      }
-    }
-
-    $paternal_parent = tripal_get_germplasm_parent('paternal',$node->stock);
-    if (is_object($paternal_parent)) {
-      if (isset($paternal_parent->nid)) {
-        $default_paternal = '('.$paternal_parent->stock->stock_id.') '.$paternal_parent->stock->name;
-        $current_paternal_desc = ' The current paternal parent is <em>' . l($paternal_parent->stock->name, 'node/' . $paternal_parent->nid) . '</em>.';
-      }
-      else {
-        $default_paternal = '('.$paternal_parent->stock_id.') '.$paternal_parent->name;
-        $current_paternal_desc = ' The current paternal parent is <em>' . $paternal_parent->name . '</em>.';
-      }
-    }
-
-    $rel = chado_generate_var(
-      'stock_relationship',
-      array(
-        'type_id' => array('name' => 'is_selection_of'),
-        'subject_id' => $node->stock->stock_id
-      ),
-      array(
-        'include_fk' => array('object_id' => TRUE)
-      )
-    );
-    if (isset($rel->object_id)) {
-      $default_ril_cross_num = '(' . $rel->object_id->stock_id . ') ' . $rel->object_id->name;
-    }
-
-    $properties = chado_generate_var('stockprop',array('stock_id' => $node->stock->stock_id), array('return_array' => TRUE));
-    $properties = (is_array($properties)) ? $properties : array();
-    $property_types = array();
-    foreach ($properties as $property) {
-      switch ($property->type_id->name) {
-        case 'variety_year_released':
-          $default_date_registered = $property->value;
-          $property_types['variety'][$property->type_id->cvterm_id] = 'variety_year_released';
-          break;
-        case 'market_class':
-          $default_market_class = $property->value;
-          $property_types['variety'][$property->type_id->cvterm_id] = 'market_class';
-          break;
-        case 'crossingblock_year':
-          $default_cb_year = $property->value;
-          $property_types['cross'][$property->type_id->cvterm_id] = 'crossingblock_year';
-          break;
-        case 'crossingblock_season':
-          $default_cb_season = $property->value;
-          $property_types['cross'][$property->type_id->cvterm_id] = 'crossingblock_season';
-          break;
-      }
-    }
   }
 
   // 2) if we are re constructing the form from a failed validation or ajax callback
@@ -163,12 +84,6 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
   if (array_key_exists('values', $form_state)) {
 
     $type_id = $form_state['values']['type_id'];
-
-    $default_ril_cross_num = $form_state['values']['ril_cross_number'];
-    $default_date_registered = $form_state['values']['date_registered'];
-    $default_market_class = $form_state['values']['market_class'];
-    $default_cb_year = $form_state['values']['cb_year'];
-    $default_cb_season = $form_state['values']['cb_season'];
 
   }
 
@@ -178,12 +93,37 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
 
     $type_id = $form_state['values']['type_id'];
 
-    $default_ril_cross_num = $form_state['input']['ril_cross_number'];
-    $default_date_registered = $form_state['input']['date_registered'];
-    $default_market_class = $form_state['input']['market_class'];
-    $default_cb_year = $form_state['input']['cb_year'];
-    $default_cb_season = $form_state['input']['cb_season'];
   }
+
+  // Determine the category.
+  $categories = module_invoke_all('germplasm_node_categories');
+  $category = NULL;
+  foreach ($categories as $machine_name => $details) {
+    if (call_user_func($details['check_function'], array('type_id' => $type_id))) {
+      $category = $machine_name;
+    }
+  }
+  $form_state['germplasm']['category'] = $category;
+
+  $defaults = array();
+  $property_types = array();
+  $relationship_types = array();
+  foreach($special_fields as $machine_name => $details) {
+    if (!$details['type_specific'] OR in_array($category, $details['category'])) {
+      $defaults[$machine_name] = call_user_func( $details['value_function'], $node, $details);
+
+      if ($details['node_api_category'] == 'property') {
+        $property_types[$details['type_id']] = (isset($details['type_name'])) ? $details['type_name'] : $machine_name;
+      }
+      elseif ($details['node_api_category'] == 'relationship') {
+        $relationship_types[$details['current_stock_side']][$details['type_id']] = (isset($details['type_name'])) ? $details['type_name'] : $machine_name;
+      }
+    }
+  }
+  $form_state['germplasm']['defaults'] = $defaults;
+  $form_state['germplasm']['property_types'] = $property_types;
+  $form_state['germplasm']['relationship_types'] = $relationship_types;
+  //dpm($defaults, 'defaults');
 
   ///////////////////////////////////////////////
   // Form Proper.
@@ -216,23 +156,17 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
     'wrapper' => 'type-specific-options',
   );
 
+  // Chado node api changes.
   //---------------------------------------------
-  // Change the dbxref, properties & relationships forms to be in vertical tabs.
-  $form['chado_node_api'] = array(
-    '#type' => 'vertical_tabs',
-    '#weight' => 50
-  );
-  $node_api_elements = array('addtl_dbxrefs', 'properties', 'relationships');
-  foreach ($node_api_elements as $element_name) {
-    $form[$element_name]['#group'] = 'chado_node_api';
-    $form[$element_name]['#collapsible'] = TRUE;
-    $form[$element_name]['#collapsed'] = TRUE;
-    unset($form[$element_name]['#prefix']);
-    unset($form[$element_name]['#suffix']);
-  }
+  // Set the weight.
+  $form['chado_node_api']['#weight'] = 50;
 
   // change the name of the additional dbxrefs fieldset.
   $form['addtl_dbxrefs']['#title'] = 'External Accessions';
+
+  // Make Chado Node API relationship table use our autocomplete.
+  $form['relationships']['relationship_table']['new']['object_name']['#autocomplete_path'] = 'tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
+  $form['relationships']['relationship_table']['new']['subject_name']['#autocomplete_path'] = 'tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
 
   // Add in some themeing
   //---------------------------------------------
@@ -248,142 +182,37 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
     '#suffix' => '</div>'
   );
 
-  $form['type_specifc']['property_type_ids'] = array(
-    '#type' => 'hidden',
-    '#value' => serialize($property_types),
-  );
-
-  $form['type_specific']['relationship_type_ids'] = array(
-    '#type' => 'hidden',
-    '#value' => serialize($relationship_types),
-  );
-
-  // Determine the category.
-  $category = 'cross';
-  if (tripal_is_germplasm_variety(array('type_id' => $type_id))) {
-    $category = 'variety';
-  }
-  elseif (tripal_is_germplasm_ril(array('type_id' => $type_id))) {
-    $category = 'ril';
-  }
-  $form['type_specifc']['type_category'] = array(
-    '#type' => 'hidden',
-    '#value' => $category,
-  );
-
-  // Cross
-  //'''''''''''''''
-  $form['type_specific']['cross'] = array(
+  $form['type_specific'][$category] = array(
     '#type' => 'fieldset',
-    '#title' => 'Type-specific: Cross',
+    '#title' => 'Type-specific: ' . $categories[$category]['title'],
     '#weight' => 2,
     '#prefix' => '<div id="type-specific-options">',
     '#suffix' => '</div>'
   );
-  if ($category != 'cross') {
-    $form['type_specific']['cross']['#prefix'] = '<span style="display:none">';
-    $form['type_specific']['cross']['#suffix'] = '</span>';
+
+  // Now add in each of the type-specific fields :).
+  foreach($special_fields as $machine_name => $details) {
+    if (in_array($category, $details['category']) AND $details['type_specific']) {
+
+      $form['type_specific'][$category][$machine_name] = array(
+        '#type' => $details['form_type'],
+        '#title' => $details['title'],
+        '#description' => $details['description'],
+        '#default_value' => $defaults[$machine_name]['value']
+      );
+
+      if ($details['node_api_category'] == 'relationship') {
+        $form['type_specific'][$category][$machine_name]['#autocomplete_path'] ='tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
+      }
+
+    }
   }
-
-  // Crossing Block Year
-  $form['type_specific']['cross']['cb_year'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Crossing Block Year',
-    '#description' => 'The year this cross was made in (ie: '.date("Y").').',
-    '#default_value' => $default_cb_year
-  );
-
-  $form['type_specific']['cross']['cb_season'] = array(
-    '#type' => 'select',
-    '#title' => 'Crossing Block Season',
-    '#description' => 'The season this cross was made in.',
-    '#options' => array(
-      0 => '',
-      'Spring' => 'Spring',
-      'Summer' => 'Summer',
-      'Fall' => 'Fall',
-      'Winter' => 'Winter'
-    ),
-    '#default_value' => $default_cb_season
-  );
-
-  // Variety
-  //'''''''''''''''
-  $form['type_specific']['variety'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Type-specific: Variety',
-    '#weight' => 3,
-  );
-  if ($category != 'variety') {
-    $form['type_specific']['variety']['#prefix'] = '<span style="display:none">';
-    $form['type_specific']['variety']['#suffix'] = '</span>';
-  }
-
-  // Date Registered
-  $form['type_specific']['variety']['date_registered'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Date Registered',
-    '#description' => 'The date this variety was registered.',
-    '#default_value' => $default_date_registered
-  );
-
-  // Market Class
-  $form['type_specific']['variety']['market_class'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Market Class',
-    '#description' => 'The market class of this variety.',
-    '#default_value' => $default_market_class
-  );
-
-  // RIL
-  //'''''''''''''''
-  $form['type_specific']['ril'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Type-specific: RIL',
-    '#weight' => 4,
-    '#prefix' => '<div id="type-specific-options">',
-    '#suffix' => '</div>'
-  );
-  if ($category != 'ril') {
-    $form['type_specific']['ril']['#prefix'] = '<span style="display:none">';
-    $form['type_specific']['ril']['#suffix'] = '</span>';
-  }
-
-  // Original Cross Number
-  $form['type_specific']['ril']['ril_cross_number'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Original Cross Number',
-    '#description' => 'The cross number the RIL originated from',
-    '#default_value' => $default_ril_cross_num,
-    '#autocomplete_path' => 'tripal_ajax/tripal_germplasm/name_to_id/ALL'
-  );
-  if (isset($node->stock->organism_id->genus)) {
-    $form['type_specific']['ril']['ril_cross_number']['#autocomplete_path'] = 'tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
-  }
-
-  // Date Deposited with number of lines
-  // @TODO: Add compound form element with two textfields to enter two properties concurrently
-
-  // Accession
-  //'''''''''''''''
-  /**
-  $form['accession'] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Accession Details',
-    '#weight' => 5,
-    '#collapsible' => TRUE,
-    '#collapsed' => !tripal_is_germplasm_accession(array('type_id' => $type_id)),
-  );
-
-  // Dbxrefs
-  // @TODO: Create a compound form field to enter both the db.name and accession
-*/
 
   // Disable the rows in the chado node api: properties
   // that are now controlled by custom fields.
   //---------------------------------------------
-  if (isset($property_types[$category])) {
-    foreach ($property_types[$category] as $type_id => $property_name) {
+  foreach ($property_types as $type_id => $property_name) {
+    if (isset($form['properties']['property_table'][$type_id])) {
       foreach ($form['properties']['property_table'][$type_id] as $key => $form_row) {
         if (!preg_match('/^#/', $key)) {
           unset($form['properties']['property_table'][$type_id][$key]['property_action']['#ajax']);
@@ -396,15 +225,13 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
 
   // And notify the user of what's going on.
   // Both in the type-specific fieldsets
-  $form['type_specific']['cross']['removal-warning'] = array(
+  $form['type_specific'][$category]['removal-warning'] = array(
     '#type' => 'markup',
     '#markup' => 'Remove a type-specific property by deleting the text in the corresponding box below.',
     '#prefix' => '<div id="chado-node-api-property-parent-warning" class="messages property-type-specific fieldset-warning tripal-germplasm-warning" style="display:none; height: 18px">',
     '#suffix' => '</div>',
     '#weight' => -10
   );
-  $form['type_specific']['variety']['removal-warning'] = $form['type_specific']['cross']['removal-warning'];
-  $form['type_specific']['ril']['removal-warning'] = $form['type_specific']['cross']['removal-warning'];
 
   // And notifty them in the chado node api fieldset as well.
   $form['properties']['type_specific_msg'] = array(
@@ -427,55 +254,38 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
     '#description' => 'The parents of the current germplasm (if known).'
   );
 
-  if (isset($maternal_parent->stock_id)) {
-    $form['parents']['maternal_parent_id'] = array(
-      '#type' => 'hidden',
-      '#value' => $maternal_parent->stock_id
-    );
-  }
-  $form['parents']['maternal_parent'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Maternal Parent',
-    '#description' => 'The name of the maternal parent of this germplasm.' . $current_maternal_desc,
-    '#default_value' => $default_maternal,
-    '#autocomplete_path' => 'tripal_ajax/tripal_germplasm/name_to_id/ALL',
-    '#weight' => 9
-  );
-  if (isset($node->stock->organism_id->genus)) {
-    $form['parents']['maternal_parent']['#autocomplete_path'] = 'tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
-  }
+  // Now add in the parental fields :).
+  foreach($special_fields as $machine_name => $details) {
+    if (in_array('parent', $details['category'])) {
 
-  if (isset($paternal_parent->stock_id)) {
-    $form['parents']['paternal_parent_id'] = array(
-      '#type' => 'hidden',
-      '#value' => $paternal_parent->stock_id
-    );
-  }
-  $form['parents']['paternal_parent'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Paternal Parent',
-    '#description' => 'The name of the paternal parent of this germplasm.' . $current_paternal_desc,
-    '#default_value' => $default_paternal,
-    '#autocomplete_path' => 'tripal_ajax/tripal_germplasm/name_to_id/ALL',
-    '#weight' => 10
-  );
-  if (isset($node->stock->organism_id->genus)) {
-    $form['parents']['paternal_parent']['#autocomplete_path'] = 'tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
-  }
+      $form['parents'][$machine_name . '_id'] = array(
+        '#type' => 'hidden',
+        '#value' => $defaults[$machine_name]['stock_id']
+      );
 
-  // Make Chado Node API relationship table use our autocomplete.
-  $form['relationships']['relationship_table']['new']['object_name']['#autocomplete_path'] = $form['parents']['maternal_parent']['#autocomplete_path'];
-  $form['relationships']['relationship_table']['new']['subject_name']['#autocomplete_path'] = $form['parents']['maternal_parent']['#autocomplete_path'];
+      $form['parents'][$machine_name] = array(
+        '#type' => $details['form_type'],
+        '#title' => $details['title'],
+        '#description' => $details['description'],
+        '#default_value' => $defaults[$machine_name]['value']
+      );
+
+      if ($details['node_api_category'] == 'relationship') {
+        $form['parents'][$machine_name]['#autocomplete_path'] ='tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
+      }
+
+    }
+  }
 
   // Disable the rows in the chado node api: relationships
   // that are now controlled by custom fields.
   //---------------------------------------------
   // Ensure they don't remove relationships they shouldn't.
   foreach ($relationship_types as $side => $types) {
-    foreach ($types as $type_id) {
+    foreach ($types as $type_id => $type_name) {
       foreach ($form['relationships']['relationship_table'][$type_id] as $key => $form_row) {
         if (!preg_match('/^#/', $key)) {
-          if ($form_row[$side]['#value'] == $form_state['node']->stock->stock_id) {
+          if ($form_row[$side . '_id']['#value'] == $form_state['node']->stock->stock_id) {
             unset($form['relationships']['relationship_table'][$type_id][$key]['rel_action']['#ajax']);
             $form['relationships']['relationship_table'][$type_id][$key]['subject_name']['#prefix'] = '** ';
             $form['relationships']['relationship_table'][$type_id][$key]['#attributes']['class'][] = 'custom-control';
@@ -524,17 +334,19 @@ function ajax_tripal_germplasm_node_form_type_specific_options($form, $form_stat
  */
 function tripal_germplasm_node_form_properties_add_button_validate($form, &$form_state) {
 
-  $property_types = unserialize($form_state['values']['property_type_ids']);
   $new_type_id = $form_state['values']['property_table']['new']['type'];
 
   // Ensure that if a type has been selected that the user is not trying
   // to add a type-specific property.
   if ($new_type_id != 0) {
-    if (isset($property_types[$form_state['values']['type_category']][$new_type_id])) {
+    if (isset($form_state['germplasm']['property_types'][$new_type_id])) {
+      $type_name = $form_state['germplasm']['property_types'][$new_type_id];
       form_set_error(
         'property_table][new][type',
-        t('Cannot add %type_name property because it is type-specific. Please add type-specific properties in the "type-specific" section above.',
-          array('%type_name' => $property_types[$form_state['values']['type_category']][$new_type_id]))
+        t('Cannot add %type_name property because it is type-specific. Instead, enter this value in the "Type-Specific" section as the %field_name.',
+          array(
+            '%type_name' => $type_name,
+            '%field_name' => $form_state['germplasm']['special_fields'][$type_name]['title']))
       );
     }
   }
@@ -548,28 +360,48 @@ function tripal_germplasm_node_form_properties_add_button_validate($form, &$form
  */
 function tripal_germplasm_node_form_relationships_add_button_validate($form, &$form_state) {
 
-  $relationship_types = unserialize($form_state['values']['relationship_type_ids']);
+  // First get information about the new relationship.
+  $new_type_name = $form_state['values']['relationship_table']['new']['type_name'];
+  // Get details assuming the special fields key is the type.name
+  $new_type_details = $form_state['germplasm']['special_fields'][$new_type_name];
 
-  // Handle the original cross number.
-  if ($form_state['values']['relationship_table']['new']['subject_is_current'] == TRUE) {
-    if (in_array($form_state['values']['relationship_table']['new']['type_name'], $relationship_types['subject_id'])) {
-      form_set_error('relationship_table][new][type_name',
-        t('Cannot add %type_name relationship because it is type-specific. Please add this relationship in the "Type-Specific" section above, specifically it is the original cross number.',
-          array('%type_name' => $form_state['values']['relationship_table']['new']['type_name']))
-      );
+  // The relationship types array is first keyed by object/subject and then each
+  // one has a list of types that we care about in that particular direction.
+  // For example, we only care about the maternal parent relationship in the
+  // object direction since the other direction would refer to progeny rather
+  // than parents.
+  foreach($form_state['germplasm']['relationship_types'] as $side => $types) {
+
+    // Check to see if the new relationship is in the current direction...
+    if ($form_state['values']['relationship_table']['new'][$side . '_is_current'] == TRUE) {
+
+      // and is one of the types we care about for this direction.
+      if (in_array($new_type_name, $types)) {
+
+        // If it is then stop the user from adding it since they should be
+        // using the custom fields. Further customize the error message based
+        // on whether they tried to add a parental or type-specific relationship.
+        if ($new_type_details['type_specific']) {
+          form_set_error('relationship_table][new][type_name',
+            t('Cannot add %type_name relationship because it is type-specific. Instead, enter this value in the "Type-Specific" section as the %field_name.',
+             array(
+              '%type_name' => $form_state['values']['relationship_table']['new']['type_name'],
+              '%field_name' => $new_type_details['title']
+            ))
+          );
+        }
+        else {
+          form_set_error('relationship_table][new][type_name',
+            t('Cannot add %type_name relationship because it is parental. Instead, enter this value in the "Parents" section as the %field_name.',
+             array(
+              '%type_name' => $form_state['values']['relationship_table']['new']['type_name'],
+              '%field_name' => $new_type_details['title']
+            ))
+          );
+        }
+      }
     }
   }
-
-  // Now handle parents.
-  if ($form_state['values']['relationship_table']['new']['object_is_current'] == TRUE) {
-    if (in_array($form_state['values']['relationship_table']['new']['type_name'], $relationship_types['object_id'])) {
-      form_set_error('relationship_table][new][type_name',
-        t('Cannot add %type_name relationship because it is a parental relationship. Please add this relationship in the "Parents" section above.',
-          array('%type_name' => $form_state['values']['relationship_table']['new']['type_name']))
-      );
-    }
-  }
-
 }
 
 /**
@@ -585,162 +417,101 @@ function tripal_germplasm_node_form_relationships_add_button_validate($form, &$f
 function tripal_germplasm_node_validate($node, $form, &$form_state) {
   if ($node->type == 'chado_stock') {
 
-    // Handle Parents.
-    //-------------------------------------------------------------------------
-    // Ensure that the relationship fields are set based on the autocomplete
-    // and if they are, add them to the relationship_table array.
-    $type = tripal_get_cvterm(array('name' => 'is_selection_of'));
-    $selection_type_id = NULL;
-    if (isset($type->cvterm_id)) {
-      $selection_type_id = $type->cvterm_id;
-    }
+    // For each of the special fields associated with the germplasm node...
+    foreach ($form_state['germplasm']['special_fields'] as $field_name => $details) {
 
-    $relationship_fields = array(
-      'maternal_parent' => array(
-        'title' => 'Maternal Parent',
-        'relationship' => array(
-          'subject_id' => NULL,
-          'type_id' => variable_get('germplasm_mparent_rel_type_id', NULL),
-          'object_id' => NULL, //NOTE: Don't just use node->stock_id since this is not avail. on create
-        ),
-        'static_side' => 'object_id',
-        'delete_if_empty' => TRUE
-      ),
-      'paternal_parent' => array(
-        'title' => 'Paternal Parent',
-        'relationship' => array(
-          'subject_id' => NULL,
-          'type_id' => variable_get('germplasm_pparent_rel_type_id', NULL),
-          'object_id' => NULL, //NOTE: Don't just use node->stock_id since this is not avail. on create
-        ),
-        'static_side' => 'object_id',
-        'delete_if_empty' => TRUE
-      ),
-      'ril_cross_number' => array(
-        'title' => 'Original Cross Number',
-        'relationship' => array(
-          'subject_id' => NULL, //NOTE: Don't just use node->stock_id since this is not avail. on create
-          'type_id' => $selection_type_id,
-          'object_id' => NULL
-        ),
-        'static_side' => 'subject_id',
-        'delete_if_empty' => FALSE
-      ),
-    );
-    foreach ($relationship_fields as $field_name => $fields) {
-      if (!empty($form_state['values'][$field_name]) AND !preg_match('/\((\d+)\).*/', $form_state['values'][$field_name], $matches)) {
-        form_set_error($field_name, t('You need to choose the %title from the autocomplete rather than just typing in the full name manually.', array('%title' => $fields['title'])));
-      }
-      elseif (!empty($form_state['values'][$field_name])) {
+      // First ensure this is a field present in the form.
+      if ($details['type_specific'] === FALSE OR in_array($form_state['germplasm']['category'], $details['category'])) {
 
-        // Set the parent based on the regex match (stock_id)
-        $fields['changing_side'] = ($fields['static_side'] == 'subject_id') ? 'object_id' : 'subject_id';
-        $fields['relationship'][ $fields['changing_side'] ] = $matches[1];
+        // Handle Relationships.
+        //-------------------------------------------------------------------------
+        if ($details['node_api_category'] == 'relationship') {
 
-        // Now add/update the parent in the form_state.
-        tripal_germplasm_add_relationship_chado_node_form_reltable(
-          $form_state,
-          $fields['relationship'],
-          $fields['changing_side']
-        );
-      }
-      // If the maternal parent form element is empty, we might need to remove
-      // a pre-existing parent.
-      else {
-        if ($fields['delete_if_empty'] AND isset($node->stock_id)) {
+          // First check that the field was set using the autocomplete
+          // (if it's set at all, of course ;) ).
+          if (!empty($form_state['values'][$field_name]) AND !preg_match('/\((\d+)\).*/', $form_state['values'][$field_name], $matches)) {
+            form_set_error($field_name, t('You need to choose the %title from the autocomplete rather than just typing in the full name manually.', array('%title' => $details['title'])));
+          }
+          // Next, check it's set, assuming it uses autocomplete based on
+          // the previous check.
+          elseif (!empty($form_state['values'][$field_name])) {
 
-          // First we need to set the static side
-          $fields['relationship'][$fields['static_side']] = $node->stock_id;
+            // Mock-up a blank relationship.
+            $relationship = array(
+              'subject_id' => NULL,
+              'type_id' => $details['type_id'],
+              'object_id' => NULL
+            );
 
-          // Only then can we delete.
-          tripal_germplasm_remove_relationship_chado_node_form_reltable(
-            $form_state,
-            $fields['relationship'],
-            $fields['static_side']
-          );
+            // Set the parent based on the regex match (stock_id)
+            $changing_side = ($details['current_stock_side'] == 'subject') ? 'object_id' : 'subject_id';
+            $relationship[ $changing_side ] = $matches[1];
+
+            // Now add/update the parent in the form_state.
+            tripal_germplasm_add_relationship_chado_node_form_reltable(
+              $form_state,
+              $relationship,
+              $changing_side
+            );
+          }
+          // If the form element is empty, we need to remove
+          // a pre-existing relationship.
+          else {
+            // No need to remove if it's not been saved yet ;).
+            if (isset($node->stock_id)) {
+
+              // Mock-up a blank relationship.
+              $relationship = array(
+                'subject_id' => NULL,
+                'type_id' => $details['type_id'],
+                'object_id' => NULL
+              );
+
+              // Set the current stock to be used by the remove function.
+              $relationship[ $details['current_stock_side'] . '_id' ] = $node->stock_id;
+
+              // Only then can we delete.
+              tripal_germplasm_remove_relationship_chado_node_form_reltable(
+                $form_state,
+                $relationship,
+                $details['current_stock_side'] . '_id'
+              );
+            }
+          }
+        }
+        // Now handle properties.
+        //-------------------------------------------------------------------------
+        // NOTE: the following code assumes that there will only ever be one stockprop
+        // value for each type (ie: the rank field will not be used). As such,
+        // if you have two occurances of a property added through another method
+        // and someone empties that field then both properties of that type will be removed.
+        elseif ($details['node_api_category'] == 'property') {
+
+          // If there is a value then add it to the Chado Node API property table.
+          if (!empty($form_state['values'][$field_name])) {
+            $form_state['values']['property_table'][ $details['type_id'] ] = array(array(
+              'prop_type_id' => $details['type_id'],
+              'prop_value' => $form_state['values'][$field_name],
+              'prop_rank' => 'TEMP' . uniqid()
+            ));
+          }
+          // Otherwise remove it.
+          else {
+            unset($form_state['values']['property_table'][ $details['type_id'] ]);
+          }
+
         }
       }
-    }
-
-    // Now handle properties.
-    //-------------------------------------------------------------------------
-    // NOTE: the following code assumes that there will only ever be one stockprop
-    // value for each type (ie: the rank field will not be used). As such,
-    // if you have two occurances of a property added through another method
-    // and someone empties that field then both properties of that type will be removed.
-
-    // Retrieve Type_ids for the various properties.
-    $variety_year_released_id = tripal_get_cvterm(array('name' => 'variety_year_released'));
-    if (isset($variety_year_released_id->cvterm_id)) {
-      $variety_year_released_id = $variety_year_released_id->cvterm_id;
-    }
-    $market_class_id = tripal_get_cvterm(array('name' => 'market_class'));
-    if (isset($market_class_id->cvterm_id)) {
-      $market_class_id = $market_class_id->cvterm_id;
-    }
-
-    // List the properties.
-    $properties = array(
-      'cb_year' => array(
-        'title' => 'Crossing Block Year',
-        'prop_type_id' => tripal_get_germplasm_crossingblock_type_id('year'),
-        'prop_value' => $form_state['values']['cb_year'],
-        'prop_rank' => 'TEMP' . uniqid()
-      ),
-      'cb_season' => array(
-        'title' => 'Crossing Block Season',
-        'prop_type_id' => tripal_get_germplasm_crossingblock_type_id('season'),
-        'prop_value' => $form_state['values']['cb_season'],
-        'prop_rank' => 'TEMP' . uniqid()
-      ),
-      'date_registered' => array(
-        'title' => 'Date Variety Registered',
-        'prop_type_id' => $variety_year_released_id,
-        'prop_value' => $form_state['values']['date_registered'],
-        'prop_rank' => 'TEMP' . uniqid()
-      ),
-      'market_class_id' => array(
-        'title' => 'Market Class',
-        'prop_type_id' => $market_class_id,
-        'prop_value' => $form_state['values']['market_class'],
-        'prop_rank' => 'TEMP' . uniqid()
-      ),
-    );
-    // For each property needing to be updated/checked...
-    foreach ($properties as $prop_fields) {
-      if (!empty($prop_fields['prop_type_id'])) {
-
-        // If there is a value then add it to the Chado Node API property table.
-        if (!empty($prop_fields['prop_value'])) {
-          $form_state['values']['property_table'][ $prop_fields['prop_type_id'] ] = array(array(
-            'prop_type_id' => $prop_fields['prop_type_id'],
-            'prop_value' => $prop_fields['prop_value'],
-            'prop_rank' => $prop_fields['prop_rank']
-          ));
-        }
-        // Otherwise remove it.
-        else {
-          unset($form_state['values']['property_table'][ $prop_fields['prop_type_id'] ]);
-        }
-      }
-      // If there is no type_id set then we can't add/remove the properties
-      // so warn the user/administrator.
-      else {
-        drupal_set_message(t('Unable to save %title', array('%title' => $prop_fields['title'])),'error');
-        tripal_report_error(
-          'tripal_germplasm',
-          TRIPAL_ERROR,
-          t('Unable to save %title when updating germplasm record. Specifically unable to find the stock property type_id',
-            array('%title' => $prop_fields['title']))
-        );
-      }
-    }
+    } //End of for each special field.
 
   } //End of if stock
 }
 
 /**
  * Implements hook_node_update().
+ *
+ * NOTE: We are replacing the uniquename with an accession based on the
+ * stock_id and adding a primary dbxref.
  */
 function tripal_germplasm_node_insert($node) {
   if ($node->type == 'chado_stock') {
@@ -774,6 +545,8 @@ function tripal_germplasm_node_insert($node) {
 
 /**
  * Implements hook_node_view().
+ *
+ * Custom germplasm node themeing.
  */
 function tripal_germplasm_node_view($node, $view_mode, $langcode) {
 
