@@ -171,8 +171,24 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
   // Add in some themeing
   //---------------------------------------------
   $form['#attached']['css'][] = drupal_get_path('module','tripal_germplasm') . '/theme/css/tripal_germplasm.node_form.css';
-  $form['#attached']['js'][] = drupal_get_path('module','tripal_germplasm') . '/theme/js/stockNode_relationshipJump.js';
-  $form['#attached']['js'][] = drupal_get_path('module','tripal_germplasm') . '/theme/js/stockNode_propertyJump.js';
+  $form['#attached']['js'][] = array(
+    'type' => 'setting',
+    'data' => array('tripalGermplasm' => array(
+      // Used by the add button validates to prevent addition based on type.
+      'preventAdd' => FALSE,
+      // JQuery identifier for the field the user should be entering the data into.
+      // Set by the add/remove validate functions.
+      'correctField' => FALSE,
+      // Either parentFieldset or TypeSpecificFieldset dependant upon which to highlight.
+      // Set by the add/remove validate functions.
+      'correctFieldset' => FALSE,
+      // JQuery identifier for the parent fieldset.
+      'parentFieldset' => 'fieldset#edit-parents',
+      // JQuery identifier for the Type-Specific fieldset.
+      'typeSpecificFieldset' => '#type-specific-options fieldset'
+    ))
+  );
+  $form['#attached']['js'][] = drupal_get_path('module','tripal_germplasm') . '/theme/js/stockNode_ChadoNodeApiJump.js';
 
   //---------------------------------------------
   // Type-specific Additions.
@@ -187,7 +203,8 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
     '#title' => 'Type-specific: ' . $categories[$category]['title'],
     '#weight' => 2,
     '#prefix' => '<div id="type-specific-options">',
-    '#suffix' => '</div>'
+    '#suffix' => '</div>',
+    '#description' => 'The following fields allow you to add information specific to this type of germplasm. <span id="type-specific-property-instructions" class="germplasm-instructions">Note: To remove an existing piece of information, simply delete the text from the appropriate box.</span>'
   );
 
   // Now add in each of the type-specific fields :).
@@ -215,25 +232,17 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
     if (isset($form['properties']['property_table'][$type_id])) {
       foreach ($form['properties']['property_table'][$type_id] as $key => $form_row) {
         if (!preg_match('/^#/', $key)) {
-          unset($form['properties']['property_table'][$type_id][$key]['property_action']['#ajax']);
+          //unset($form['properties']['property_table'][$type_id][$key]['property_action']['#ajax']);
           $form['properties']['property_table'][$type_id][$key]['type']['#prefix'] = '** ';
           $form['properties']['property_table'][$type_id][$key]['#attributes']['class'][] = 'custom-control';
+          $form['properties']['property_table'][$type_id][$key]['property_action']['#validate'][] = 'tripal_germplasm_node_form_properties_remove_button_validate';
         }
       }
     }
   }
 
   // And notify the user of what's going on.
-  // Both in the type-specific fieldsets
-  $form['type_specific'][$category]['removal-warning'] = array(
-    '#type' => 'markup',
-    '#markup' => 'Remove a type-specific property by deleting the text in the corresponding box below.',
-    '#prefix' => '<div id="chado-node-api-property-parent-warning" class="messages property-type-specific fieldset-warning tripal-germplasm-warning" style="display:none; height: 18px">',
-    '#suffix' => '</div>',
-    '#weight' => -10
-  );
-
-  // And notifty them in the chado node api fieldset as well.
+  // In the chado node api fieldset.
   $form['properties']['type_specific_msg'] = array(
     '#type' => 'item',
     '#markup' => '** To add or remove <em>Type-Specific Properties</em> of the current germplasm, please use the "Type-Specific" section above.',
@@ -242,16 +251,15 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
     '#weight' => 4
   );
 
-  // Add additional validate to Chado Node Api Property "Add" button
+  // Add additional validate to Chado Node Api Property "Add" button.
   $form['properties']['property_table']['new']['property_action']['#validate'][] = 'tripal_germplasm_node_form_properties_add_button_validate';
-
 
   //---------------------------------------------
   // Parents
   $form['parents'] = array(
     '#type' => 'fieldset',
     '#title' => 'Parents',
-    '#description' => 'The parents of the current germplasm (if known).'
+    '#description' => 'The parents of the current germplasm (if known). <span id="parent-instructions" class="germplasm-instructions">Note: To remove an existing parent, simply delete the text from the appropriate box.</span>'
   );
 
   // Now add in the parental fields :).
@@ -283,12 +291,22 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
   // Ensure they don't remove relationships they shouldn't.
   foreach ($relationship_types as $side => $types) {
     foreach ($types as $type_id => $type_name) {
+      //$form_state['germplasm']['special_fields'][$type_name]['category']
       foreach ($form['relationships']['relationship_table'][$type_id] as $key => $form_row) {
         if (!preg_match('/^#/', $key)) {
           if ($form_row[$side . '_id']['#value'] == $form_state['node']->stock->stock_id) {
-            unset($form['relationships']['relationship_table'][$type_id][$key]['rel_action']['#ajax']);
+            //unset($form['relationships']['relationship_table'][$type_id][$key]['rel_action']['#ajax']);
+            $form['relationships']['relationship_table'][$type_id][$key]['rel_action']['#validate'][] = 'tripal_germplasm_node_form_relationships_remove_button_validate';
             $form['relationships']['relationship_table'][$type_id][$key]['subject_name']['#prefix'] = '** ';
+
+            // Add classes to be used by the JS highlighting/redirecting.
             $form['relationships']['relationship_table'][$type_id][$key]['#attributes']['class'][] = 'custom-control';
+            if (in_array('parent', $form_state['germplasm']['special_fields'][$type_name]['category'])) {
+              $form['relationships']['relationship_table'][$type_id][$key]['#attributes']['class'][] = 'category-parent';
+            }
+            if ($form_state['germplasm']['special_fields'][$type_name]['type_specific'] === TRUE) {
+              $form['relationships']['relationship_table'][$type_id][$key]['#attributes']['class'][] = 'type-specific';
+            }
           }
         }
       }
@@ -296,15 +314,7 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
   }
 
   // And notify the user of what's going on.
-  // Both in the parents fieldset
-  $form['parents']['removal-warning'] = array(
-    '#type' => 'markup',
-    '#markup' => 'Remove a parent by deleting the text in the corresponding box below.',
-    '#prefix' => '<div id="edit-parent-fieldset-relationship-warning" class="messages relationship-parent tripal-germplasm-warning fieldset-warning" style="display:none; height: 18px">',
-    '#suffix' => '</div>'
-  );
-
-  // And notifty them in the chado node api fieldset as well.
+  // In the chado node api fieldset.
   $form['relationships']['parent_msg'] = array(
     '#type' => 'item',
     '#markup' => '** To add or remove Parents of the current germplasm, please use the "Parents" section above.',
@@ -348,8 +358,47 @@ function tripal_germplasm_node_form_properties_add_button_validate($form, &$form
             '%type_name' => $type_name,
             '%field_name' => $form_state['germplasm']['special_fields'][$type_name]['title']))
       );
+
+      // Add a Drupal JS setting so we can lead them where they should be doing this.
+      drupal_add_js(array('tripalGermplasm' => array(
+        'correctField' => '#edit-' . str_replace('_','-',$type_name),
+        'correctFieldset' => 'typeSpecificFieldset',
+        'preventAdd' => TRUE,
+      )), 'setting');
     }
   }
+}
+
+/**
+ * Validate for the Chado Node API: Property Remove Button.
+ *
+ * Purpose: To ensure that users don't remove type-specific properties
+ * and instead use the appropriate section.
+ */
+function tripal_germplasm_node_form_properties_remove_button_validate(&$form, &$form_state) {
+
+  // Retrieve infomration about the offending property.
+  $type_name = $form_state['germplasm']['property_types'][$form_state['triggering_element']['#parents'][1]];
+  $field_details = $form_state['germplasm']['special_fields'][$type_name];
+
+  // Set an error so it's not actually removed.
+  $button = implode('][', $form_state['triggering_element']['#parents']);
+  form_set_error($button, t('Cannot remove %type_name property because it is type-specific. Instead, enter this value in the "Type-Specific" section as the %field_name.',
+    array('%type_name' => $field_details['type_name'], '%field_name' =>$field_details['title'])
+  ));
+
+  // However, we can't actually show an error highlight on the row since there
+  // isn't an input field there. Thus add a class to change the color ourself.
+  $form['properties']['property_table'][ $form_state['triggering_element']['#array_parents'][2] ][ $form_state['triggering_element']['#array_parents'][3] ]['#attributes']['class'][] = 'error-highlight';
+  $form['properties']['property_table'][ $form_state['triggering_element']['#array_parents'][2] ][ $form_state['triggering_element']['#array_parents'][3] ]['#attributes']['class'][] = 'edit-' . str_replace('_','-',$type_name);
+
+  // Also highlight the field they should be using.
+  // We do this using javascript settings because that part of the form won't be re-rendered.
+  drupal_add_js(array('tripalGermplasm' => array(
+    'correctField' => '#edit-' . str_replace('_','-',$type_name),
+    'correctFieldset' => 'typeSpecificFieldset',
+  )), 'setting');
+
 }
 
 /**
@@ -389,6 +438,14 @@ function tripal_germplasm_node_form_relationships_add_button_validate($form, &$f
               '%field_name' => $new_type_details['title']
             ))
           );
+
+          //Add a Drupal JS setting
+          // so we can lead them where they should be doing this.
+          drupal_add_js(array('tripalGermplasm' => array(
+            'correctField' => '#edit-' . str_replace('_','-',$new_type_name),
+            'preventAdd' => TRUE,
+            'correctFieldset' => 'typeSpecificFieldset'
+          )), 'setting');
         }
         else {
           form_set_error('relationship_table][new][type_name',
@@ -398,10 +455,83 @@ function tripal_germplasm_node_form_relationships_add_button_validate($form, &$f
               '%field_name' => $new_type_details['title']
             ))
           );
+
+          //Add a Drupal JS setting
+          // so we can lead them where they should be doing this.
+          drupal_add_js(array('tripalGermplasm' => array(
+            'correctField' => '#edit-' . str_replace('_','-',$new_type_name),
+            'preventAdd' => TRUE,
+            'correctFieldset' => 'parentFieldset'
+          )), 'setting');
         }
       }
     }
   }
+}
+
+/**
+ * Validate for the Chado Node API: Property Remove Button.
+ *
+ * Purpose: To ensure that users don't remove type-specific properties
+ * and instead use the appropriate section.
+ */
+function tripal_germplasm_node_form_relationships_remove_button_validate(&$form, &$form_state) {
+
+
+  // Retrieve infomration about the offending property.
+  $type_id = $form_state['triggering_element']['#parents'][1];
+  if (isset($form_state['germplasm']['relationship_types']['object'][$type_id])) {
+    $type_name = $form_state['germplasm']['relationship_types']['object'][$type_id];
+  }
+  elseif (isset($form_state['germplasm']['relationship_types']['subject'][$type_id])) {
+    $type_name = $form_state['germplasm']['relationship_types']['subject'][$type_id];
+  }
+  $field_details = $form_state['germplasm']['special_fields'][$type_name];
+
+  // Set an error so it's not actually removed.
+  $button = implode('][', $form_state['triggering_element']['#parents']);
+  if ($field_details['type_specific']) {
+    form_set_error($button, t('Cannot remove %type_name relationship because it is type-specific. Instead, enter this value in the "Type-Specific" section as the %field_name.',
+      array('%type_name' => $field_details['type_name'], '%field_name' =>$field_details['title'])
+    ));
+
+    // Also highlight the field they should be using.
+    // We do this using javascript settings because that part of the form won't be re-rendered.
+    drupal_add_js(array('tripalGermplasm' => array(
+      'correctField' => '#edit-' . str_replace('_','-',$type_name),
+      'correctFieldset' => 'typeSpecificFieldset',
+    )), 'setting');
+  }
+  elseif (in_array('parent', $field_details['category'])) {
+    form_set_error($button, t('Cannot remove %type_name relationship because it is parental. Instead, enter this value in the "Parents" section as the %field_name.',
+      array('%type_name' => $field_details['type_name'], '%field_name' =>$field_details['title'])
+    ));
+
+    // Also highlight the field they should be using.
+    // We do this using javascript settings because that part of the form won't be re-rendered.
+    drupal_add_js(array('tripalGermplasm' => array(
+      'correctField' => '#edit-' . str_replace('_','-',$type_name),
+      'correctFieldset' => 'parentFieldset',
+    )), 'setting');
+  }
+  else {
+    form_set_error($button, t('Cannot remove %type_name relationship because it is being handled above. Instead, enter this value in the %field_name field above.',
+      array('%type_name' => $field_details['type_name'], '%field_name' =>$field_details['title'])
+    ));
+
+    // Also highlight the field they should be using.
+    // We do this using javascript settings because that part of the form won't be re-rendered.
+    drupal_add_js(array('tripalGermplasm' => array(
+      'correctField' => '#edit-' . str_replace('_','-',$type_name),
+      'correctFieldset' => 'typeSpecificFieldset',
+    )), 'setting');
+  }
+
+  // However, we can't actually show an error highlight on the row since there
+  // isn't an input field there. Thus add a class to change the color ourself.
+  $form['relationships']['relationship_table'][ $form_state['triggering_element']['#array_parents'][2] ][ $form_state['triggering_element']['#array_parents'][3] ]['#attributes']['class'][] = 'error-highlight';
+  $form['relationships']['relationship_table'][ $form_state['triggering_element']['#array_parents'][2] ][ $form_state['triggering_element']['#array_parents'][3] ]['#attributes']['class'][] = 'edit-' . str_replace('_','-',$type_name);
+
 }
 
 /**

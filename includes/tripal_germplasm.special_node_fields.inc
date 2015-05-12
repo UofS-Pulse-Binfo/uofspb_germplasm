@@ -289,7 +289,6 @@ function tripal_germplasm_node_part_get_property_value($node, $details) {
   $return = array('value'=>'');
 
   if (isset($node->stock->stockprop)) {
-dpm($node->stock->stockprop, 'stockprop');
 
     foreach($node->stock->stockprop as $prop) {
 
