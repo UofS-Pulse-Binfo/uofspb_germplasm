@@ -52,7 +52,12 @@ function tripal_germplasm_cmp_progeny_name($a, $b) {
  * easier to enter germplasm.
  */
 function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state, $form_id) {
-  $form['#node']->stock = chado_expand_var($form['#node']->stock, 'table', 'stockprop', array('return_array' => TRUE));
+
+  $is_create = TRUE;
+  if (isset($form['#node']->stock)) {
+    $is_create = FALSE;
+    $form['#node']->stock = chado_expand_var($form['#node']->stock, 'table', 'stockprop', array('return_array' => TRUE));
+  }
   $node = $form['#node'];
 
   // Gather information about special fields.
@@ -110,7 +115,12 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
   $relationship_types = array();
   foreach($special_fields as $machine_name => $details) {
     if (!$details['type_specific'] OR in_array($category, $details['category'])) {
-      $defaults[$machine_name] = call_user_func( $details['value_function'], $node, $details);
+      if ($is_create) {
+        $defaults[$machine_name] = NULL;
+      }
+      else {
+        $defaults[$machine_name] = call_user_func( $details['value_function'], $node, $details);
+      }
 
       if ($details['node_api_category'] == 'property') {
         $property_types[$details['type_id']] = (isset($details['type_name'])) ? $details['type_name'] : $machine_name;
@@ -165,8 +175,14 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
   $form['addtl_dbxrefs']['#title'] = 'External Accessions';
 
   // Make Chado Node API relationship table use our autocomplete.
-  $form['relationships']['relationship_table']['new']['object_name']['#autocomplete_path'] = 'tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
-  $form['relationships']['relationship_table']['new']['subject_name']['#autocomplete_path'] = 'tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
+  if ($is_create) {
+    $form['relationships']['relationship_table']['new']['object_name']['#autocomplete_path'] = 'tripal_ajax/tripal_germplasm/name_to_id/all';
+    $form['relationships']['relationship_table']['new']['subject_name']['#autocomplete_path'] = 'tripal_ajax/tripal_germplasm/name_to_id/all';
+  }
+  else {
+    $form['relationships']['relationship_table']['new']['object_name']['#autocomplete_path'] = 'tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
+    $form['relationships']['relationship_table']['new']['subject_name']['#autocomplete_path'] = 'tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
+  }
 
   // Add in some themeing
   //---------------------------------------------
@@ -198,30 +214,30 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
     '#suffix' => '</div>'
   );
 
-  $form['type_specific'][$category] = array(
-    '#type' => 'fieldset',
-    '#title' => 'Type-specific: ' . $categories[$category]['title'],
-    '#weight' => 2,
-    '#prefix' => '<div id="type-specific-options">',
-    '#suffix' => '</div>',
-    '#description' => 'The following fields allow you to add information specific to this type of germplasm. <span id="type-specific-property-instructions" class="germplasm-instructions">Note: To remove an existing piece of information, simply delete the text from the appropriate box.</span>'
-  );
+  if (isset($categories[$category])) {
+    $form['type_specific'][$category] = array(
+      '#type' => 'fieldset',
+      '#title' => 'Type-specific: ' . $categories[$category]['title'],
+      '#weight' => 2,
+      '#description' => 'The following fields allow you to add information specific to this type of germplasm. <span id="type-specific-property-instructions" class="germplasm-instructions">Note: To remove an existing piece of information, simply delete the text from the appropriate box.</span>'
+    );
 
-  // Now add in each of the type-specific fields :).
-  foreach($special_fields as $machine_name => $details) {
-    if (in_array($category, $details['category']) AND $details['type_specific']) {
+    // Now add in each of the type-specific fields :).
+    foreach($special_fields as $machine_name => $details) {
+      if (in_array($category, $details['category']) AND $details['type_specific']) {
 
-      $form['type_specific'][$category][$machine_name] = array(
-        '#type' => $details['form_type'],
-        '#title' => $details['title'],
-        '#description' => $details['description'],
-        '#default_value' => $defaults[$machine_name]['value']
-      );
+        $form['type_specific'][$category][$machine_name] = array(
+          '#type' => $details['form_type'],
+          '#title' => $details['title'],
+          '#description' => $details['description'],
+          '#default_value' => $defaults[$machine_name]['value']
+        );
 
-      if ($details['node_api_category'] == 'relationship') {
-        $form['type_specific'][$category][$machine_name]['#autocomplete_path'] ='tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
+        if ($details['node_api_category'] == 'relationship') {
+          $form['type_specific'][$category][$machine_name]['#autocomplete_path'] ='tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
+        }
+
       }
-
     }
   }
 
@@ -279,7 +295,12 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
       );
 
       if ($details['node_api_category'] == 'relationship') {
-        $form['parents'][$machine_name]['#autocomplete_path'] ='tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
+        if ($is_create) {
+          $form['parents'][$machine_name]['#autocomplete_path'] ='tripal_ajax/tripal_germplasm/name_to_id/all';
+        }
+        else {
+          $form['parents'][$machine_name]['#autocomplete_path'] ='tripal_ajax/tripal_germplasm/name_to_id/' . $node->stock->organism_id->genus;
+        }
       }
 
     }
@@ -292,20 +313,22 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
   foreach ($relationship_types as $side => $types) {
     foreach ($types as $type_id => $type_name) {
       //$form_state['germplasm']['special_fields'][$type_name]['category']
-      foreach ($form['relationships']['relationship_table'][$type_id] as $key => $form_row) {
-        if (!preg_match('/^#/', $key)) {
-          if ($form_row[$side . '_id']['#value'] == $form_state['node']->stock->stock_id) {
-            //unset($form['relationships']['relationship_table'][$type_id][$key]['rel_action']['#ajax']);
-            $form['relationships']['relationship_table'][$type_id][$key]['rel_action']['#validate'][] = 'tripal_germplasm_node_form_relationships_remove_button_validate';
-            $form['relationships']['relationship_table'][$type_id][$key]['subject_name']['#prefix'] = '** ';
+      if (isset($form['relationships']['relationship_table'][$type_id])) {
+        foreach ($form['relationships']['relationship_table'][$type_id] as $key => $form_row) {
+          if (!preg_match('/^#/', $key)) {
+            if ($form_row[$side . '_id']['#value'] == $form_state['node']->stock->stock_id) {
+              //unset($form['relationships']['relationship_table'][$type_id][$key]['rel_action']['#ajax']);
+              $form['relationships']['relationship_table'][$type_id][$key]['rel_action']['#validate'][] = 'tripal_germplasm_node_form_relationships_remove_button_validate';
+              $form['relationships']['relationship_table'][$type_id][$key]['subject_name']['#prefix'] = '** ';
 
-            // Add classes to be used by the JS highlighting/redirecting.
-            $form['relationships']['relationship_table'][$type_id][$key]['#attributes']['class'][] = 'custom-control';
-            if (in_array('parent', $form_state['germplasm']['special_fields'][$type_name]['category'])) {
-              $form['relationships']['relationship_table'][$type_id][$key]['#attributes']['class'][] = 'category-parent';
-            }
-            if ($form_state['germplasm']['special_fields'][$type_name]['type_specific'] === TRUE) {
-              $form['relationships']['relationship_table'][$type_id][$key]['#attributes']['class'][] = 'type-specific';
+              // Add classes to be used by the JS highlighting/redirecting.
+              $form['relationships']['relationship_table'][$type_id][$key]['#attributes']['class'][] = 'custom-control';
+              if (in_array('parent', $form_state['germplasm']['special_fields'][$type_name]['category'])) {
+                $form['relationships']['relationship_table'][$type_id][$key]['#attributes']['class'][] = 'category-parent';
+              }
+              if ($form_state['germplasm']['special_fields'][$type_name]['type_specific'] === TRUE) {
+                $form['relationships']['relationship_table'][$type_id][$key]['#attributes']['class'][] = 'type-specific';
+              }
             }
           }
         }
