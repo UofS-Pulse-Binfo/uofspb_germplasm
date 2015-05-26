@@ -284,14 +284,14 @@ function tripal_germplasm_form_chado_stock_node_form_alter(&$form, &$form_state,
 
       $form['parents'][$machine_name . '_id'] = array(
         '#type' => 'hidden',
-        '#value' => $defaults[$machine_name]['stock_id']
+        '#value' => (isset($defaults[$machine_name]['stock_id'])) ? $defaults[$machine_name]['stock_id'] : NULL
       );
 
       $form['parents'][$machine_name] = array(
         '#type' => $details['form_type'],
         '#title' => $details['title'],
         '#description' => $details['description'],
-        '#default_value' => $defaults[$machine_name]['value']
+        '#default_value' => (isset($defaults[$machine_name]['value'])) ? $defaults[$machine_name]['value'] : NULL
       );
 
       if ($details['node_api_category'] == 'relationship') {
