@@ -12,26 +12,28 @@ function tripal_germplasm_node_load($nodes, $types) {
 
   if (in_array('chado_stock', $types)) {
     foreach($nodes as $nid => $node) {
-      $node->germplasm = new stdClass();
+      if ($node->type == 'chado_stock') {
+        $node->germplasm = new stdClass();
+  
+        // Add the maternal & paternal parent for display in the overview.
+        $maternal = tripal_get_germplasm_parent('maternal',$node->stock);
+        if (is_object($maternal)) {
+          $node->germplasm->maternal_parent = $maternal;
+        }
+        $paternal = tripal_get_germplasm_parent('paternal',$node->stock);
+        if (is_object($paternal)) {
+          $node->germplasm->paternal_parent = $paternal;
+        }
 
-      // Add the maternal & paternal parent for display in the overview.
-      $maternal = tripal_get_germplasm_parent('maternal',$node->stock);
-      if (is_object($maternal)) {
-        $node->germplasm->maternal_parent = $maternal;
+        // Add all the relationships
+        $progeny = tripal_get_germplasm_progeny($node->stock, 'all');
+        if (!empty($progeny)) {
+          usort($progeny, "tripal_germplasm_cmp_progeny_name");
+          $node->germplasm->progeny = $progeny;
+        }
+        
+        $nodes[$nid] = $node;
       }
-      $paternal = tripal_get_germplasm_parent('paternal',$node->stock);
-      if (is_object($paternal)) {
-        $node->germplasm->paternal_parent = $paternal;
-      }
-
-      // Add all the relationships
-      $progeny = tripal_get_germplasm_progeny($node->stock, 'all');
-      if (!empty($progeny)) {
-        usort($progeny, "tripal_germplasm_cmp_progeny_name");
-        $node->germplasm->progeny = $progeny;
-      }
-
-      $nodes[$nid] = $node;
     }
   }
 
