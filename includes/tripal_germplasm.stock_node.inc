@@ -570,7 +570,7 @@ function tripal_germplasm_node_form_relationships_remove_button_validate(&$form,
  * arrays added by the chado_stock_form().
  */
 function tripal_germplasm_node_validate($node, $form, &$form_state) {
-  if ($node->type == 'chado_stock') {
+  if ($node->type == 'chado_stock' AND isset($form_state['germplasm'])) {
 
     // For each of the special fields associated with the germplasm node...
     foreach ($form_state['germplasm']['special_fields'] as $field_name => $details) {
