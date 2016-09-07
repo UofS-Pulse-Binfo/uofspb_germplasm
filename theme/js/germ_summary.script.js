@@ -1,28 +1,28 @@
 /**
- * @file 
+ * @file
  * Handle events in summary matrix
  */
- 
+
 (function($) {
   Drupal.behaviors.summaryMatrixBehaviour = {
     attach: function (context, settings) {
       // Add event listener to link to show matrix.
       if ($('.nav-link').length) {
         $('.nav-link').click(function(e) {
-          e.preventDefault(); 
+          e.preventDefault();
           // Destroy table from dom and repost matrix.
           $('#container-table').remove();
           $('#container-matrix').removeClass('no-display');
         });
       }
-      
+
       // Add event listener to table cells.
       $('td')
       ////
       .mouseover(function() {
         // child object.
         var siblings = {};
-        
+
         // Get the id attribute of the selected cell.
         // The id attribute contains parent cell index in table element.
         // eg. p_2_3 where the first digit is the mother and the second
@@ -34,28 +34,28 @@
         siblings.dad = parents[2];
 
         // Highlight sibling count cell and parents as well.
-        highlightParentCells(siblings); 
+        highlightParentCells(siblings);
       })
       ////
       .mouseout(function() {
         // Remove all highlights to cell, parents and between.
-        highlightParentCells(0); 
+        highlightParentCells(0);
       });
-      
+
       // Function to highlight parents of siblings count.
       function highlightParentCells(siblings) {
         if (siblings) {
           // Style the child cell first.
           var theCell = $('#' + siblings.attrId);
           theCell.addClass('highlight-child');
-          
+
           // Style the mom and dad cell.
           var momTh = $('#maternal-' + siblings.mom);
           momTh.addClass('highlight-mom');
-      
+
           var dadTh = $('#paternal-' + siblings.dad);
-          dadTh.addClass('highlight-dad');   
-          
+          dadTh.addClass('highlight-dad');
+
           // Create a beam effect from child cell to mom and dad cell.
           for(var k = siblings.dad - 1; k > 0; k--) {
             // Move one cell up.
@@ -71,7 +71,9 @@
         }
         else {
           // Remove all highlighting classes attached to table headers and cells.
-          $('th, td').removeClass();
+          $('th, td').removeClass (function (index, css) {
+            return (css.match (/(^|\s)highlight-\S+/g) || []).join(' ');
+          });
         }
       }
     }

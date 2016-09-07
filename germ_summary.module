@@ -64,9 +64,7 @@ function germ_summary_form($form, &$form_state, $mom = NULL, $dad = NULL) {
           GROUP BY mom_org.species, dad_org.species
           ORDER BY mom_org.species ASC, dad_org.species ASC";
 
-  $result = chado_query($sql, $args)->fetchAll();
-
-dpm($result, 'result');
+  $result = chado_query($sql, $args);
 
   // Array to hold number of children given a mom and dad.
   $arr_child_count = array();
@@ -101,16 +99,35 @@ dpm($result, 'result');
 
   $arr_tbl_rows = array();
 
+  // Move interspecific, introgression, spp., sp. to the end if present.
+  foreach (array('interspecific','introgression','sp\.', 'spp\.') as $keyword) {
+    // check to see if there is a key including the keyword.
+    $found_key = preg_grep('/(\W+|^)'.$keyword.'\W+/', $arr_species_dad);
+    if ($found_key) {
+      foreach ($found_key as $k => $v) {
+        // First dad,
+        unset($arr_species_dad[$k]);
+        $arr_species_dad[$k] = $v;
+        // then Mom.
+        unset($arr_species_mom[$k]);
+        $arr_species_mom[$k] = $v;
+      }
+    }
+  }
+
   $i = 1;
   foreach($arr_species_dad as $dad_id => $dad_name) {
     list($dad_species, $dad_abbr) = explode(' abbr: ', $dad_name);
 
+    // Sanitize the species for use as a class name.
+    $class = preg_replace('/[^-\w]+/','',str_replace(' ','-',strtolower(strip_tags($dad_species))));
+
     // Push mom species to header array (barrow dads name).
-    array_push($arr_tbl_headers, array('data' => $dad_abbr, 'id' => 'maternal-' . $i));
+    array_push($arr_tbl_headers, array('data' => $dad_abbr, 'id' => 'maternal-' . $i, 'class' => array($class)));
 
     // Create individual table data cells containing the child count and form a
     // single row in the table. The first cell is the dad header.
-    $tmp_rows = array(array('header' => $dad_abbr, 'data' => $dad_abbr, 'id' => 'paternal-' . $i));
+    $tmp_rows = array(array('header' => true, 'data' => $dad_abbr, 'id' => 'paternal-' . $i, 'class' => array($class)));
 
     // See if dad matched with different moms match a count in the child count array above.
     $j = 1;
@@ -125,7 +142,7 @@ dpm($result, 'result');
                          'germplasm/list/' . $mom_id . '/' . $dad_id);
       }
       else {
-        $child_count = 0; // :(
+        $child_count = '<span style="color:#E6E6E6">0</span>'; // :(
       }
 
       // Now frame this family in a table cell.

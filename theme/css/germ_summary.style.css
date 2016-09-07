@@ -34,9 +34,9 @@ div.table-caption {
 
 
 /* Reset all border rules */
-#tbl-summary-matrix tr, 
-#tbl-summary-matrix th, 
-#tbl-summary-matrix thead, 
+#tbl-summary-matrix tr,
+#tbl-summary-matrix th,
+#tbl-summary-matrix thead,
 #tbl-summary-matrix tbody {
   border: none !important;
   margin: 0 !important;
@@ -65,7 +65,7 @@ div.table-caption {
   margin: 0 !important;
   padding: 20px 5px !important;
   text-align: center !important;
-  width: 100px; 
+  width: 100px;
 }
 
 /* Style the empty cell in the top most corner */
@@ -109,7 +109,7 @@ div.table-caption {
   color: #000000 !important;
   font-size: 1.4em !important;
   font-weight: bold !important;
-  
+
   -webkit-transition: background-color 0.7s ease-out;
   -moz-transition: background-color 0.7s ease-out;
   -o-transition: background-color 0.7s ease-out;
@@ -177,7 +177,7 @@ div.table-caption {
   margin: 0 10px 20px 0;
   padding: 10px 20px;
   border: 2px solid green;
-  
+
   -moz-box-shadow:    1px 1px 1px 1px #CCCCCC;
   -webkit-box-shadow: 1px 1px 1px 1px #CCCCCC;
   box-shadow:         1px 1px 1px 1px #CCCCCC;
@@ -218,4 +218,9 @@ div.nav-link {
 
 .no-display {
   display: none;
+}
+
+/* Style some table headers to be less noticeable */
+#tbl-summary-matrix th.introgression, #tbl-summary-matrix th.interspecific, #tbl-summary-matrix th.sp-unknown, #tbl-summary-matrix th.spp-mixture, #tbl-summary-matrix th.sp, #tbl-summary-matrix th.spp {
+  color: #999999 !important;
 }
