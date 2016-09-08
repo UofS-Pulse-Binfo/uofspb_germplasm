@@ -315,7 +315,7 @@ function germ_summary_form($form, &$form_state) {
 
         // Pager:
         // Number of rows per page.
-        $pager_rows_per_page = 50;
+        $pager_rows_per_page = 25;
         // Current page number in pager.
         $pager_current_page = pager_default_initialize(count($arr_tbl_rows), $pager_rows_per_page);
         // Show the rows for a page number.
