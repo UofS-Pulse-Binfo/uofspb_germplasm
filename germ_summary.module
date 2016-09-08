@@ -174,6 +174,7 @@ function germ_summary_form($form, &$form_state) {
     $j = 1;
     foreach($arr_species_mom as $mom_id => $mom_name) {
       list($mom_species, $mom_abbr) = explode(' abbr: ', $mom_name);
+      $names = '';
 
       // Check if given a mom and data, child count has a value.
       if (isset($arr_child_count[$dad_species][$mom_species])) {
@@ -181,13 +182,53 @@ function germ_summary_form($form, &$form_state) {
         // Create a link to child summary table page.
         $child_count = l($arr_child_count[$dad_species][$mom_species],
                          'germplasm/list/' . $genus . '/' . $mom_id . '/' . $dad_id);
+
+        // Show them the first 3 names.
+        $limit = 3;
+        $names_sql = "
+          SELECT
+            child.name
+          FROM
+            {stock} child
+
+            LEFT JOIN {stock_relationship} srm ON srm.object_id = child.stock_id
+            LEFT JOIN {stock} mom ON srm.subject_id = mom.stock_id
+            LEFT JOIN {organism} mom_org ON mom_org.organism_id = mom.organism_id
+
+            LEFT JOIN {stock_relationship} srd ON srd.object_id = child.stock_id
+            LEFT JOIN {stock} dad ON srd.subject_id = dad.stock_id
+            LEFT JOIN {organism} dad_org ON dad_org.organism_id = dad.organism_id
+          WHERE
+            srm.type_id IN
+              (SELECT cvterm_id FROM {cvterm} WHERE name = 'is_maternal_parent_of')
+            AND srd.type_id IN
+              (SELECT cvterm_id FROM {cvterm} WHERE name = 'is_paternal_parent_of')
+            AND mom_org.genus = :genus
+            AND mom_org.species = :mom
+            AND dad_org.genus = :genus
+            AND dad_org.species = :dad
+          LIMIT $limit";
+        $names_args = $args;
+        $names_args[':mom'] = $mom_species;
+        $names_args[':dad'] = $dad_species;
+        $names = chado_query($names_sql, $names_args)->fetchCol();
+
+        if ($arr_child_count[$dad_species][$mom_species] > $limit) {
+          $names[] = '...';
+        }
+
       }
       else {
         $child_count = '<span style="color:#E6E6E6">0</span>'; // :(
       }
 
       // Now frame this family in a table cell.
-      array_push($tmp_rows, array('data' => $child_count, 'id' => 'p-' . $j . '-' . $i));
+      if ($names) {
+        array_push($tmp_rows, array('data' => $child_count, 'id' => 'p-' . $j . '-' . $i, 'title' => implode("\n",$names)));
+      }
+      else {
+        array_push($tmp_rows, array('data' => $child_count, 'id' => 'p-' . $j . '-' . $i));
+      }
 
       // Next mom same dad.
       $j++;
