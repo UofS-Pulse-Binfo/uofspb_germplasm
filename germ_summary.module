@@ -47,7 +47,7 @@ function germ_summary_form($form, &$form_state) {
   $args = array(':genus' => $genus);
 
   // Determine parent species if they are in the path.
-  if (isset($form_state['build_info']['args'][1]) AND !empty($form_state['build_info']['args'][1])) {
+  if (isset($form_state['build_info']['args'][2]) AND !empty($form_state['build_info']['args'][2])) {
     $mom = $form_state['build_info']['args'][1];
     $dad = $form_state['build_info']['args'][2];
     $display = 'list';
