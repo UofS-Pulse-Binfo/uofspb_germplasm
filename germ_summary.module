@@ -14,16 +14,16 @@ function germ_summary_menu() {
     'title' => 'Germplasm Summary',
     'access arguments' => array('access content'),
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('germ_summary_form'),
+    'page arguments' => array('germ_summary_form', 2),
     'type' => MENU_NORMAL_ITEM,
   );
 
   // Menu callback - display number of siblings table. (% - /mom/dad)
-  $items['germplasm/list/%/%'] = array(
+  $items['germplasm/list/%/%/%'] = array(
     'title' => 'Germplasm List',
     'access arguments' => array('access content'),
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('germ_summary_form', 2, 3),
+    'page arguments' => array('germ_summary_form', 2, 3, 4),
     'type' => MENU_CALLBACK,
   );
 
@@ -34,10 +34,51 @@ function germ_summary_menu() {
 /**
  * Function callback: Construct matrix and table.
  */
-function germ_summary_form($form, &$form_state, $mom = NULL, $dad = NULL) {
-  // Genus variable for future implementation by other genus.
+function germ_summary_form($form, &$form_state) {
+
+  // Determine the genus from the path. If it's not included then fall back on a default.
   $genus = 'Lens';
+  if (empty($form_state['build_info']['args'][0])) {
+    $genus = variable_get('germ_summary_default_genus', germ_summary_get_default_genus());
+  }
+  else {
+    $genus = $form_state['build_info']['args'][0];
+  }
   $args = array(':genus' => $genus);
+
+  // Determine parent species if they are in the path.
+  if (isset($form_state['build_info']['args'][1]) AND !empty($form_state['build_info']['args'][1])) {
+    $mom = $form_state['build_info']['args'][1];
+    $dad = $form_state['build_info']['args'][2];
+    $display = 'list';
+  }
+  else {
+    $display = 'matrix';
+  }
+
+  // Set the title to reflect the current genus.
+  drupal_set_title($genus . ' Germplasm Summary');
+
+  //-------------------------
+  // Summary Matrix.
+
+  // Provide a quick paragraph for context.
+  if ($display == 'matrix') {
+    $form['description'] = array(
+      '#type' => 'item',
+      '#markup' => 'The following table summarizes the number of germplasm with parents of
+        the specified species. Specifically, the maternal parent species is listed as
+        the column header and the paternal parent species is the row header. Thus intraspecific
+        crosses are shown along the center diagonal with interspecific crosses making up the
+        rest of the table.'
+    );
+  }
+  else {
+    $form['description'] = array(
+      '#type' => 'item',
+      '#markup' => '',
+    );
+  }
 
   // Query number of children in each species crosses.
   $sql = "SELECT
@@ -139,7 +180,7 @@ function germ_summary_form($form, &$form_state, $mom = NULL, $dad = NULL) {
         // Yes, this pair has produced cute healthy children...
         // Create a link to child summary table page.
         $child_count = l($arr_child_count[$dad_species][$mom_species],
-                         'germplasm/list/' . $mom_id . '/' . $dad_id);
+                         'germplasm/list/' . $genus . '/' . $mom_id . '/' . $dad_id);
       }
       else {
         $child_count = '<span style="color:#E6E6E6">0</span>'; // :(
@@ -162,9 +203,12 @@ function germ_summary_form($form, &$form_state, $mom = NULL, $dad = NULL) {
   // Create the matrix table.
   $matrix = germ_summary_construct_table($arr_tbl_headers, $arr_tbl_rows, 'tbl-summary-matrix');
   $form['summary_matrix'] = array(
-    '#markup' => $matrix
+    '#markup' => $matrix,
   );
 
+  //-------------------------
+  // Germplasm List
+  // for specific combo.
 
   // When mom and dad are requested to generate child summary table.
   if (!empty($mom) AND !empty($dad)) {
@@ -275,7 +319,9 @@ function germ_summary_form($form, &$form_state, $mom = NULL, $dad = NULL) {
 
   $path = drupal_get_path('module', 'germ_summary') . '/theme/';
   $form['#attached']['css'] = array($path . 'css/germ_summary.style.css');
-  $form['#attached']['js']  = array($path . 'js/germ_summary.script.js');
+  if ($display == 'matrix') {
+    $form['#attached']['js']  = array($path . 'js/germ_summary.script.js');
+  }
 
   return $form;
 }
@@ -294,6 +340,36 @@ function germ_summary_theme($existing, $type, $theme, $path) {
   return $items;
 }
 
+/**
+ * Helper Function: Determine the default genus.
+ *
+ * We're going to assume that the genus with the most species is the one they want...
+ * If two genus' have the same number of species then the default is chosen aphabetically.
+ *
+ * @return
+ *   The genus to use as the default.
+ */
+function germ_summary_get_default_genus() {
+
+  // Grab the genus with the most species.
+  $genus = chado_query('
+    SELECT t.genus
+    FROM (
+        SELECT genus, count(*) as num_species
+        FROM {organism}
+        GROUP BY genus
+      ) t
+    ORDER BY t.num_species DESC, t.genus ASC
+    LIMIT 1
+  ')->fetchField();
+
+  // If that worked then save it for faster use later.
+  if ($genus) {
+    variable_set('germ_summary_default_genus', $genus);
+  }
+
+  return $genus;
+}
 
 /**
  * Function helper: Construct a Drupal theme table.
