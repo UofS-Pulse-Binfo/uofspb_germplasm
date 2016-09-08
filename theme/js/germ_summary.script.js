@@ -6,15 +6,6 @@
 (function($) {
   Drupal.behaviors.summaryMatrixBehaviour = {
     attach: function (context, settings) {
-      // Add event listener to link to show matrix.
-      if ($('.nav-link').length) {
-        $('.nav-link').click(function(e) {
-          e.preventDefault();
-          // Destroy table from dom and repost matrix.
-          $('#container-table').remove();
-          $('#container-matrix').removeClass('no-display');
-        });
-      }
 
       // Add event listener to table cells.
       $('td')

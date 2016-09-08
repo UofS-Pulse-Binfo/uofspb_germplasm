@@ -274,7 +274,7 @@ function germ_summary_form($form, &$form_state) {
 
         // Pager:
         // Number of rows per page.
-        $pager_rows_per_page = 20;
+        $pager_rows_per_page = 50;
         // Current page number in pager.
         $pager_current_page = pager_default_initialize(count($arr_tbl_rows), $pager_rows_per_page);
         // Show the rows for a page number.
@@ -282,6 +282,11 @@ function germ_summary_form($form, &$form_state) {
 
         // Create child summary table.
         $sum_table = germ_summary_construct_table($arr_tbl_headers, $pager_row_set[$pager_current_page], 'tbl-summary-table');
+
+        $form['back_link'] = array(
+          '#type' => 'markup',
+          '#markup' => l('Back to Summary Matrix', 'germplasm/summary/' . $genus),
+        );
 
         $form['summary_table'] = array(
           '#markup' => $sum_table . theme('pager', array('quantity', count($arr_tbl_rows))),
@@ -313,7 +318,7 @@ function germ_summary_form($form, &$form_state) {
     }
     else {
       // Parents dont exist.
-      drupal_set_message('Maternal and/or Paternal parent no found.', 'error');
+      drupal_set_message('Maternal and/or Paternal parent not found.', 'error');
     }
   }
 

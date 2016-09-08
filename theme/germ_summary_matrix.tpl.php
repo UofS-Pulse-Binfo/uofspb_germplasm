@@ -46,7 +46,7 @@
           <li><?php print $form['siblings_count']['#value']; ?> Stock Records<small>&nbsp;</small></li>
         </ul>
 
-        <div class="nav-link"><a href="#">Wild Lentil Crosses Matrix</a></div>
+        <div class="nav-link"><?php print drupal_render($form['back_link']); ?></div>
       </div>
 
       <div class="div-line">&nbsp;</div>
