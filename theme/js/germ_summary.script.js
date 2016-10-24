@@ -6,32 +6,31 @@
 (function($) {
   Drupal.behaviors.summaryMatrixBehaviour = {
     attach: function (context, settings) {
-
       // Add event listener to table cells.
-      $('td')
+      $('#tbl-summary-matrix td')
       ////
-      .mouseover(function() {
-        // child object.
-        var siblings = {};
+        .mouseover(function() {
+          // child object.
+          var siblings = {};
 
-        // Get the id attribute of the selected cell.
-        // The id attribute contains parent cell index in table element.
-        // eg. p_2_3 where the first digit is the mother and the second
-        //     digit is the father.
-        siblings.attrId = $(this).attr('id');
-        var parents = siblings.attrId.split('-');
-        // Get the index of parents;
-        siblings.mom = parents[1];
-        siblings.dad = parents[2];
+          // Get the id attribute of the selected cell.
+          // The id attribute contains parent cell index in table element.
+          // eg. p_2_3 where the first digit is the mother and the second
+          //     digit is the father.
+          siblings.attrId = $(this).attr('id');
+          var parents = siblings.attrId.split('-');
+          // Get the index of parents;
+          siblings.mom = parents[1];
+          siblings.dad = parents[2];
 
-        // Highlight sibling count cell and parents as well.
-        highlightParentCells(siblings);
-      })
-      ////
-      .mouseout(function() {
-        // Remove all highlights to cell, parents and between.
-        highlightParentCells(0);
-      });
+          // Highlight sibling count cell and parents as well.
+          highlightParentCells(siblings);
+        })
+        ////
+        .mouseout(function() {
+          // Remove all highlights to cell, parents and between.
+          highlightParentCells(0);
+        });
 
       // Function to highlight parents of siblings count.
       function highlightParentCells(siblings) {

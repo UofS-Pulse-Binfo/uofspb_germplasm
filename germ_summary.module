@@ -35,7 +35,6 @@ function germ_summary_menu() {
  * Function callback: Construct matrix and table.
  */
 function germ_summary_form($form, &$form_state) {
-
   // Determine the genus from the path. If it's not included then fall back on a default.
   $genus = 'Lens';
   if (empty($form_state['build_info']['args'][0])) {
@@ -44,6 +43,7 @@ function germ_summary_form($form, &$form_state) {
   else {
     $genus = $form_state['build_info']['args'][0];
   }
+
   $args = array(':genus' => $genus);
 
   // Determine parent species if they are in the path.
@@ -102,6 +102,8 @@ function germ_summary_form($form, &$form_state) {
               (SELECT cvterm_id FROM {cvterm} WHERE name = 'is_paternal_parent_of')
             AND mom_org.genus = :genus
             AND dad_org.genus = :genus
+            AND child.type_id =
+              (SELECT cvterm_id FROM {cvterm} WHERE name = 'Recombinant Inbred Line')
           GROUP BY mom_org.species, dad_org.species
           ORDER BY mom_org.species ASC, dad_org.species ASC";
 
@@ -207,7 +209,10 @@ function germ_summary_form($form, &$form_state) {
             AND mom_org.species = :mom
             AND dad_org.genus = :genus
             AND dad_org.species = :dad
+            AND child.type_id =
+              (SELECT cvterm_id FROM {cvterm} WHERE name = 'Recombinant Inbred Line')
           LIMIT $limit";
+
         $names_args = $args;
         $names_args[':mom'] = $mom_species;
         $names_args[':dad'] = $dad_species;
@@ -223,11 +228,14 @@ function germ_summary_form($form, &$form_state) {
       }
 
       // Now frame this family in a table cell.
+      // Add parents to tooltip.
+      $parents = '[' . $dad_abbr . ' + ' . $mom_abbr . ']';
+
       if ($names) {
-        array_push($tmp_rows, array('data' => $child_count, 'id' => 'p-' . $j . '-' . $i, 'title' => implode("\n",$names)));
+        array_push($tmp_rows, array('data' => $child_count, 'id' => 'p-' . $j . '-' . $i, 'title' => $parents . "\n" . implode("\n",$names)));
       }
       else {
-        array_push($tmp_rows, array('data' => $child_count, 'id' => 'p-' . $j . '-' . $i));
+        array_push($tmp_rows, array('data' => $child_count, 'id' => 'p-' . $j . '-' . $i, 'title' => $parents));
       }
 
       // Next mom same dad.
@@ -258,59 +266,165 @@ function germ_summary_form($form, &$form_state) {
       list($mom, $mom_abbr) = explode(' abbr: ', $arr_species_mom[$mom]);
       list($dad, $dad_abbr) = explode(' abbr: ', $arr_species_dad[$dad]);
 
+      // Get cvterm id of F1 - F8 Generation and RIL Complete properties.
+      $sql_G = "SELECT t2.name, t2.cvterm_id
+                FROM {cv} AS t1 INNER JOIN {cvterm} AS t2 USING(cv_id)
+                WHERE
+                  t2.name IN ('F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'RIL_complete')
+                  AND t1.name = 'stock_properties'";
+
+      $prop = chado_query($sql_G)
+        ->fetchAllKeyed();
+
       // Query stocks given a mom and a dad.
       $sql = "SELECT
-              child.name,
-              child.uniquename AS accession,
-              'node/' || child_link.nid AS child_url,
+                child.stock_id,
+                child.name,
+                child.uniquename AS accession,
+                'node/' || child_link.nid AS child_url,
 
-              mom.name || ' (' || mom.uniquename || ')' AS maternal_parent,
-              mom_org.abbreviation AS mom_abbr,
-              'node/' || mom_link.nid AS maternal_parent_url,
+                mom.name || ' (' || mom.uniquename || ')' AS maternal_parent,
+                mom_org.abbreviation AS mom_abbr,
+                'node/' || mom_link.nid AS maternal_parent_url,
 
-              dad.name || ' (' || dad.uniquename || ')' AS paternal_parent,
-              dad_org.abbreviation AS dad_abbr,
-              'node/' || dad_link.nid AS paternal_parent_url
-            FROM
-              {stock} child
-              LEFT JOIN chado_stock child_link ON child_link.stock_id = child.stock_id
+                dad.name || ' (' || dad.uniquename || ')' AS paternal_parent,
+                dad_org.abbreviation AS dad_abbr,
+                'node/' || dad_link.nid AS paternal_parent_url,
 
-              LEFT JOIN {stock_relationship} srm ON srm.object_id = child.stock_id
-              LEFT JOIN {stock} mom ON srm.subject_id = mom.stock_id
-              LEFT JOIN chado_stock mom_link ON mom_link.stock_id = mom.stock_id
-              LEFT JOIN {organism} mom_org ON mom_org.organism_id = mom.organism_id
+                STRING_AGG(
+                   CASE
+                     WHEN prop.type_id = :F1 THEN CONCAT('F1=>', TRIM(prop.value))
+                     WHEN prop.type_id = :F2 THEN CONCAT('F2=>', TRIM(prop.value))
+                     WHEN prop.type_id = :F3 THEN CONCAT('F3=>', TRIM(prop.value))
+                     WHEN prop.type_id = :F4 THEN CONCAT('F4=>', TRIM(prop.value))
+                     WHEN prop.type_id = :F5 THEN CONCAT('F5=>', TRIM(prop.value))
+                     WHEN prop.type_id = :F6 THEN CONCAT('F6=>', TRIM(prop.value))
+                     WHEN prop.type_id = :F7 THEN CONCAT('F7=>', TRIM(prop.value))
+                     WHEN prop.type_id = :F8 THEN CONCAT('F8=>', TRIM(prop.value))
+                     ELSE ''
+                   END,
+                ' # ') AS property_generation,
 
-              LEFT JOIN {stock_relationship} srd ON srd.object_id = child.stock_id
-              LEFT JOIN {stock} dad ON srd.subject_id = dad.stock_id
-              LEFT JOIN chado_stock dad_link ON dad_link.stock_id = dad.stock_id
-              LEFT JOIN {organism} dad_org ON dad_org.organism_id = dad.organism_id
-            WHERE
-              srm.type_id IN
-                (SELECT cvterm_id FROM chado.cvterm WHERE name = 'is_maternal_parent_of')
-              AND srd.type_id IN
-                (SELECT cvterm_id FROM chado.cvterm WHERE name = 'is_paternal_parent_of')
-              AND mom_org.species = :mom
-              AND dad_org.species = :dad
-            ORDER BY child.name ASC";
+                STRING_AGG(CASE WHEN prop.type_id = :RIL_complete THEN TRIM(prop.value) END, '') AS property_complete
 
-      $args = array(':mom' => $mom, ':dad' => $dad);
+              FROM
+                {stock} child
+                LEFT JOIN chado_stock child_link ON child_link.stock_id = child.stock_id
+
+                LEFT JOIN {stock_relationship} srm ON srm.object_id = child.stock_id
+                LEFT JOIN {stock} mom ON srm.subject_id = mom.stock_id
+                LEFT JOIN chado_stock mom_link ON mom_link.stock_id = mom.stock_id
+                LEFT JOIN {organism} mom_org ON mom_org.organism_id = mom.organism_id
+
+                LEFT JOIN {stock_relationship} srd ON srd.object_id = child.stock_id
+                LEFT JOIN {stock} dad ON srd.subject_id = dad.stock_id
+                LEFT JOIN chado_stock dad_link ON dad_link.stock_id = dad.stock_id
+                LEFT JOIN {organism} dad_org ON dad_org.organism_id = dad.organism_id
+
+                LEFT JOIN {stockprop} AS prop ON child.stock_id = prop.stock_id
+
+              WHERE
+                srm.type_id IN
+                  (SELECT cvterm_id FROM {cvterm} WHERE name = 'is_maternal_parent_of')
+                AND srd.type_id IN
+                  (SELECT cvterm_id FROM {cvterm} WHERE name = 'is_paternal_parent_of')
+                AND mom_org.species = :mom
+                AND dad_org.species = :dad
+                AND child.type_id =
+                  (SELECT cvterm_id FROM {cvterm} WHERE name = 'Recombinant Inbred Line')
+
+              GROUP BY child.stock_id, child.name, child.uniquename, child_link.nid,
+                       mom.name, mom.uniquename, mom_org.abbreviation, mom_link.nid,
+                       dad.name, dad.uniquename, dad_org.abbreviation, dad_link.nid
+
+              ORDER BY child.name ASC";
+
+      $args = array(':mom' => $mom,
+                    ':dad' => $dad,
+                    ':F1'  => $prop['F1'],
+                    ':F2'  => $prop['F2'],
+                    ':F3'  => $prop['F3'],
+                    ':F4'  => $prop['F4'],
+                    ':F5'  => $prop['F5'],
+                    ':F6'  => $prop['F6'],
+                    ':F7'  => $prop['F7'],
+                    ':F8'  => $prop['F8'],
+                    ':RIL_complete' => $prop['RIL_complete']);
+
       $child = chado_query($sql, $args);
 
       if ($child->rowCount() > 0) {
+        // Path to module
+        // 4 dir up - germplasm/list/Lens/% mom/% dad
+        $path = '../../../../' . drupal_get_path('module', 'germ_summary') . '/theme/img/';
+
         // Target links in the table to new page.
         $attributes = array('attributes' => array('target' => '_blank'));
 
         // Arrays to hold table headers and rows.
-        $arr_tbl_headers = array(t('Name'), t('Accession'), t('Maternal Parent'), t('Paternal Parent'));
+        $arr_tbl_headers = array(
+          t('Name'),
+          t('Accession'),
+          t('Maternal Parent'),
+          t('Paternal Parent'),
+        );
+
+        // Push Generations (F1 - F8) + Completed Property.
+        // F1 - F8 image column headers.
+        for($i = 1; $i < 9; $i++) {
+          $arr_tbl_headers[] = '<img src="' . $path . 'header-f' . $i . '.jpg' . '" alt="' . 'F' . $i . '" title="' . 'F' . $i . '" />';
+        }
+
+        // HEADER: RIL_complete property.
+        $arr_tbl_headers[] = '<img src="' . $path . 'header-finished.jpg' . '" alt="RIL Complete" title="RIL complete" />';
+
+        // Array to hold table rows.
         $arr_tbl_rows = array();
 
         foreach($child as $i => $c) {
           // Create a link to child, mom and dad info page.
+          // Child link.
           $child_link = l($c->name, $c->child_url, $attributes);
+          // Maternal link.
           $mommy_link = l($c->maternal_parent, $c->maternal_parent_url, $attributes);
+          // Paternal link.
           $daddy_link = l($c->paternal_parent, $c->paternal_parent_url, $attributes);
 
-          array_push($arr_tbl_rows, array($child_link, $c->accession, $mommy_link, $daddy_link));
+          // Push other stock information cell value.
+          $arr_row_cell_value =  array($child_link, $c->accession, $mommy_link, $daddy_link);
+
+          // Push stock generation and RIL complete cell values.
+          // Test each to see if it has a value.
+          // When set but with an empty value, add a check icon, otherwise, add text/numeric value.
+
+          // Get stock property generation => property value list.
+          $arr_F_values = array();
+          $prop_gen = explode(' # ', $c->property_generation);
+
+          // Read each F generation property type and value pair.
+          foreach($prop_gen as $prop) {
+            if (trim($prop) != '') {
+              // Extract the F generation property type and value only when value
+              // is not empty.
+              list($F_gen, $F_gen_value) = explode('=>', $prop);
+
+              // For each F generation propertytype, create an array where the key is the property type and
+              // value is the corresponding value.
+              $arr_F_values[$F_gen] = $F_gen_value;
+            }
+          }
+
+          // Create the cell value for F1 to F8 property type.
+          for($i = 1; $i < 9; $i++) {
+            $F = 'F' . $i;
+
+            $arr_row_cell_value[] = germ_summary_generate_cell_value($arr_F_values[$F], $F);
+          }
+
+          // Create the cell value for RIL complete.
+          $arr_row_cell_value[] = germ_summary_generate_cell_value($c->property_complete, 'RIL');
+
+          array_push($arr_tbl_rows, $arr_row_cell_value);
         }
 
         // Pager:
@@ -323,6 +437,17 @@ function germ_summary_form($form, &$form_state) {
 
         // Create child summary table.
         $sum_table = germ_summary_construct_table($arr_tbl_headers, $pager_row_set[$pager_current_page], 'tbl-summary-table');
+
+        // Add another table header to contain header for generations and finished property.
+        // 3 columns 1 row - first col empty (Stock info) 2nd col Generations 3rd col empty (Finished property).
+        $sum_table = str_replace('<thead>',
+          '<thead>
+            <tr class="headings">
+              <th colspan="4">&nbsp;</th>
+              <th colspan="8">Generations</th>
+              <th>&nbsp</th>
+            </tr>
+          ', $sum_table);
 
         $form['back_link'] = array(
           '#type' => 'markup',
@@ -365,9 +490,7 @@ function germ_summary_form($form, &$form_state) {
 
   $path = drupal_get_path('module', 'germ_summary') . '/theme/';
   $form['#attached']['css'] = array($path . 'css/germ_summary.style.css');
-  if ($display == 'matrix') {
-    $form['#attached']['js']  = array($path . 'js/germ_summary.script.js');
-  }
+  $form['#attached']['js']  = array($path . 'js/germ_summary.script.js');
 
   return $form;
 }
@@ -440,4 +563,40 @@ function germ_summary_construct_table($headers, $rows, $tbl_id) {
   $arr_tbl_args['attributes'] = array('id' => $tbl_id);
 
   return theme('table', $arr_tbl_args);
+}
+
+/**
+ * Function helper: Generete the correct value to a table cell given a Stock Property Value.
+ *
+ * @param $prop_value
+ *   The value of a given Stock Property.
+ * @param $prop_type
+ *   The type of stock property of a given property value.
+ *   RIL - for RIL complete
+ *   F%  - for F1 - F8 generation
+ *
+ * @return
+ *   Exists but empty: Check icon (image).
+ *   Exists but has value: Display the value (text/numeric).
+ *   Does not exist: Blank space.
+ */
+function germ_summary_generate_cell_value($prop_value, $prop_type) {
+  if (isset($prop_value)) {
+    if ($prop_value == '') {
+      // Check mark image icon.
+      $attr_image = '../../../../' . drupal_get_path('module', 'germ_summary') . '/theme/img/message-16-ok.png';
+      // Alternate text (alt/title) attribute of the icon image.
+      $attr_title = ($prop_type == 'RIL') ? 'RIL Complete' : 'Generation ' . $prop_type;
+
+      $cell_val = '<img src="' . $attr_image . ' " alt="' . $attr_title . '" title="' . $attr_title . '" />';
+    }
+    else {
+      $cell_val = $prop_value;
+    }
+  }
+  else {
+    $cell_val = '&nbsp;';
+  }
+
+  return $cell_val;
 }
