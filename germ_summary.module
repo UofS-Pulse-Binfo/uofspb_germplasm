@@ -33,6 +33,7 @@ function germ_summary_menu() {
 
 /**
  * Function callback: Construct matrix and table.
+ * NOTE: Show maternal parent then paternal parent when show these information.
  */
 function germ_summary_form($form, &$form_state) {
   // Determine the genus from the path. If it's not included then fall back on a default.
@@ -229,7 +230,7 @@ function germ_summary_form($form, &$form_state) {
 
       // Now frame this family in a table cell.
       // Add parents to tooltip.
-      $parents = '[' . $dad_abbr . ' + ' . $mom_abbr . ']';
+      $parents = '[' . $mom_abbr . ' + ' . $dad_abbr . ']';
 
       if ($names) {
         array_push($tmp_rows, array('data' => $child_count, 'id' => 'p-' . $j . '-' . $i, 'title' => $parents . "\n" . implode("\n",$names)));
@@ -251,6 +252,7 @@ function germ_summary_form($form, &$form_state) {
 
   // Create the matrix table.
   $matrix = germ_summary_construct_table($arr_tbl_headers, $arr_tbl_rows, 'tbl-summary-matrix');
+
   $form['summary_matrix'] = array(
     '#markup' => $matrix,
   );
@@ -418,7 +420,8 @@ function germ_summary_form($form, &$form_state) {
           for($i = 1; $i < 9; $i++) {
             $F = 'F' . $i;
 
-            $arr_row_cell_value[] = germ_summary_generate_cell_value($arr_F_values[$F], $F);
+            $F_val = isset($arr_F_values[$F]) ? $arr_F_values[$F] : null;
+            $arr_row_cell_value[] = germ_summary_generate_cell_value($F_val, $F);
           }
 
           // Create the cell value for RIL complete.
@@ -559,7 +562,7 @@ function germ_summary_construct_table($headers, $rows, $tbl_id) {
 
   $arr_tbl_args['header']     = $headers;
   $arr_tbl_args['rows']       = $rows;
-  $arr_tbl_args['sticky']     = FALSE;
+  $arr_tbl_args['sticky']     = ($tbl_id == 'tbl-summary-table') ? FALSE : TRUE;
   $arr_tbl_args['attributes'] = array('id' => $tbl_id);
 
   return theme('table', $arr_tbl_args);
