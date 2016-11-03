@@ -230,7 +230,7 @@ function germ_summary_form($form, &$form_state) {
 
       // Now frame this family in a table cell.
       // Add parents to tooltip.
-      $parents = '[' . $mom_abbr . ' + ' . $dad_abbr . ']';
+      $parents = '[' . $mom_abbr . ' x ' . $dad_abbr . ']';
 
       if ($names) {
         array_push($tmp_rows, array('data' => $child_count, 'id' => 'p-' . $j . '-' . $i, 'title' => $parents . "\n" . implode("\n",$names)));

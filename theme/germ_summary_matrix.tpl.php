@@ -32,7 +32,7 @@
 
   <?php print drupal_render($form['description']); ?>
 
-  <div id="container-matrix" class="<?php print $display_matrix; ?>">
+  <div id="container-matrix" class="<?php print $display_matrix; ?> paternal-bg">
     <div class="table-caption horizontal-col">&nbsp;</div>
     <?php print drupal_render($form['summary_matrix']); ?>
   </div>

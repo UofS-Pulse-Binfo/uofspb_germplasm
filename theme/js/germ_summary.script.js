@@ -9,18 +9,12 @@
       // Manage maternal and paternal captions.
       var matrixContainer = $('div#container-matrix');
 
-      // When user scrolls.
       $(document).scroll(function() {
-        var containerBg = matrixContainer.css('background');
-
-        // Ensure that the sticky header is visible before altering background css rule.
         if ($('#container-matrix .sticky-header').css('visibility') == 'visible') {
-          // Remove the the background image.
-          matrixContainer.css('background', '#304356');
+          matrixContainer.removeClass('paternal-bg');
         }
         else {
-          // Restore background css rule.
-          matrixContainer.css('background', containerBg);
+          matrixContainer.addClass('paternal-bg');
         }
       });
 

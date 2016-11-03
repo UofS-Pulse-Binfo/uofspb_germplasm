@@ -15,13 +15,16 @@ div.table-caption {
 }
 
 #container-matrix {
-  background: #304356 url('../img/caption-paternal.gif') no-repeat left top;
-  background-position: 0 15%;
+  background-color: #304356;
   border-right: 4px solid #304356;
   border-bottom: 4px solid #304356;
   padding-left: 25px;
 }
 
+div.paternal-bg {
+  background: url('../img/caption-paternal.gif') no-repeat left top;
+  background-position: 0 15%;
+}
 
 /* Summary Matrix Table */
 #container-matrix .sticky-header {
