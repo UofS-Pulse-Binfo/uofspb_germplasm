@@ -110,13 +110,14 @@ function germ_summary_form($form, &$form_state) {
 
   $result = chado_query($sql, $args);
 
+
   // Array to hold number of children given a mom and dad.
   $arr_child_count = array();
   foreach($result as $p) {
     // Test to see matrix plots the right children to crosses.
     // dpm('Mom:' . $p->mom .' Dad:' . $p->dad . ' Count:' . $p->num_children);
 
-    // Store the number of childre in a matrix where parents are the keys.
+    // Store the number of children in a matrix where parents are the keys.
     $arr_child_count[$p->dad][$p->mom] = $p->num_children;
   }
 
@@ -143,12 +144,20 @@ function germ_summary_form($form, &$form_state) {
 
   $arr_tbl_rows = array();
 
+  // Grab Lens sp. (unknown) for all stock with EMPTY mom or dad.
+  $unknown = '';
+
   // Move interspecific, introgression, spp., sp. to the end if present.
   foreach (array('interspecific','introgression','sp\.', 'spp\.') as $keyword) {
     // check to see if there is a key including the keyword.
     $found_key = preg_grep('/(\W+|^)'.$keyword.'\W+/', $arr_species_dad);
     if ($found_key) {
       foreach ($found_key as $k => $v) {
+        if (strstr($v, 'unknown')) {
+          list($species, ) = explode(' abbr: ', $v);
+          $unknown = $species;
+        }
+
         // First dad,
         unset($arr_species_dad[$k]);
         $arr_species_dad[$k] = $v;
@@ -158,6 +167,54 @@ function germ_summary_form($form, &$form_state) {
       }
     }
   }
+
+
+  // To include stocks where mom and dad with EMPTY/UNSET VALUE.
+  // Such stocks will be placed in Lens sp. (unknown) mom or dad.
+  $sql1 = sprintf("
+    SELECT
+      count(t1.stock_id) AS num_children,
+      CASE WHEN mom_org.species IS NULL THEN '%s' ELSE mom_org.species END AS mom,
+      CASE WHEN dad_org.species IS NULL THEN '%s' ELSE dad_org.species END AS dad,
+
+      CASE WHEN mom_org.genus IS NULL THEN stock_org.genus ELSE mom_org.genus END AS mom_genus,
+      CASE WHEN dad_org.genus IS NULL THEN stock_org.genus ELSE dad_org.genus END AS dad_genus,
+
+      ARRAY_TO_STRING(ARRAY_AGG(t1.stock_id), ',') AS stocks
+    FROM
+      {stock} AS t1
+
+      LEFT JOIN chado.organism AS stock_org ON t1.organism_id = stock_org.organism_id
+
+      LEFT JOIN chado.stock_relationship AS srm ON t1.stock_id = srm.object_id
+        AND srm.type_id = (SELECT cvterm_id FROM chado.cvterm WHERE name = 'is_maternal_parent_of')
+      LEFT JOIN chado.stock AS mom ON srm.subject_id = mom.stock_id
+      LEFT JOIN chado.organism AS mom_org ON mom.organism_id = mom_org.organism_id
+
+      LEFT JOIN chado.stock_relationship AS srd ON t1.stock_id = srd.object_id
+        AND srd.type_id = (SELECT cvterm_id FROM chado.cvterm WHERE name = 'is_paternal_parent_of')
+      LEFT JOIN chado.stock AS dad ON srd.subject_id = dad.stock_id
+      LEFT JOIN chado.organism AS dad_org ON dad.organism_id = dad_org.organism_id
+    WHERE
+      t1.type_id = (SELECT cvterm_id FROM chado.cvterm WHERE name = 'Recombinant Inbred Line')
+    GROUP BY mom_org.species, dad_org.species, mom_org.genus, dad_org.genus, stock_org.genus, stock_org.species
+    ORDER BY mom_org.genus, dad_org.genus", $unknown, $unknown, $genus, $genus);
+
+  $result1 = chado_query($sql1);
+
+  if ($result1->rowCount() > 0) {
+    $arr_stocks = array();
+
+    foreach($result1 as $p1) {
+      if ($p1->mom == $unknown || $p1->dad == $unknown) {
+        if ($p1->mom_genus == $genus && $p1->dad_genus == $genus) {
+          $arr_child_count[$p1->dad][$p1->mom] = $p1->num_children;
+          $arr_stocks[$p1->dad][$p1->mom] = explode(',', $p1->stocks);
+        }
+      }
+    }
+  }
+
 
   $i = 1;
   foreach($arr_species_dad as $dad_id => $dad_name) {
@@ -175,6 +232,7 @@ function germ_summary_form($form, &$form_state) {
 
     // See if dad matched with different moms match a count in the child count array above.
     $j = 1;
+
     foreach($arr_species_mom as $mom_id => $mom_name) {
       list($mom_species, $mom_abbr) = explode(' abbr: ', $mom_name);
       $names = '';
@@ -268,6 +326,18 @@ function germ_summary_form($form, &$form_state) {
       list($mom, $mom_abbr) = explode(' abbr: ', $arr_species_mom[$mom]);
       list($dad, $dad_abbr) = explode(' abbr: ', $arr_species_dad[$dad]);
 
+      // WHEN a parent is referring to Lens Sp. (unknown). Supply the stock id number
+      // to the query as condition. Otherwise, use mom and dad as the condition.
+      $condition = array();
+      if (strstr($mom, 'unknown') || strstr($dad, 'unknown')) {
+        $condition['cond'] = 'AND child.stock_id IN (:stock)';
+        $condition['args'] = array(':stock' => $arr_stocks[$dad][$mom]);
+      }
+      else {
+        $condition['cond'] = 'AND mom_org.species = :mom AND dad_org.species = :dad';
+        $condition['args'] = array(':mom' => $mom, ':dad' => $dad);
+      }
+
       // Get cvterm id of F1 - F8 Generation and RIL Complete properties.
       $sql_G = "SELECT t2.name, t2.cvterm_id
                 FROM {cv} AS t1 INNER JOIN {cvterm} AS t2 USING(cv_id)
@@ -279,7 +349,8 @@ function germ_summary_form($form, &$form_state) {
         ->fetchAllKeyed();
 
       // Query stocks given a mom and a dad.
-      $sql = "SELECT
+      $sql = sprintf("
+              SELECT
                 child.stock_id,
                 child.name,
                 child.uniquename AS accession,
@@ -313,12 +384,14 @@ function germ_summary_form($form, &$form_state) {
                 {stock} child
                 LEFT JOIN chado_stock child_link ON child_link.stock_id = child.stock_id
 
-                LEFT JOIN {stock_relationship} srm ON srm.object_id = child.stock_id
+                LEFT JOIN {stock_relationship} srm ON srm.object_id = child.stock_id AND
+                  srm.type_id = (SELECT cvterm_id FROM {cvterm} WHERE name = 'is_maternal_parent_of')
                 LEFT JOIN {stock} mom ON srm.subject_id = mom.stock_id
                 LEFT JOIN chado_stock mom_link ON mom_link.stock_id = mom.stock_id
                 LEFT JOIN {organism} mom_org ON mom_org.organism_id = mom.organism_id
 
-                LEFT JOIN {stock_relationship} srd ON srd.object_id = child.stock_id
+                LEFT JOIN {stock_relationship} srd ON srd.object_id = child.stock_id AND
+                  srd.type_id = (SELECT cvterm_id FROM {cvterm} WHERE name = 'is_paternal_parent_of')
                 LEFT JOIN {stock} dad ON srd.subject_id = dad.stock_id
                 LEFT JOIN chado_stock dad_link ON dad_link.stock_id = dad.stock_id
                 LEFT JOIN {organism} dad_org ON dad_org.organism_id = dad.organism_id
@@ -326,24 +399,19 @@ function germ_summary_form($form, &$form_state) {
                 LEFT JOIN {stockprop} AS prop ON child.stock_id = prop.stock_id
 
               WHERE
-                srm.type_id IN
-                  (SELECT cvterm_id FROM {cvterm} WHERE name = 'is_maternal_parent_of')
-                AND srd.type_id IN
-                  (SELECT cvterm_id FROM {cvterm} WHERE name = 'is_paternal_parent_of')
-                AND mom_org.species = :mom
-                AND dad_org.species = :dad
-                AND child.type_id =
+                child.type_id =
                   (SELECT cvterm_id FROM {cvterm} WHERE name = 'Recombinant Inbred Line')
+
+                %s
 
               GROUP BY child.stock_id, child.name, child.uniquename, child_link.nid,
                        mom.name, mom.uniquename, mom_org.abbreviation, mom_link.nid,
                        dad.name, dad.uniquename, dad_org.abbreviation, dad_link.nid
 
-              ORDER BY child.name ASC";
+              ORDER BY child.name ASC", $condition['cond']);
 
-      $args = array(':mom' => $mom,
-                    ':dad' => $dad,
-                    ':F1'  => $prop['F1'],
+      $args = $condition['args'] +
+              array(':F1'  => $prop['F1'],
                     ':F2'  => $prop['F2'],
                     ':F3'  => $prop['F3'],
                     ':F4'  => $prop['F4'],
@@ -388,9 +456,9 @@ function germ_summary_form($form, &$form_state) {
           // Child link.
           $child_link = l($c->name, $c->child_url, $attributes);
           // Maternal link.
-          $mommy_link = l($c->maternal_parent, $c->maternal_parent_url, $attributes);
+          $mommy_link = (empty($c->maternal_parent)) ? 'Unknown' : l($c->maternal_parent, $c->maternal_parent_url, $attributes);
           // Paternal link.
-          $daddy_link = l($c->paternal_parent, $c->paternal_parent_url, $attributes);
+          $daddy_link = (empty($c->paternal_parent)) ? 'Unknown' : l($c->paternal_parent, $c->paternal_parent_url, $attributes);
 
           // Push other stock information cell value.
           $arr_row_cell_value =  array($child_link, $c->accession, $mommy_link, $daddy_link);
