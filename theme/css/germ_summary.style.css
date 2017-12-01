@@ -100,6 +100,15 @@ div.paternal-bg {
   border-top: 1px solid #304356 !important;
 }
 
+#container-matrix .sticky-header .highlight-mom-sticky {
+  background-color: #EAEAEA !important;
+  border-top: 1px solid green !important;
+  border-left: 1px solid green !important;
+  border-right: 1px solid green !important;
+  color: #666666 !important;
+}
+
+
 /* Style table data cell */
 #tbl-summary-matrix td {
   background-color: #FFFFFF !important;

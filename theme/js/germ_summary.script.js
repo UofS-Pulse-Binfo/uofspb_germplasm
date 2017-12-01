@@ -6,6 +6,14 @@
 (function($) {
   Drupal.behaviors.summaryMatrixBehaviour = {
     attach: function (context, settings) {
+      // Fix Drupal cloning the header of table
+      // and duplicates all element id attribute.
+      $('.sticky-header th').each(function() {
+        var cur_id = $(this).attr('id');
+        var new_id = cur_id + '-sticky';
+        $(this).attr('id', new_id);
+      });
+
       // Manage maternal and paternal captions.
       var matrixContainer = $('div#container-matrix');
 
@@ -54,6 +62,12 @@
           // Style the mom and dad cell.
           var momTh = $('#maternal-' + siblings.mom);
           momTh.addClass('highlight-mom');
+
+          // For sticky header.
+          var momThSticky = $('#maternal-' + siblings.mom + '-sticky');
+          momThSticky.addClass('highlight-mom-sticky');
+
+          momThSticky.css('color', 'red');
 
           var dadTh = $('#paternal-' + siblings.dad);
           dadTh.addClass('highlight-dad');
