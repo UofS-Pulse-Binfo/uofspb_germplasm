@@ -104,7 +104,8 @@ function germ_summary_form($form, &$form_state) {
             AND mom_org.genus = :genus
             AND dad_org.genus = :genus
             AND child.type_id =
-              (SELECT cvterm_id FROM {cvterm} WHERE name = 'Recombinant Inbred Line')
+              (SELECT cvterm_id FROM {cvterm} WHERE name = 'Recombinant Inbred Line' AND
+              cv_id = (SELECT cv_id FROM {cv} WHERE name = 'stock_type'))
           GROUP BY mom_org.species, dad_org.species
           ORDER BY mom_org.species ASC, dad_org.species ASC";
 
@@ -196,7 +197,8 @@ function germ_summary_form($form, &$form_state) {
       LEFT JOIN chado.stock AS dad ON srd.subject_id = dad.stock_id
       LEFT JOIN chado.organism AS dad_org ON dad.organism_id = dad_org.organism_id
     WHERE
-      t1.type_id = (SELECT cvterm_id FROM chado.cvterm WHERE name = 'Recombinant Inbred Line')
+      t1.type_id = (SELECT cvterm_id FROM chado.cvterm WHERE name = 'Recombinant Inbred Line' AND
+      cv_id = (SELECT cv_id FROM {cv} WHERE name = 'stock_type'))
     GROUP BY mom_org.species, dad_org.species, mom_org.genus, dad_org.genus, stock_org.genus, stock_org.species
     ORDER BY mom_org.genus, dad_org.genus", $unknown, $unknown, $genus, $genus);
 
@@ -269,7 +271,8 @@ function germ_summary_form($form, &$form_state) {
             AND dad_org.genus = :genus
             AND dad_org.species = :dad
             AND child.type_id =
-              (SELECT cvterm_id FROM {cvterm} WHERE name = 'Recombinant Inbred Line')
+              (SELECT cvterm_id FROM {cvterm} WHERE name = 'Recombinant Inbred Line' AND
+              cv_id = (SELECT cv_id FROM {cv} WHERE name = 'stock_type'))
           LIMIT $limit";
 
         $names_args = $args;
@@ -400,7 +403,8 @@ function germ_summary_form($form, &$form_state) {
 
               WHERE
                 child.type_id =
-                  (SELECT cvterm_id FROM {cvterm} WHERE name = 'Recombinant Inbred Line')
+                  (SELECT cvterm_id FROM {cvterm} WHERE name = 'Recombinant Inbred Line' AND
+                   cv_id = (SELECT cv_id FROM {cv} WHERE name = 'stock_type'))
 
                 %s
 
