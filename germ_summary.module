@@ -225,6 +225,13 @@ function germ_summary_form($form, &$form_state) {
     // Sanitize the species for use as a class name.
     $class = preg_replace('/[^-\w]+/','',str_replace(' ','-',strtolower(strip_tags($dad_species))));
 
+    // Remove L. in mon and dad.
+    preg_match('/^l\./i', $dad_abbr, $matches);
+    $l = isset($matches[0]) ? '<span class="l">' . $matches[0] . '</span>' : '';
+
+    $dad_abbr = preg_replace('/^l\./i','', $dad_abbr);
+    $dad_abbr = '<div><span>' . $l . ' ' . trim($dad_abbr) . '</span></div>';
+
     // Push mom species to header array (barrow dads name).
     array_push($arr_tbl_headers, array('data' => $dad_abbr, 'id' => 'maternal-' . $i, 'class' => array($class)));
 
@@ -283,7 +290,6 @@ function germ_summary_form($form, &$form_state) {
         if ($arr_child_count[$dad_species][$mom_species] > $limit) {
           $names[] = '...';
         }
-
       }
       else {
         $child_count = '<span style="color:#E6E6E6">0</span>'; // :(
@@ -292,6 +298,7 @@ function germ_summary_form($form, &$form_state) {
       // Now frame this family in a table cell.
       // Add parents to tooltip.
       $parents = '[' . $mom_abbr . ' x ' . $dad_abbr . ']';
+      $parents = strip_tags($parents);
 
       if ($names) {
         array_push($tmp_rows, array('data' => $child_count, 'id' => 'p-' . $j . '-' . $i, 'title' => $parents . "\n" . implode("\n",$names)));

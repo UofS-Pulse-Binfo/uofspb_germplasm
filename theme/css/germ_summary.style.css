@@ -32,6 +32,7 @@ div.paternal-bg {
   background-position: 0% 0 !important;
   border-collapse: separate !important;
   border-spacing: 0;
+  border: none !important;
   margin: 0 !important;
   padding: 25px 0 0 0 !important;
 }
@@ -366,5 +367,67 @@ div.nav-link {
   #tbl-summary-matrix th {
     font-size: 0.89em;
     font-weight: 300;
+  }
+
+  /* Rotate headers */
+  .sticky-header th,
+  #tbl-summary-matrix thead th {
+    height: 65px;
+    position: relative;
+    font-weight: 300;
+  }
+
+  .sticky-header th div,
+  #tbl-summary-matrix thead th div {
+    -webkit-transform: rotate(-60deg);
+    -moz-transform: rotate(-60deg);
+    -ms-transform: rotate(-60deg);
+    -o-transform: rotate(-60deg);
+  }
+
+  #tbl-summary-matrix thead th div {
+    margin: -10px 0 0 0;
+  }
+
+  #tbl-summary-matrix td a {
+    line-height: 25px;
+  }
+
+  #container-matrix .sticky-header {
+    padding: 10px 0 0 0 !important;
+  }
+
+  div.paternal-bg {
+    background-position: 0 25%;
+  }
+
+  #container-matrix .sticky-header th,
+  #tbl-summary-matrix th {
+    font-size: 0.85em !important;
+    padding: 0 !important;
+  }
+
+  #tbl-summary-matrix td {
+    font-size: 1em !important;
+  }
+
+  #tbl-summary-matrix .highlight-child {
+    font-size: 1em !important;
+  }
+
+  .l {
+    display: none;
+  }
+
+  /* Summary Table */
+  #tbl-summary-table th,
+  #tbl-summary-table td {
+    font-size: 0.8em;
+    font-weight: 300;
+  }
+
+  #tbl-summary-table th img {
+    height: 20px;
+    width: 20px;
   }
 }
