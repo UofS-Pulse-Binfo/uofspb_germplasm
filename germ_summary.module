@@ -225,12 +225,8 @@ function germ_summary_form($form, &$form_state) {
     // Sanitize the species for use as a class name.
     $class = preg_replace('/[^-\w]+/','',str_replace(' ','-',strtolower(strip_tags($dad_species))));
 
-    // Remove L. in mon and dad.
-    preg_match('/^l\./i', $dad_abbr, $matches);
-    $l = isset($matches[0]) ? '<span class="l">' . $matches[0] . '</span>' : '';
-
-    $dad_abbr = preg_replace('/^l\./i','', $dad_abbr);
-    $dad_abbr = '<div><span>' . $l . ' ' . trim($dad_abbr) . '</span></div>';
+    $l = '<span class="l">' . $dad_species . '</span>';
+    $dad_abbr = '<div><span>' . $l . ' ' . trim($dad_species) . '</span></div>';
 
     // Push mom species to header array (barrow dads name).
     array_push($arr_tbl_headers, array('data' => $dad_abbr, 'id' => 'maternal-' . $i, 'class' => array($class)));
