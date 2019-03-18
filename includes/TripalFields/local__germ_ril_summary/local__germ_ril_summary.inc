@@ -111,7 +111,9 @@ class local__germ_ril_summary extends TripalField {
    *
    */
   public function load($entity) {
-
+    // We need the field name to ensure we save the data in the correct field!
+    $field_name = $this->instance['field_name'];
+    $entity->{$field_name}['und'][0]['value']['local:magnitude of phenotypes'] = $magnitude_of_phenotypes;
   }
 
   /**
