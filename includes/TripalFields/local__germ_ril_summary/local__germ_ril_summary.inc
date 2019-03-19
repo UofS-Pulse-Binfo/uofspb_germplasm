@@ -111,9 +111,32 @@ class local__germ_ril_summary extends TripalField {
    *
    */
   public function load($entity) {
+    // About the stock.
+    $germ_ril_summary = array(
+      'type' => $entity->chado_record->type_id->name,
+      'name'   => $entity->title,
+      'uniquename' => $entity->chado_record->uniquename,
+      'maternal' => '',
+      'paternal' => '',
+      'generations' => array(),
+      'complete' => '',
+    );
+    
+    // Some relationships.
+    // F prperties
+    $prop = chado_query("
+      SELECT t2.name, t2.cvterm_id
+      FROM {cv} AS t1 INNER JOIN {cvterm} AS t2 USING(cv_id)
+      WHERE
+        t2.name IN ('F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'RIL_complete')
+        AND t1.name = 'stock_property'")
+    ->fetchAllKeyed();
+    
+    $germ_ril_summary['generations'] = $prop;
+    
     // We need the field name to ensure we save the data in the correct field!
     $field_name = $this->instance['field_name'];
-    $entity->{$field_name}['und'][0]['value']['local:magnitude of phenotypes'] = $magnitude_of_phenotypes;
+    $entity->{$field_name}['und'][0]['value']['local:germ ril summary'] = $germ_ril_summary;
   }
 
   /**

@@ -44,10 +44,11 @@ class local__germ_ril_summary_formatter extends TripalFieldFormatter {
    *    hook_field_formatter_view() function.
    */
   public function view(&$element, $entity_type, $entity, $langcode, $items, $display) {
+    //dpm($entity);
+    dpm($items);
     
-        // Style information.
+    // Style information.
     drupal_add_css(drupal_get_path('module', 'germ_summary') . '/includes/TripalFields/local__germ_ril_summary/theme/style_grs_field.css');
-
     
     $path = $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'germ_summary') . '/includes/TripalFields/local__germ_ril_summary/theme/';
     
@@ -57,20 +58,23 @@ class local__germ_ril_summary_formatter extends TripalFieldFormatter {
     
     // RIL Finished header.
     $tbl_args['header'][] = '<img src="' . $path . 'header-finished.jpg' . '" alt="RIL Complete" title="RIL complete" /><small>RIL Complete</small>';
-    
-    
-    
+
     $tbl_args['rows'][] = array(1,2,3,4,5,6,7,8, 'Complete');
     $tbl_args['attributes'] = array('id' => 'field-germ-ril-summary-table');
     $table = theme('table', $tbl_args);
-    
     
     // All set, render items.
     $element[0] = array(
       '#type' => 'markup',
       '#markup' => '<div id="field-germ-ril-summary-wrapper">' . $table  .
         
-      '</div>',
+      '<small>Values indicate number of RILS in a generation.</small>
+       <ul>
+         <li>CDC Redberry (KP:GERM234) is Interspecific</li>
+         <li>Maternal and Paternal Parents: link Mon link Dad</li>
+       </ul>
+      
+      </div>',
     );
 
 
