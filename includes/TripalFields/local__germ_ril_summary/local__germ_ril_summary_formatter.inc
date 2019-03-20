@@ -109,7 +109,7 @@ class local__germ_ril_summary_formatter extends TripalFieldFormatter {
 
       '<small>Values indicate number of RILS in a generation.</small>
        <ul>
-         <li>CDC Redberry (KP:GERM234) is '. ucfirst($data['type']) .'</li>
+         <li>' . $data['name'] . ' (' . $data['uniquename'] . ')' . ' is '. ucfirst($data['type']) .'</li>
          <li>Maternal and Paternal Parents: ' . $mom . ' &nbsp; ' . $dad . '</li>
        </ul>
 
