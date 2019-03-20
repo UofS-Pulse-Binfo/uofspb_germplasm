@@ -117,7 +117,9 @@ class local__germ_ril_summary extends TripalField {
       'name'   => $entity->title,
       'uniquename' => $entity->chado_record->uniquename,
       'maternal' => '',
+      'mom_entity_id' => '',
       'paternal' => '',
+      'dad_entity_id' => '',
       'generations' => array(),
       'complete' => '',
     );
@@ -136,7 +138,11 @@ class local__germ_ril_summary extends TripalField {
       // Fs and Parents.
       $f = chado_query("SELECT child.stock_id,
         mom.name || ' (' || mom.uniquename || ')' AS maternal_parent,
+        mom.stock_id AS mom_id, mom.type_id AS mom_type,
+
         dad.name || ' (' || dad.uniquename || ')' AS paternal_parent,
+        dad.stock_id AS dad_id, dad.type_id AS dad_type,
+
         STRING_AGG(
           CASE WHEN prop.type_id = :RIL_complete THEN TRIM(prop.value)
           END, '') AS property_complete,
@@ -164,7 +170,8 @@ class local__germ_ril_summary extends TripalField {
 
         LEFT JOIN {stockprop} AS prop ON child.stock_id = prop.stock_id
       WHERE child.stock_id = :stock_id
-      GROUP BY child.stock_id, mom.name, mom.uniquename, dad.name, dad.uniquename",
+      GROUP BY child.stock_id, mom.name, mom.uniquename, mom.stock_id, mom.type_id,
+        dad.name, dad.type_id, dad.uniquename, dad.stock_id",
       array(
         ':stock_id' => $entity->chado_record_id,
         ':F1'  => $prop['F1'], ':F2'  => $prop['F2'], ':F3'  => $prop['F3'], ':F4'  => $prop['F4'],
@@ -173,8 +180,13 @@ class local__germ_ril_summary extends TripalField {
       ->fetchObject();
 
       if ($f) {
+        // Debug values:
+        // $germ_ril_summary['all'] = $f;
+
         $germ_ril_summary['maternal']    = $f->maternal_parent;
+        $germ_ril_summary['mom_entity_id'] = grs_get_stock_entity_id($f->mom_id, $f->mom_type);
         $germ_ril_summary['paternal']    = $f->paternal_parent;
+        $germ_ril_summary['dad_entity_id'] = grs_get_stock_entity_id($f->dad_id, $f->dad_type);
         $germ_ril_summary['complete']    = $f->property_complete;
         $germ_ril_summary['generations'] = $f->property_generation;
       }
@@ -219,38 +231,41 @@ class local__germ_ril_summary extends TripalField {
   }
 }
 
-  /**
-   * Function fetch entity id number of a trait.
-   * The id will be used to construct link to Tripal 3 page for a stock.
-   *
-   * @param $stock_id
-   *   Integer, a number corresponding to cverm_id in chado.cvterm table.
-   *
-   * @return
-   *   Integer, a number corresponding to a entity id in tripal_bundle table.
-   */
-  function grs_get_stock_entity_id($stock_id) {
-    // This character is also used to tell JS if node should be rendered as link or a text.
-    $entity_id = '#';
 
-    $m = db_query('SELECT t2.name
-      FROM {tripal_term} AS t1 INNER JOIN {tripal_bundle} AS t2 ON t1.id = t2.term_id
-      WHERE t1.accession = (
-        SELECT t3.accession
-        FROM chado.dbxref AS t3 INNER JOIN chado.cvterm AS t4 USING(dbxref_id)
-        WHERE t4.cvterm_id = :stock_type)', array(':stock_type' => $type_id))
-      ->fetchField();
+/**
+ * Function get entity id from tripal 3 content type.
+ *
+ * @param $stock_id
+ *   Integer, stock_id from chado.stock table.
+ * @param $type_id
+ *   Integer, type id of stock corresponding to a term in chado.cvterm.
+ *
+ * @return
+ *   Entity id or # or an blank anchor when entity id cannot be extracted.
+ */
+function grs_get_stock_entity_id($stock_id, $type_id) {
+  // This character is also used to tell JS if node should be rendered as link or a text.
+  $entity_id = '#';
 
-    if ($m) {
-      $chado_bundle = 'chado_' . $m;
-      $sql = sprintf('SELECT t1.entity_id FROM %s AS t1 INNER JOIN {stock} AS t2 ON t1.record_id = t2.stock_id
-        WHERE stock_id = :stock_id LIMIT 1', $chado_bundle);
-      $result = chado_query($sql, array(':stock_id' => $stock_id));
-      if ($result->rowCount() > 0) {
-        $entity_id = $result->fetchField();
-      }
+  $m = db_query('SELECT t2.name
+    FROM {tripal_term} AS t1 INNER JOIN {tripal_bundle} AS t2 ON t1.id = t2.term_id
+    WHERE t1.accession = (
+      SELECT t3.accession
+      FROM chado.dbxref AS t3 INNER JOIN chado.cvterm AS t4 USING(dbxref_id)
+      WHERE t4.cvterm_id = :stock_type)', array(':stock_type' => $type_id))
+    ->fetchField();
+
+  if ($m) {
+    $chado_bundle = 'chado_' . $m;
+
+    $sql = sprintf('SELECT t1.entity_id FROM %s AS t1 INNER JOIN {stock} AS t2 ON t1.record_id = t2.stock_id
+      WHERE stock_id = :stock_id LIMIT 1', $chado_bundle);
+    $result = chado_query($sql, array(':stock_id' => $stock_id));
+
+    if ($result->rowCount() > 0) {
+      $entity_id = $result->fetchField();
     }
-
-    return $entity_id;
   }
 
+  return $entity_id;
+}

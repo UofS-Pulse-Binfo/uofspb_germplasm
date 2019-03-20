@@ -99,8 +99,8 @@ class local__germ_ril_summary_formatter extends TripalFieldFormatter {
     $table = theme('table', $tbl_args);
 
     // Format parents:
-    $mom = l($data['maternal'], '#');
-    $dad = l($data['paternal'], '#');
+    $mom = (empty(trim($data['maternal']))) ? 'Unknown' : l($data['maternal'], $path['base'] . '/bio_data/' . $data['mom_entity_id']);
+    $dad = (empty(trim($data['paternal']))) ? 'Unknown' : l($data['paternal'], $path['base'] . '/bio_data/' . $data['dad_entity_id']);
 
     // All set, render items.
     $element[0] = array(
@@ -109,7 +109,7 @@ class local__germ_ril_summary_formatter extends TripalFieldFormatter {
 
       '<small>Values indicate number of RILS in a generation.</small>
        <ul>
-         <li>CDC Redberry (KP:GERM234) is Interspecific</li>
+         <li>CDC Redberry (KP:GERM234) is '. ucfirst($data['type']) .'</li>
          <li>Maternal and Paternal Parents: ' . $mom . ' &nbsp; ' . $dad . '</li>
        </ul>
 

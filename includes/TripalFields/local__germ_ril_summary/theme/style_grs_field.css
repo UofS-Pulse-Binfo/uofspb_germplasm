@@ -54,3 +54,10 @@
 #field-germ-ril-summary-table tbody td:last-child {
  border-right: 1px solid #D0D0D0;
 }
+
+/* Other information */
+#field-germ-ril-summary-wrapper ul {
+  list-style-type: none;
+  margin-left: 0;
+  padding-left: 0;
+}
