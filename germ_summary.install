@@ -1,0 +1,16 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function germ_summary_install() {
+  // Register term required by Germ RIL Summary.
+  $germ_ril_summary = array(
+    'id' => 'local:germ_ril_summary',
+    'name' => 'germ ril summary',
+    'cv_name' => 'local',
+    'definition' => 'Germ RIL Summary',
+  );
+  
+  chado_insert_cvterm($germ_ril_summary);
+}

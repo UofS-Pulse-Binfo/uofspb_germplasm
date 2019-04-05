@@ -4,6 +4,9 @@
  * @file
  * The main functionality of this module.
  */
+ 
+// Initialize fields.
+module_load_include('inc', 'germ_summary', 'includes/TripalFields/germ_summary.fields');
 
 /**
  * Implements hook_menu().
