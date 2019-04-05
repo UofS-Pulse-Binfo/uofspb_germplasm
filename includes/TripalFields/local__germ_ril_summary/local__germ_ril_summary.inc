@@ -15,9 +15,9 @@ class local__germ_ril_summary extends TripalField {
   // the field and it's default widget and formatter.
   // --------------------------------------------------------------------------
   // The default label for this field.
-  public static $default_label = 'Germ RIL Summary';
+  public static $default_label = 'Germplasm RIL Summary';
   // The default description for this field.
-  public static $default_description = 'Germ RIL Summary';
+  public static $default_description = 'Germplasm RIL Summary';
   // The default widget for this field.
   public static $default_widget = 'local__germ_ril_summary_widget';
   // The default formatter for this field.
@@ -137,10 +137,10 @@ class local__germ_ril_summary extends TripalField {
     if ($prop) {
       // Fs and Parents.
       $f = chado_query("SELECT child.stock_id,
-        mom.name || ' (' || mom.uniquename || ')' AS maternal_parent,
+        mom.name AS maternal_parent,
         mom.stock_id AS mom_id, mom.type_id AS mom_type,
 
-        dad.name || ' (' || dad.uniquename || ')' AS paternal_parent,
+        dad.name AS paternal_parent,
         dad.stock_id AS dad_id, dad.type_id AS dad_type,
 
         STRING_AGG(

@@ -11,24 +11,6 @@ function germ_summary_install() {
     'cv_name' => 'local',
     'definition' => 'Germ RIL Summary',
   );
-
-  // Test term to ensure no duplicate exists in the system.
-  $is_in = FALSE;
-
-  if (function_exists('chado_get_cvterm')) {
-    $is_in = chado_get_cvterm($germ_ril_summary);
-  }
-  else {
-    $is_in = tripal_get_cvterm($germ_ril_summary);
-  }
-
-  if (!$is_in) {
-    // Is clear, insert term.
-    if (function_exists('cahdo_insert_cvterm')) {
-      chado_insert_cvterm($germ_ril_summary);
-    }
-    else {
-      tripal_insert_cvterm($germ_ril_summary);
-    }
-  }
+  
+  chado_insert_cvterm($germ_ril_summary);
 }

@@ -14,7 +14,7 @@
  */
 class local__germ_ril_summary_formatter extends TripalFieldFormatter {
   // The default label for this field.
-  public static $default_label = 'Germ RIL Summary';
+  public static $default_label = 'Germplasm RIL Summary';
 
   // The list of field types for which this formatter is appropriate.
   public static $field_types = array('local__germ_ril_summary');
@@ -58,7 +58,7 @@ class local__germ_ril_summary_formatter extends TripalFieldFormatter {
 
     // Table header Fs.
     // Data row.
-    $f = explode('#', $data['generations']);
+    $f = ($data['generations']) ? explode('#', $data['generations']) : array();
     $generations_value = array();
     foreach($f as $g) {
       if (!empty($g)) {
@@ -79,6 +79,7 @@ class local__germ_ril_summary_formatter extends TripalFieldFormatter {
 
     if (isset($data['complete'])) {
       if ($data['complete'] == '') {
+        $attr_title = 'RIL Complete';
         // Property exists. It is complete - a check.
         $cell_val = '<img src="' . $path['base'] . '/' . $path['field'] . 'theme/message-16-ok.png" alt="' . $attr_title . '" title="' . $attr_title . '" />';
       }
@@ -107,10 +108,10 @@ class local__germ_ril_summary_formatter extends TripalFieldFormatter {
       '#type' => 'markup',
       '#markup' => '<div id="field-germ-ril-summary-wrapper">' . $table  .
 
-      '<small>Values indicate number of RILS in a generation.</small>
+      '<small>Values indicate number of sublines in a generation.</small>
        <ul>
          <li>' . $data['name'] . ' (' . $data['uniquename'] . ')' . ' is '. ucfirst($data['type']) .'</li>
-         <li>Maternal and Paternal Parents: ' . $mom . ' &nbsp; ' . $dad . '</li>
+         <li>Maternal and Paternal Parents: ' . $mom . '/' . $dad . '</li>
        </ul>
 
       </div>',
