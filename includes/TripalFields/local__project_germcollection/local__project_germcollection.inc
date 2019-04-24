@@ -54,7 +54,7 @@ class local__project_germcollection extends ChadoField {
   public static $download_formatters = array(
      'TripalTabDownloader',
      'TripalCSVDownloader',
-  ),
+  );
 
   // Provide a list of instance specific settings. These can be access within
   // the instanceSettingsForm.  When the instanceSettingsForm is submitted
@@ -80,11 +80,11 @@ class local__project_germcollection extends ChadoField {
     // attached asynchronously.
     'auto_attach' => FALSE,
     // The table in Chado that the instance maps to.
-    'chado_table' => '',
+    'chado_table' => 'project',
     // The column of the table in Chado where the value of the field comes from.
-    'chado_column' => '',
+    'chado_column' => 'project_id',
     // The base table.
-    'base_table' => '',
+    'base_table' => 'project',
   );
 
   // A boolean specifying that users should not be allowed to create
@@ -106,11 +106,36 @@ class local__project_germcollection extends ChadoField {
 
   public function load($entity) {
 
-    // ChadoFields automatically load the chado column specified in the
-    // default settings above. If that is all you need then you don't even
-    // need to implement this function. However, if you need to add any
-    // additional data to be used in the display, you should add it here.
-    parent::load($entity);
+    // We need the field name to ensure we save the data in the correct field!
+    $field_name = $this->instance['field_name'];
+
+    // Since the project is the chado record...
+    $project_id = $entity->chado_record_id;
+
+    $bundle_id = chado_query("SELECT chado_bundle_id FROM chado_bundle WHERE data_table='stockcollection'")->fetchField();
+    $bundle_table = 'chado_bio_data_'.$bundle_id;
+
+    $results = chado_query('
+      SELECT sc.stockcollection_id, sc.name
+      FROM chado.stockcollection sc
+      LEFT JOIN chado.project_stockcollection psc ON psc.stockcollection_id=sc.stockcollection_id
+      WHERE psc.project_id=:id',
+      array(':id' => $project_id));
+    foreach ($results as $k => $r) {
+
+      // Retrieve entity_id for current stockcollection.
+      $entity_id = db_query("SELECT entity_id FROM $bundle_table WHERE record_id=:id", 
+        array(':id' => $r->stockcollection_id))->fetchField();
+
+      // Save the chado data.
+      $entity->{$field_name}['und'][$k]['chado-project__project_id'] = $project_id;
+      $entity->{$field_name}['und'][$k]['chado-stockcollection__stockcollection_id'] = $r->stockcollection_id;
+
+      // Save the value.
+      $entity->{$field_name}['und'][$k]['value'] = array();
+      $entity->{$field_name}['und'][$k]['value']['schema:name'] = $r->name;
+      if (!empty($entity_id)) { $entity->{$field_name}['und'][$k]['value']['schema:url'] = 'bio_data/'.$entity_id; }
+    }
   }
 
 

@@ -37,6 +37,21 @@ class local__project_germcollection_formatter extends ChadoFieldFormatter {
 
     // Get the settings
     $settings = $display['settings'];
+
+    //dpm($items, 'items');
+    foreach ($items as $delta => $item) {
+
+      $link = $item['value']['schema:name'];
+      if (isset($item['value']['schema:url'])) {
+        $link = l($item['value']['schema:name'], $item['value']['schema:url']);
+      }
+
+      $element[$delta] = array(
+        '#type' => 'markup',
+        '#markup' => $link,
+      );
+    }
+    //dpm($element, 'element');
   }
 
     /**
