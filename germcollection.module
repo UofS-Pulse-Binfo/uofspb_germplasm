@@ -4,5 +4,5 @@
  * Contains miscellaneous functions related to the support of germplasm collections in Tripal
  */
 
-module_load_include('inc','germcollectio', 'germcollection.fields');
+module_load_include('inc','germcollection', 'includes/germcollection.fields');
 
