@@ -38,7 +38,7 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
 
     $element[0] = array(
       '#theme' => 'table',
-      '#header' => array('Name', 'Accession', 'Type', 'Species'),
+      '#header' => array('Name', 'Accession', 'Type', 'Species', 'Country of Origin'),
       '#rows' => array(),
     );
 
@@ -56,7 +56,7 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       $organism = $i['value']['taxrank:0000005'] . ' ' . $i['value']['taxrank:0000006'];
 
       // Compile the table row.
-      $element[0]['#rows'][] = array($name, $accession, $i['value']['rdfs:type'], $organism);
+      $element[0]['#rows'][] = array($name, $accession, $i['value']['rdfs:type'], $organism, $i['value']['internal:country_of_origin']);
     }
   }
 

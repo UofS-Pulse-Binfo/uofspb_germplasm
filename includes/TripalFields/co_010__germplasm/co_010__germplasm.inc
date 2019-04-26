@@ -119,12 +119,32 @@ class co_010__germplasm extends ChadoField {
       $bundle_labels[$table] = $r->label;
     }
 
-    $results = chado_query('
-      SELECT s.stock_id, s.name, s.uniquename, o.genus, o.species
-      FROM {stock} s 
-      LEFT JOIN {organism} o ON o.organism_id=s.organism_id
-      WHERE stock_id IN (SELECT stock_id FROM {stockcollection_stock} WHERE stockcollection_id=:id)',
-      array(':id' => $stockcollection_id));
+    // Our researchers are very concerned with origin so we're going to add
+    // that to this table if the term exists and more then 50% of germplasm
+    // have the property.
+    $origin_term = chado_get_cvterm(array('name' => 'country_of_origin', 'cv_id' => array('name' => 'stock_property'))); 
+    $origin_accession = FALSE;
+
+    if ($origin_term) {
+      $origin_accession = 'internal:country_of_origin';
+      $results = chado_query('
+        SELECT s.stock_id, s.name, s.uniquename, o.genus, o.species, prop.value as origin
+        FROM {stock} s 
+        LEFT JOIN {organism} o ON o.organism_id=s.organism_id
+        LEFT JOIN {stockprop} prop ON prop.stock_id=s.stock_id 
+        WHERE
+          prop.type_id = :origin_type AND
+          s.stock_id IN (SELECT stock_id FROM {stockcollection_stock} WHERE stockcollection_id=:id)',
+        array(':id' => $stockcollection_id, ':origin_type' => $origin_term->cvterm_id));
+    }
+    else {
+      $results = chado_query('
+        SELECT s.stock_id, s.name, s.uniquename, o.genus, o.species
+        FROM {stock} s 
+        LEFT JOIN {organism} o ON o.organism_id=s.organism_id
+        WHERE s.stock_id IN (SELECT stock_id FROM {stockcollection_stock} WHERE stockcollection_id=:id)',
+        array(':id' => $stockcollection_id));
+    }
     foreach ($results as $k => $r) {
 
       // Entity ID
@@ -146,6 +166,7 @@ class co_010__germplasm extends ChadoField {
       $entity->{$field_name}['und'][$k]['value']['rdfs:type'] = $bundle_label;
       $entity->{$field_name}['und'][$k]['value']['taxrank:0000005'] = $r->genus;
       $entity->{$field_name}['und'][$k]['value']['taxrank:0000006'] = $r->species;
+      if ($origin_accession) { $entity->{$field_name}['und'][$k]['value'][$origin_accession] = $r->origin; }
       if (!empty($entity_id)) { $entity->{$field_name}['und'][$k]['value']['schema:url'] = 'bio_data/'.$entity_id; }
     }
     // @debug dpm($entity->{$field_name}['und'][0], 'first item from load');
