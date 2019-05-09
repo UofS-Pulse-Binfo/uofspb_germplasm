@@ -30,10 +30,6 @@ class local__project_germcollection_widget extends ChadoFieldWidget {
     $stockcollection_name = NULL;
     $pkey_value = NULL;
 
-    dpm($items, 'items');
-    //dpm($form_state, 'form state');
-    //dpm($widget, 'widget');
-
     // If the field already has a value then it will come through the $items
     // array.  This happens when editing an existing record.
     if (count($items) > 0) {
@@ -95,16 +91,19 @@ class local__project_germcollection_widget extends ChadoFieldWidget {
 
     if (!$stockcollection_id AND $stockcollection_name) {
       $stockcollection_id = chado_query('SELECT stockcollection_id FROM {stockcollection} WHERE name=:name',
-        array(':name' => $stockcollection_name))->fetchField();
+	array(':name' => trim($stockcollection_name)))->fetchField();
     }
 
     if ($stockcollection_id) {
       $form_state['values'][$field_name]['und'][$delta]['chado-project_stockcollection--project_id'] = $project_id;
       $form_state['values'][$field_name]['und'][$delta]['chado-project_stockcollection__stockcollection_id'] = $stockcollection_id;
     }
-
-    dpm($form_state['values'][$field_name]['und'][$delta], 'form state in validate');
-    dpm($element, 'element');
+    elseif ($stockcollection_name) {
+      form_set_error(
+        $this->field['field_name'] . '][' . $langcode . '][' . $delta . '][stockcollection_name',
+        'Collection does not exists.'
+      );
+    }
   }
 
   /**

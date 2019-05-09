@@ -120,7 +120,8 @@ class local__project_germcollection extends ChadoField {
       FROM chado.stockcollection sc
       LEFT JOIN chado.project_stockcollection psc ON psc.stockcollection_id=sc.stockcollection_id
       WHERE psc.project_id=:id',
-      array(':id' => $project_id));
+        array(':id' => $project_id));
+    $entity->{$field_name}['und'] = array();
     foreach ($results as $k => $r) {
 
       // Retrieve entity_id for current stockcollection.
