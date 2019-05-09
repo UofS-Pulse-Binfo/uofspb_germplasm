@@ -15,7 +15,7 @@ function germcollection_enable() {
       'id' => 'local:project_germcollection',
       'name' => 'project_germcollection',
       'cv_name' => 'tripal',
-      'definition' => 'Connects related rmplasm to a project.', 
+      'definition' => 'Connects related germplasm to a project.', 
     ]);
   }
 

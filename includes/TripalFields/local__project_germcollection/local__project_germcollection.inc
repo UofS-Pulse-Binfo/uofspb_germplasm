@@ -116,7 +116,7 @@ class local__project_germcollection extends ChadoField {
     $bundle_table = 'chado_bio_data_'.$bundle_id;
 
     $results = chado_query('
-      SELECT sc.stockcollection_id, sc.name
+      SELECT psc.project_stockcollection_id, sc.stockcollection_id, sc.name
       FROM chado.stockcollection sc
       LEFT JOIN chado.project_stockcollection psc ON psc.stockcollection_id=sc.stockcollection_id
       WHERE psc.project_id=:id',
@@ -124,12 +124,17 @@ class local__project_germcollection extends ChadoField {
     foreach ($results as $k => $r) {
 
       // Retrieve entity_id for current stockcollection.
-      $entity_id = db_query("SELECT entity_id FROM $bundle_table WHERE record_id=:id", 
-        array(':id' => $r->stockcollection_id))->fetchField();
+      $entity_id= NULL;
+      if ($bundle_id) {
+        $entity_id = db_query("SELECT entity_id FROM $bundle_table WHERE record_id=:id", 
+          array(':id' => $r->stockcollection_id))->fetchField();
+      }
 
       // Save the chado data.
       $entity->{$field_name}['und'][$k]['chado-project__project_id'] = $project_id;
-      $entity->{$field_name}['und'][$k]['chado-stockcollection__stockcollection_id'] = $r->stockcollection_id;
+      $entity->{$field_name}['und'][$k]['chado-project_stockcollection__project_id'] = $project_id;
+      $entity->{$field_name}['und'][$k]['chado-project_stockcollection__stockcollection_id'] = $r->stockcollection_id;
+      $entity->{$field_name}['und'][$k]['chado-project_stockcollection__project_stockcollection_id'] = $r->project_stockcollection_id;
 
       // Save the value.
       $entity->{$field_name}['und'][$k]['value'] = array();

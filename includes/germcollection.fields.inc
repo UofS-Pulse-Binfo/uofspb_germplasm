@@ -177,6 +177,6 @@ function germcollection_bundle_instances_info($entity_type, $bundle) {
     );
 
   }
-dpm($instances, 'instances');
+
   return $instances;
 }
