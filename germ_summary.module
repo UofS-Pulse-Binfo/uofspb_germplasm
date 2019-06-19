@@ -466,22 +466,21 @@ function germ_summary_form($form, &$form_state) {
 
         foreach($child as $i => $c) {
           // Create a link to child, mom and dad info page.
-          $link = '';
+
           // Keep a record of tripal entity id - bundle relation
           // so only when there is new id not in the list
           // will be requested otherwise just find in in this array.
 
           // Child link.
           if (isset($entity_id[ $c->stock_id . '-' . $c->type_id ])) {
-            $link = $entity_id[ $c->stock_id . '-' . $c->type_id ];
+            $e_id = $entity_id[ $c->stock_id . '-' . $c->type_id ];
           }
           else {
             $e_id = germ_summary_fetch_tripalentityid($c->stock_id, $c->type_id);
-            $link = ($e_id == '#') ? $e_id : 'bio_data/' . $e_id;
-            $entity_id[ $c->stock_id . '-' . $c->type_id ] = $link;
+            $entity_id[ $c->stock_id . '-' . $c->type_id ] = $e_id;
           }
 
-          $child_link = l($c->name, $link, $attributes);
+          $child_link = ($e_id == '#') ? $c->name : l($c->name, 'bio_data/' . $e_id, $attributes);
 
           // Maternal link.
           if (empty($c->maternal_parent)) {
@@ -489,15 +488,14 @@ function germ_summary_form($form, &$form_state) {
           }
           else {
             if (isset($entity_id[ $c->mom_stock_id . '-' . $c->mom_type_id ])) {
-              $link = $entity_id[ $c->mom_stock_id . '-' . $c->mom_type_id ];
+              $e_id = $entity_id[ $c->mom_stock_id . '-' . $c->mom_type_id ];
             }
             else {
               $e_id = germ_summary_fetch_tripalentityid($c->mom_stock_id, $c->mom_type_id);
-              $link = ($e_id == '#') ? $e_id : 'bio_data/' . $e_id;
-              $entity_id[ $c->mom_stock_id . '-' . $c->mom_type_id ] = $link;
+              $entity_id[ $c->mom_stock_id . '-' . $c->mom_type_id ] = $e_id;
             }
 
-            $mommy_link = l($c->maternal_parent, $link, $attributes);
+            $mommy_link = ($e_id == '#') ? $c->maternal_parent : l($c->maternal_parent, 'bio_data/' . $e_id, $attributes);
           }
 
           // Paternal link.
@@ -506,15 +504,14 @@ function germ_summary_form($form, &$form_state) {
           }
           else {
             if (isset($entity_id[ $c->dad_stock_id . '-' . $c->dad_type_id ])) {
-              $link = $entity_id[ $c->dad_stock_id . '-' . $c->dad_type_id ];
+              $e_id = $entity_id[ $c->dad_stock_id . '-' . $c->dad_type_id ];
             }
             else {
               $e_id = germ_summary_fetch_tripalentityid($c->dad_stock_id, $c->dad_type_id);
-              $link = ($e_id == '#') ? $e_id : 'bio_data/' . $e_id;
-              $entity_id[ $c->dad_stock_id . '-' . $c->dad_type_id ] = $link;
+              $entity_id[ $c->dad_stock_id . '-' . $c->dad_type_id ] = $e_id;
             }
 
-            $daddy_link = l($c->paternal_parent, $link, $attributes);
+            $daddy_link = ($e_id == '#') ? $c->paternal_parent : l($c->paternal_parent, 'bio_data/' . $e_id, $attributes);
           }
 
 
@@ -555,6 +552,9 @@ function germ_summary_form($form, &$form_state) {
 
           array_push($arr_tbl_rows, $arr_row_cell_value);
         }
+
+        // No more need for the ids.
+        unset($entity_id);
 
         // Pager:
         // Number of rows per page.
