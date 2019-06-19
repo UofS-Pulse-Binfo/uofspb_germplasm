@@ -749,9 +749,14 @@ function germ_summary_fetch_tripalentityid($stock_id, $stock_type) {
         WHERE t4.cvterm_id = :stock_type)', array(':stock_type' => $stock_type))
       ->fetchField();
 
-    $entity = sprintf("SELECT entity_id FROM chado_%s WHERE record_id = :stock_id LIMIT 1", $chado_bundle);
-    $chado_entity = chado_query($entity, array(':stock_id' => $stock_id))
-      ->fetchField();
+    if ($chado_bundle) {
+      $entity = sprintf("SELECT entity_id FROM chado_%s WHERE record_id = :stock_id LIMIT 1", $chado_bundle);
+      $chado_entity = chado_query($entity, array(':stock_id' => $stock_id))
+        ->fetchField();
+    }
+    else {
+      tripal_report_error('germ_summary', TRIPAL_WARNING, 'Unable to find bundle for :bundle.', [':bundle' => $stock_type]);
+    }
   }
 
   return $chado_entity ?? '#';
