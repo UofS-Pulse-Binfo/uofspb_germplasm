@@ -4,7 +4,7 @@
  * @file
  * The main functionality of this module.
  */
- 
+
 // Initialize fields.
 module_load_include('inc', 'germ_summary', 'includes/TripalFields/germ_summary.fields');
 
@@ -127,7 +127,7 @@ function germ_summary_form($form, &$form_state) {
 
   // Get all species and use this to generate headers containing maternal and paternal species.
   $sql = "SELECT organism_id, species
-          FROM {organism} 
+          FROM {organism}
           WHERE genus = :genus ORDER BY species ASC";
 
   // Store the species name and use this to search for no of children
@@ -363,17 +363,17 @@ function germ_summary_form($form, &$form_state) {
       $sql = sprintf("
               SELECT
                 child.stock_id,
+                child.type_id,
                 child.name,
                 child.uniquename AS accession,
-                'node/' || child_link.nid AS child_url,
 
                 mom.name || ' (' || mom.uniquename || ')' AS maternal_parent,
                 mom_org.abbreviation AS mom_abbr,
-                'node/' || mom_link.nid AS maternal_parent_url,
+                mom.stock_id AS mom_stock_id, mom.type_id AS mom_type_id,
 
                 dad.name || ' (' || dad.uniquename || ')' AS paternal_parent,
                 dad_org.abbreviation AS dad_abbr,
-                'node/' || dad_link.nid AS paternal_parent_url,
+                dad.stock_id AS dad_stock_id, dad.type_id AS dad_type_id,
 
                 STRING_AGG(
                    CASE
@@ -393,18 +393,15 @@ function germ_summary_form($form, &$form_state) {
 
               FROM
                 {stock} child
-                LEFT JOIN chado_stock child_link ON child_link.stock_id = child.stock_id
 
                 LEFT JOIN {stock_relationship} srm ON srm.object_id = child.stock_id AND
                   srm.type_id = (SELECT cvterm_id FROM {cvterm} WHERE name = 'is_maternal_parent_of')
                 LEFT JOIN {stock} mom ON srm.subject_id = mom.stock_id
-                LEFT JOIN chado_stock mom_link ON mom_link.stock_id = mom.stock_id
                 LEFT JOIN {organism} mom_org ON mom_org.organism_id = mom.organism_id
 
                 LEFT JOIN {stock_relationship} srd ON srd.object_id = child.stock_id AND
                   srd.type_id = (SELECT cvterm_id FROM {cvterm} WHERE name = 'is_paternal_parent_of')
                 LEFT JOIN {stock} dad ON srd.subject_id = dad.stock_id
-                LEFT JOIN chado_stock dad_link ON dad_link.stock_id = dad.stock_id
                 LEFT JOIN {organism} dad_org ON dad_org.organism_id = dad.organism_id
 
                 LEFT JOIN {stockprop} AS prop ON child.stock_id = prop.stock_id
@@ -416,9 +413,9 @@ function germ_summary_form($form, &$form_state) {
 
                 %s
 
-              GROUP BY child.stock_id, child.name, child.uniquename, child_link.nid,
-                       mom.name, mom.uniquename, mom_org.abbreviation, mom_link.nid,
-                       dad.name, dad.uniquename, dad_org.abbreviation, dad_link.nid
+              GROUP BY child.stock_id, child.type_id, child.name, child.uniquename,
+                       mom.name, mom.uniquename, mom_org.abbreviation, mom.stock_id, mom.type_id,
+                       dad.name, dad.uniquename, dad_org.abbreviation, dad.stock_id, dad.type_id
 
               ORDER BY child.name ASC", $condition['cond']);
 
@@ -463,14 +460,60 @@ function germ_summary_form($form, &$form_state) {
         // Array to hold table rows.
         $arr_tbl_rows = array();
 
+        // Store where the type_id is the key and value being
+        // the chado bundle information.
+        $entity_id = array();
+
         foreach($child as $i => $c) {
           // Create a link to child, mom and dad info page.
+
+          // Keep a record of tripal entity id - bundle relation
+          // so only when there is new id not in the list
+          // will be requested otherwise just find in in this array.
+
           // Child link.
-          $child_link = l($c->name, $c->child_url, $attributes);
+          if (isset($entity_id[ $c->stock_id . '-' . $c->type_id ])) {
+            $e_id = $entity_id[ $c->stock_id . '-' . $c->type_id ];
+          }
+          else {
+            $e_id = germ_summary_fetch_tripalentityid($c->stock_id, $c->type_id);
+            $entity_id[ $c->stock_id . '-' . $c->type_id ] = $e_id;
+          }
+
+          $child_link = ($e_id == '#') ? $c->name : l($c->name, 'bio_data/' . $e_id, $attributes);
+
           // Maternal link.
-          $mommy_link = (empty($c->maternal_parent)) ? 'Unknown' : l($c->maternal_parent, $c->maternal_parent_url, $attributes);
+          if (empty($c->maternal_parent)) {
+            $mommy_link = 'Unknown';
+          }
+          else {
+            if (isset($entity_id[ $c->mom_stock_id . '-' . $c->mom_type_id ])) {
+              $e_id = $entity_id[ $c->mom_stock_id . '-' . $c->mom_type_id ];
+            }
+            else {
+              $e_id = germ_summary_fetch_tripalentityid($c->mom_stock_id, $c->mom_type_id);
+              $entity_id[ $c->mom_stock_id . '-' . $c->mom_type_id ] = $e_id;
+            }
+
+            $mommy_link = ($e_id == '#') ? $c->maternal_parent : l($c->maternal_parent, 'bio_data/' . $e_id, $attributes);
+          }
+
           // Paternal link.
-          $daddy_link = (empty($c->paternal_parent)) ? 'Unknown' : l($c->paternal_parent, $c->paternal_parent_url, $attributes);
+          if (empty($c->paternal_parent)) {
+            $daddy_link = 'Unknown';
+          }
+          else {
+            if (isset($entity_id[ $c->dad_stock_id . '-' . $c->dad_type_id ])) {
+              $e_id = $entity_id[ $c->dad_stock_id . '-' . $c->dad_type_id ];
+            }
+            else {
+              $e_id = germ_summary_fetch_tripalentityid($c->dad_stock_id, $c->dad_type_id);
+              $entity_id[ $c->dad_stock_id . '-' . $c->dad_type_id ] = $e_id;
+            }
+
+            $daddy_link = ($e_id == '#') ? $c->paternal_parent : l($c->paternal_parent, 'bio_data/' . $e_id, $attributes);
+          }
+
 
           // Push other stock information cell value.
           $arr_row_cell_value =  array($child_link, $c->accession, $mommy_link, $daddy_link);
@@ -509,6 +552,9 @@ function germ_summary_form($form, &$form_state) {
 
           array_push($arr_tbl_rows, $arr_row_cell_value);
         }
+
+        // No more need for the ids.
+        unset($entity_id);
 
         // Pager:
         // Number of rows per page.
@@ -682,4 +728,31 @@ function germ_summary_generate_cell_value($prop_value, $prop_type) {
   }
 
   return $cell_val;
+}
+
+/**
+ * Fetch entity id that will form part of the url linking to Tripal 3 germplasm page.
+ *
+ * @param $stock_id
+ *   Integer, stock id number corresponding to stock_id field in chado.stock table.
+ * @param $stock_type
+ *   Integer, type id number corresponding to type_id field in chado.stock table.
+ *
+ * @return Integer
+ *   Chado entity id number that forms part of the url linking to Tripal 3 page or # null page.
+ */
+function germ_summary_fetch_tripalentityid($stock_id, $stock_type) {
+  if ($stock_id > 0 && $stock_type > 0) {
+    // Fetch entity id that will form part of the url linking to Tripal 3 germplasm page.
+    $chado_bundle = db_query('SELECT t2.name FROM {tripal_term} AS t1 INNER JOIN {tripal_bundle} AS t2 ON t1.id = t2.term_id
+      WHERE t1.accession = (SELECT t3.accession FROM chado.dbxref AS t3 INNER JOIN chado.cvterm AS t4 USING(dbxref_id)
+        WHERE t4.cvterm_id = :stock_type)', array(':stock_type' => $stock_type))
+      ->fetchField();
+
+    $entity = sprintf("SELECT entity_id FROM chado_%s WHERE record_id = :stock_id LIMIT 1", $chado_bundle);
+    $chado_entity = chado_query($entity, array(':stock_id' => $stock_id))
+      ->fetchField();
+  }
+
+  return $chado_entity ?? '#';
 }
