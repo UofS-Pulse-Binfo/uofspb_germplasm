@@ -24,6 +24,8 @@ function germ_summary_enable() {
   // 1. is_maternal_parent_of
   // 2. is_paternal_parent_of
   // 3. is_selection_of
+  // 4. F generations
+  // 5. RIL complete
 
   $result = chado_query("SELECT name, cvterm_id FROM {cvterm} WHERE name
     IN ('is_maternal_parent_of', 'is_paternal_parent_of', 'is_selection_of') ORDER BY cvterm_id ASC")
@@ -43,6 +45,7 @@ function germ_summary_enable() {
 
   variable_set('gs_var_fgens', serialize($prop));
 }
+
 
 /**
  * Implements hook_uninstall().
