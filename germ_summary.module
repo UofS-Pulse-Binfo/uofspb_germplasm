@@ -179,13 +179,9 @@ function germ_summary_form($form, &$form_state) {
 
         $sql = "
           SELECT
-            child.stock_id, child.name, child.type_id, child.uniquename AS accession,
-
-            mom.name || ' (' || mom.uniquename || ')' AS maternal_parent, mom_org.abbreviation AS mom_abbr,
-            mom.stock_id AS mom_stock_id, mom.type_id AS mom_type_id,
-            dad.name || ' (' || dad.uniquename || ')' AS paternal_parent, dad_org.abbreviation AS dad_abbr,
-            dad.stock_id AS dad_stock_id, dad.type_id AS dad_type_id,
-
+            s.stock_id, s.name, s.type_id, s.uniquename AS accession,
+            mom.name || ' (' || mom.uniquename || ')' AS maternal_parent, mom.stock_id AS mom_stock_id, mom.type_id AS mom_type_id,
+            dad.name || ' (' || dad.uniquename || ')' AS paternal_parent, dad.stock_id AS dad_stock_id, dad.type_id AS dad_type_id,
             STRING_AGG(
               CASE
                 WHEN prop.type_id = :F1 THEN CONCAT('F1=>', TRIM(prop.value))
@@ -198,29 +194,29 @@ function germ_summary_form($form, &$form_state) {
                 WHEN prop.type_id = :F8 THEN CONCAT('F8=>', TRIM(prop.value))
                 ELSE ''
               END, ' # ') AS property_generation,
-
             STRING_AGG(CASE WHEN prop.type_id = :RIL_complete THEN TRIM( prop.value ) END, '') AS property_complete
-          FROM
-            {stock} AS child
-            LEFT JOIN {stock_relationship} AS bsitter ON child.stock_id = bsitter.subject_id
-            LEFT JOIN {stockprop} AS prop ON child.stock_id = prop.stock_id
+          FROM {stock} s
+            LEFT JOIN {organism} o ON o.organism_id=s.organism_id
 
-            LEFT JOIN {stock_relationship} AS mom_rel ON bsitter.object_id = mom_rel.object_id
-              AND mom_rel.type_id = :is_mom
-            LEFT JOIN {stock}    AS mom ON mom_rel.subject_id = mom.stock_id
-            LEFT JOIN {organism} AS mom_org ON mom.organism_id = mom_org.organism_id
+            LEFT JOIN {stock_relationship} origcross ON origcross.subject_id=s.stock_id
+              AND origcross.type_id = :is_sel
+            LEFT JOIN {stock_relationship} momr ON momr.object_id=origcross.object_id
+              AND momr.type_id=:is_mom
+            LEFT JOIN {stock_relationship} dadr ON dadr.object_id=origcross.object_id
+              AND dadr.type_id=:is_dad
 
-            LEFT JOIN {stock_relationship} AS dad_rel ON bsitter.object_id = dad_rel.object_id
-              AND dad_rel.type_id = :is_dad
-            LEFT JOIN {stock}    AS dad ON dad_rel.subject_id = dad.stock_id
-            LEFT JOIN {organism} AS dad_org ON dad.organism_id = dad_org.organism_id
-          WHERE
-            bsitter.type_id = :is_sel AND child.stock_id IN (:stock_id)
+            LEFT JOIN {stock} mom ON momr.subject_id=mom.stock_id
+            LEFT JOIN {stock} dad ON dadr.subject_id=dad.stock_id
+            LEFT JOIN {organism} momo ON momo.organism_id=mom.organism_id
+            LEFT JOIN {organism} dado ON dado.organism_id=dad.organism_id
+
+            LEFT JOIN {stockprop} AS prop ON s.stock_id = prop.stock_id
+          WHERE s.stock_id IN (:stock_id)
           GROUP BY
-            child.stock_id, child.name, child.type_id, child.uniquename,
-            mom.name, mom.uniquename, mom_org.abbreviation, mom.stock_id, mom.type_id,
-            dad.name, dad.uniquename, dad_org.abbreviation, dad.stock_id, dad.type_id
-          ORDER BY child.name ASC";
+            s.stock_id, s.name, s.type_id, s.uniquename,
+            mom.name, mom.uniquename, mom.stock_id, mom.type_id,
+            dad.name, dad.uniquename, dad.stock_id, dad.type_id
+          ORDER BY s.name ASC";
 
         $result = chado_query($sql, $args);
         // #Debug option: show result set.
