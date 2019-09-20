@@ -63,7 +63,7 @@ class local__germ_ril_summary_formatter extends TripalFieldFormatter {
     foreach($f as $g) {
       if (!empty($g)) {
         @list($f_gen, $f_val) = explode('=>', $g);
-        $generations_value[$f_gen] = $f_val;
+        $generations_value[ trim($f_gen) ] = $f_val;
       }
     }
 
