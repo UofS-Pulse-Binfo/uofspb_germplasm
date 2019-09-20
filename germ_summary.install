@@ -26,14 +26,18 @@ function germ_summary_enable() {
   // 3. is_selection_of
   // 4. F generations
   // 5. RIL complete
+  // 6. RIL
 
+  // Stock relationship
   $result = chado_query("SELECT name, cvterm_id FROM {cvterm} WHERE name
-    IN ('is_maternal_parent_of', 'is_paternal_parent_of', 'is_selection_of') ORDER BY cvterm_id ASC")
+    IN ('is_maternal_parent_of', 'is_paternal_parent_of', 'is_selection_of', 'Recombinant Inbred Line')
+    ORDER BY cvterm_id ASC")
   ->fetchAllKeyed();
 
   variable_set('gs_var_ismom', $result['is_maternal_parent_of']);
   variable_set('gs_var_isdad', $result['is_paternal_parent_of']);
   variable_set('gs_var_issel', $result['is_selection_of']);
+  variable_set('gs_var_isril', $result['Recombinant Inbred Line']);
 
   // F Generations.
   $sql_G = "SELECT t2.name, t2.cvterm_id FROM {cv} AS t1 INNER JOIN {cvterm} AS t2 USING(cv_id)
@@ -44,6 +48,16 @@ function germ_summary_enable() {
     ->fetchAllKeyed();
 
   variable_set('gs_var_fgens', serialize($prop));
+
+  // Recombinant Inbred Line in stock_type, there is another exact same
+  // in knowpulse_germplasm.
+  $sql_R = "SELECT t2.cvterm_id FROM {cv} AS t1 INNER JOIN {cvterm} AS t2 USING(cv_id)
+    WHERE t2.name = 'Recombinant Inbred Line' AND t1.name = 'stock_type'";
+
+  $ril = chado_query($sql_R)
+    ->fetchField();
+
+  variable_set('gs_var_isril', $ril);
 }
 
 
@@ -56,4 +70,5 @@ function germ_summary_uninstall() {
   variable_del('gs_var_isdad');
   variable_del('gs_var_issel');
   variable_del('gs_var_fgens');
+  variable_del('gs_var_isril');
 }

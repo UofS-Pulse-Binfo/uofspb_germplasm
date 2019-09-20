@@ -99,41 +99,44 @@ function germ_summary_form($form, &$form_state) {
     $args[':is_sel'] = variable_get('gs_var_issel');
     $args[':is_mom'] = variable_get('gs_var_ismom');
     $args[':is_dad'] = variable_get('gs_var_isdad');
+    //$args[':is_ril'] = variable_get('gs_var_isril');
 
     // Matrix: we want all count for every cross.
     // List: only the count for a given cross.
 
     // Names of child returned to show sample when user hovers on a count (first 5).
     // stock_id (in JSON) used expand/show list, the summary count is based on to get precise match.
+
+    // Credits to: Sanderson L-A, kp_searches
+    // https://github.com/UofS-Pulse-Binfo/kp_searches
     $sql = "
       SELECT
-        COUNT(DISTINCT child.stock_id) AS num_children,
-        CASE WHEN mom_org.species IS NULL THEN 'sp. (unknown)' ELSE mom_org.species END AS mom,
-        CASE WHEN dad_org.species IS NULL THEN 'sp. (unknown)' ELSE dad_org.species END AS dad,
+        COUNT(s.stock_id) num_children,
+        CASE WHEN momo.species IS NULL THEN 'sp. (unknown)' ELSE momo.species END AS mom,
+        CASE WHEN dado.species IS NULL THEN 'sp. (unknown)' ELSE dado.species END AS dad,
 
-        ARRAY_TO_STRING((ARRAY_AGG(DISTINCT child.name))[1:5], ',') AS stock_names,
-        ARRAY_TO_JSON(ARRAY_AGG(DISTINCT child.stock_id)) AS json_stock_id
-      FROM
-        {stock} AS child
-        LEFT JOIN {stock_relationship} AS bsitter ON child.stock_id = bsitter.subject_id
+        ARRAY_TO_STRING((ARRAY_AGG(DISTINCT s.name))[1:5], ',') AS stock_names,
+        ARRAY_TO_JSON(ARRAY_AGG(s.stock_id)) AS json_stock_id
+      FROM {stock} s
+        LEFT JOIN {organism} o ON o.organism_id=s.organism_id
 
-        LEFT JOIN {stock_relationship} AS mom_rel ON bsitter.object_id = mom_rel.object_id
-          AND mom_rel.type_id = :is_mom
-        LEFT JOIN {stock}    AS mom ON mom_rel.subject_id = mom.stock_id
-        LEFT JOIN {organism} AS mom_org ON mom.organism_id = mom_org.organism_id
+        LEFT JOIN {stock_relationship} origcross ON origcross.subject_id = s.stock_id
+          AND origcross.type_id = :is_sel
+        LEFT JOIN {stock_relationship} momr ON momr.object_id = origcross.object_id
+          AND momr.type_id = :is_mom
+        LEFT JOIN {stock_relationship} dadr ON dadr.object_id = origcross.object_id
+          AND dadr.type_id = :is_dad
 
-        LEFT JOIN {stock_relationship} AS dad_rel ON bsitter.object_id = dad_rel.object_id
-          AND dad_rel.type_id = :is_dad
-        LEFT JOIN {stock}    AS dad ON dad_rel.subject_id = dad.stock_id
-        LEFT JOIN {organism} AS dad_org ON dad.organism_id = dad_org.organism_id
-      WHERE
-        bsitter.type_id    = :is_sel
-        AND (mom_org.genus = :genus OR mom_org.genus IS NULL)
-        AND (dad_org.genus = :genus OR dad_org.genus IS NULL)
-      GROUP BY mom_org.species, dad_org.species";
+        LEFT JOIN {stock} mom ON momr.subject_id = mom.stock_id
+        LEFT JOIN {stock} dad ON dadr.subject_id = dad.stock_id
+        LEFT JOIN {organism} momo ON momo.organism_id = mom.organism_id
+        LEFT JOIN {organism} dado ON dado.organism_id = dad.organism_id
+      WHERE s.type_id = 3967 AND o.genus = :genus
+      GROUP BY momo.species, dado.species";
 
     $result = chado_query($sql, $args);
     // #Debug option: show result set.
+    // dpm($args);
     // dpm($result->fetchAll());
 
     if ($result->rowCount() > 0) {
@@ -217,8 +220,7 @@ function germ_summary_form($form, &$form_state) {
             child.stock_id, child.name, child.type_id, child.uniquename,
             mom.name, mom.uniquename, mom_org.abbreviation, mom.stock_id, mom.type_id,
             dad.name, dad.uniquename, dad_org.abbreviation, dad.stock_id, dad.type_id
-          ORDER BY child.name DESC";
-          // Desc order - we want to show readable names first then numerical names.
+          ORDER BY child.name ASC";
 
         $result = chado_query($sql, $args);
         // #Debug option: show result set.
