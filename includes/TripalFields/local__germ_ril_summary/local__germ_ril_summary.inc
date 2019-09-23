@@ -132,6 +132,7 @@ class local__germ_ril_summary extends TripalField {
       $args = array();
       $args[':F1'] = $gen['F1']; $args[':F2'] = $gen['F2']; $args[':F3'] = $gen['F3']; $args[':F4'] = $gen['F4'];
       $args[':F5'] = $gen['F5']; $args[':F6'] = $gen['F6']; $args[':F7'] = $gen['F7']; $args[':F8'] = $gen['F8'];
+
       $args[':RIL_complete'] = $gen['RIL_complete'];
 
       $args[':is_mom'] = variable_get('gs_var_ismom');
@@ -140,59 +141,58 @@ class local__germ_ril_summary extends TripalField {
 
       $args[':stock_id'] = $entity->chado_record_id;
 
-
       // Fs and Parents.
-      $f = chado_query("
+      $sql = "
         SELECT
-            s.stock_id,
-            mom.name AS maternal_parent, mom.type_id AS mom_type,
-            dad.name AS paternal_parent, dad.type_id AS dad_type,
+          s.stock_id,
+          mom.name AS maternal_parent, mom.stock_id AS mom_id, mom.type_id AS mom_type,
+          dad.name AS paternal_parent, dad.stock_id AS dad_id, dad.type_id AS dad_type,
+          STRING_AGG(
+            CASE
+              WHEN prop.type_id = :F1 THEN CONCAT('F1=>', TRIM(prop.value))
+              WHEN prop.type_id = :F2 THEN CONCAT('F2=>', TRIM(prop.value))
+              WHEN prop.type_id = :F3 THEN CONCAT('F3=>', TRIM(prop.value))
+              WHEN prop.type_id = :F4 THEN CONCAT('F4=>', TRIM(prop.value))
+              WHEN prop.type_id = :F5 THEN CONCAT('F5=>', TRIM(prop.value))
+              WHEN prop.type_id = :F6 THEN CONCAT('F6=>', TRIM(prop.value))
+              WHEN prop.type_id = :F7 THEN CONCAT('F7=>', TRIM(prop.value))
+              WHEN prop.type_id = :F8 THEN CONCAT('F8=>', TRIM(prop.value))
+              ELSE ''
+            END, ' # ') AS property_generation,
+          STRING_AGG(CASE WHEN prop.type_id = :RIL_complete THEN TRIM( prop.value ) END, '') AS property_complete
+        FROM {stock} s
+          LEFT JOIN {organism} o ON o.organism_id=s.organism_id
 
-            STRING_AGG(
-              CASE
-                WHEN prop.type_id = :F1 THEN CONCAT('F1=>', TRIM(prop.value))
-                WHEN prop.type_id = :F2 THEN CONCAT('F2=>', TRIM(prop.value))
-                WHEN prop.type_id = :F3 THEN CONCAT('F3=>', TRIM(prop.value))
-                WHEN prop.type_id = :F4 THEN CONCAT('F4=>', TRIM(prop.value))
-                WHEN prop.type_id = :F5 THEN CONCAT('F5=>', TRIM(prop.value))
-                WHEN prop.type_id = :F6 THEN CONCAT('F6=>', TRIM(prop.value))
-                WHEN prop.type_id = :F7 THEN CONCAT('F7=>', TRIM(prop.value))
-                WHEN prop.type_id = :F8 THEN CONCAT('F8=>', TRIM(prop.value))
-                ELSE ''
-              END, ' # ') AS property_generation,
-            STRING_AGG(CASE WHEN prop.type_id = :RIL_complete THEN TRIM( prop.value ) END, '') AS property_complete
-          FROM {stock} s
-            LEFT JOIN {organism} o ON o.organism_id=s.organism_id
+          LEFT JOIN {stock_relationship} origcross ON origcross.subject_id=s.stock_id
+            AND origcross.type_id = :is_sel
+          LEFT JOIN {stock_relationship} momr ON momr.object_id=origcross.object_id
+            AND momr.type_id=:is_mom
+          LEFT JOIN {stock_relationship} dadr ON dadr.object_id=origcross.object_id
+            AND dadr.type_id=:is_dad
 
-            LEFT JOIN {stock_relationship} origcross ON origcross.subject_id=s.stock_id
-              AND origcross.type_id = :is_sel
-            LEFT JOIN {stock_relationship} momr ON momr.object_id=origcross.object_id
-              AND momr.type_id=:is_mom
-            LEFT JOIN {stock_relationship} dadr ON dadr.object_id=origcross.object_id
-              AND dadr.type_id=:is_dad
+          LEFT JOIN {stock} mom ON momr.subject_id=mom.stock_id
+          LEFT JOIN {stock} dad ON dadr.subject_id=dad.stock_id
+          LEFT JOIN {organism} momo ON momo.organism_id=mom.organism_id
+          LEFT JOIN {organism} dado ON dado.organism_id=dad.organism_id
 
-            LEFT JOIN {stock} mom ON momr.subject_id=mom.stock_id
-            LEFT JOIN {stock} dad ON dadr.subject_id=dad.stock_id
-            LEFT JOIN {organism} momo ON momo.organism_id=mom.organism_id
-            LEFT JOIN {organism} dado ON dado.organism_id=dad.organism_id
+          LEFT JOIN {stockprop} AS prop ON s.stock_id = prop.stock_id
+        WHERE s.stock_id = :stock_id
+        GROUP BY
+          s.stock_id, mom.name, mom.uniquename, mom.stock_id, mom.type_id,
+          dad.name, dad.uniquename, dad.stock_id, dad.type_id";
 
-            LEFT JOIN {stockprop} AS prop ON s.stock_id = prop.stock_id
-          WHERE s.stock_id  = :stock_id
-          GROUP BY
-            s.stock_id, mom.name, mom.type_id, dad.name, dad.type_id", $args
-        )
-      ->fetchObject();
+      $f = chado_query($sql, $args)
+        ->fetchObject();
 
       if ($f) {
-        // Debug values:
-        // $germ_ril_summary['all'] = $f;
-
-        $germ_ril_summary['maternal']    = $f->maternal_parent;
+        $germ_ril_summary['maternal']      = $f->maternal_parent;
         $germ_ril_summary['mom_entity_id'] = grs_get_stock_entity_id($f->mom_id, $f->mom_type);
-        $germ_ril_summary['paternal']    = $f->paternal_parent;
+
+        $germ_ril_summary['paternal']      = $f->paternal_parent;
         $germ_ril_summary['dad_entity_id'] = grs_get_stock_entity_id($f->dad_id, $f->dad_type);
-        $germ_ril_summary['complete']    = $f->property_complete;
-        $germ_ril_summary['generations'] = $f->property_generation;
+        $germ_ril_summary['complete']      = $f->property_complete;
+
+        $germ_ril_summary['generations']   = $f->property_generation;
       }
     }
 
