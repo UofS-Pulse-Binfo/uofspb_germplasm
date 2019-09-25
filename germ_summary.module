@@ -380,7 +380,7 @@ function germ_summary_form($form, &$form_state) {
         }
         else {
           // 0 children for this pair.
-          drupal_set_message('Stocks not found.', 'warning');
+          drupal_set_message('There are no RILs for this combination of species.', 'warning');
         }
       }
       else {
