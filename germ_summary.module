@@ -352,7 +352,7 @@ function germ_summary_form($form, &$form_state) {
 
           $form['back_link'] = array(
             '#type' => 'markup',
-            '#markup' => l('Back to Summary Matrix', 'germplasm/summary/' . $genus),
+            '#markup' => l('Back to Summary Matrix', 'germplasm/summary/' . $args_genus),
           );
 
           $form['summary_table'] = array(
@@ -416,7 +416,7 @@ function germ_summary_form($form, &$form_state) {
           foreach($arr_species as $mom_key => $mom_species) {
             if (isset($arr_stock_prop[ $mom_species ][ $dad_species ]['count'])) {
               // Has child. create a link so this summary count is link.
-              $child_count = l($arr_stock_prop[ $mom_species ][ $dad_species ]['count'], 'germplasm/list/' . $genus . '/' . $mom_key . '/' . $dad_key);
+              $child_count = l($arr_stock_prop[ $mom_species ][ $dad_species ]['count'], 'germplasm/list/' . $args_genus . '/' . $mom_key . '/' . $dad_key);
               $names = explode(',', $arr_stock_prop[ $mom_species ][ $dad_species ]['sample']);
             }
             else {
