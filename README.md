@@ -1,5 +1,5 @@
 ![Tripal Dependency](https://img.shields.io/badge/tripal-%3E=3.0-brightgreen)
-![Module is Generic](https://img.shields.io/badge/generic-tested+manually-brightgreen)
+![Module is Generic](https://img.shields.io/badge/generic-tested manually-brightgreen)
 ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/UofS-Pulse-Binfo/germ_summary?include_prereleases)
 
 # RIL Summary
