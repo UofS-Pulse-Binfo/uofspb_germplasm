@@ -99,7 +99,7 @@ function germ_summary_form($form, &$form_state) {
     $args[':is_sel'] = variable_get('gs_var_issel');
     $args[':is_mom'] = variable_get('gs_var_ismom');
     $args[':is_dad'] = variable_get('gs_var_isdad');
-    //$args[':is_ril'] = variable_get('gs_var_isril');
+    $args[':is_ril'] = variable_get('gs_var_isril');
 
     // Matrix: we want all count for every cross.
     // List: only the count for a given cross.
@@ -131,13 +131,13 @@ function germ_summary_form($form, &$form_state) {
         LEFT JOIN {stock} dad ON dadr.subject_id = dad.stock_id
         LEFT JOIN {organism} momo ON momo.organism_id = mom.organism_id
         LEFT JOIN {organism} dado ON dado.organism_id = dad.organism_id
-      WHERE s.type_id = 3967 AND o.genus = :genus
+      WHERE s.type_id=:is_ril AND o.genus = :genus
       GROUP BY momo.species, dado.species";
 
     $result = chado_query($sql, $args);
     // #Debug option: show result set.
-    // dpm($args);
-    // dpm($result->fetchAll());
+    // dpm($args, 'args');
+    // dpm($result->fetchAll(), 'results');
 
     if ($result->rowCount() > 0) {
       $arr_stock_prop = array();
@@ -157,7 +157,6 @@ function germ_summary_form($form, &$form_state) {
           );
         }
       }
-
 
       // RENDER list or matrix.
 
@@ -457,6 +456,15 @@ function germ_summary_form($form, &$form_state) {
         '#type' => 'item',
         '#markup' => $form_description,
       );
+    }
+    else {
+      $num_rils = chado_query("SELECT count(*) FROM {stock} WHERE type_id=:type", [':type' => variable_get('gs_var_isril', NULL)])->fetchField();
+      if ($num_rils > 0) {
+        drupal_set_message("The RILs available for this genus are not associated with a corresponding original stock. Ensure you have a Breeding Cross related to each RIL via a 'stock_relationship:is_selected_from' relationship.", 'warning');
+      }
+      else {
+        drupal_set_message('There are no RILs available for this genus. Go to Content > Tripal Content > Recombinant Inbred Line to create one.', 'warning');
+      }
     }
   // End has species.
   }
