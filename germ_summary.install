@@ -72,9 +72,20 @@ function germ_summary_enable() {
   $sql_G = "SELECT t2.name, t2.cvterm_id FROM {cv} AS t1 INNER JOIN {cvterm} AS t2 USING(cv_id)
     WHERE t2.name IN ('F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'RIL_complete')
       AND t1.name = 'stock_property'";
-
   $prop = chado_query($sql_G)
     ->fetchAllKeyed();
+
+  // Make sure all the F-generation properties are available.
+  foreach (['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'RIL_complete'] as $f) {
+    if (!isset($prop[$f])) {
+      $cvterm = chado_insert_cvterm([
+        'id' => 'tripal:'.$f,
+        'name' => $f,
+        'cv_name' => 'stock_property',
+      ]);
+      $prop[$f] = $cvterm->cvterm_id;
+    }
+  }
 
   variable_set('gs_var_fgens', serialize($prop));
 
