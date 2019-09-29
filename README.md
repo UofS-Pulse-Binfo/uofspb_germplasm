@@ -7,13 +7,16 @@ This module provides a table/matrix per genus where the cells provide a count of
 This module also provides a means for keeping track of RIL development through use of stock properties. The generations from F1 to F8 are shown as columns and map to stock properties "F1", "F2", "F3", etc. If the property is present but with no value then a checkmark appears; if a value is present then it is shown in the table. The final column can be filled in with the "RIL_complete" stock property.
 
 ### Screenshot of the Germplasm Summary as shown on KnowPulse for Lentil:
-![Germplasm Summary Screenshot](https://cloud.githubusercontent.com/assets/1566301/18369835/5c703484-75e5-11e6-9392-54fc468f7d33.png)
+![Germplasm Summary Screenshot](https://user-images.githubusercontent.com/1566301/65840297-8c854880-e2d4-11e9-9500-4edb8d94e61f.png)
 
 ### Scheenshot of the germplasm listing:
-![Germplasm Listing Screenshot](https://cloud.githubusercontent.com/assets/1566301/19665397/0e0de2e6-9a02-11e6-9b35-1a98d27d9a8f.png)
+![Germplasm Listing Screenshot](https://user-images.githubusercontent.com/1566301/65840304-9e66eb80-e2d4-11e9-834c-02f94f842c4a.png)
 NOTE: The Accession, Maternal/Paternal parent has been obfuscated here for privacy reasons. The parents would be links and the accession is the unique name.
 
 NOTE: The checkmarks appear if the property is present but there is no value (LR-03). If there is a value then it is displayed (LR-05).
+
+### Screenshot of RIL Summary field
+![RIL Summary field](https://user-images.githubusercontent.com/1566301/65840310-b8083300-e2d4-11e9-97ba-8e02850dd8f3.png)
 
 ## Assumptions
 1. The assumed hierarachy of relationships is expected: RIL -> Original Cross -> Parents. It is assumed that parents are specified using the stock_relationship table with a type of "is_maternal_parent_of" or "is_paternal_parent_of" respectively. The parent should be the subject and the child should be the object of the relationship.
