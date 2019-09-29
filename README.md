@@ -1,3 +1,6 @@
+![Tripal Dependency](https://img.shields.io/badge/tripal-%3E=3.0-brightgreen)
+![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/UofS-Pulse-Binfo/germ_summary?include_prereleases)
+
 # RIL Summary
 This module provides a table/matrix per genus where the cells provide a count of the number of chado stocks of type "Recombinant Imbred Line" with a maternal parent of species X and a paternal parent of species Y where X is specified by the column and Y is specified by the row. This results in the number of intraspecific crosses along the center diagonal and interspecific crosses flanking it. If the user clicks on a given count they will be taken to a paged listing of stocks with that parent species combination and if they hover over a count they will be given the first three names.
 
