@@ -30,10 +30,39 @@ function germ_summary_enable() {
 
   // Stock relationship
   $result = chado_query("SELECT name, cvterm_id FROM {cvterm} WHERE name
-    IN ('is_maternal_parent_of', 'is_paternal_parent_of', 'is_selection_of', 'Recombinant Inbred Line')
-    ORDER BY cvterm_id ASC")
+    IN ('is_maternal_parent_of', 'is_paternal_parent_of', 'is_selection_of')")
   ->fetchAllKeyed();
 
+  // Ensure we add relationships if they are not already present.
+  $rel_terms = ['is_maternal_parent_of', 'is_paternal_parent_of', 'is_selection_of'];
+  $result = (is_array($result)) ? $result : [];
+  foreach ($rel_terms as $term_name) {
+    if (!isset($result[$term_name])) {
+      $cvterm = chado_insert_cvterm([
+        'id' => 'tripal:'.$term_name,
+        'name' => $term_name,
+        'cv_name' => 'stock_relationship',
+        'is_relationship' => 1
+      ]);
+      $result[$term_name] = $cvterm->cvterm_id;
+    }
+  }
+
+  // Ensure we use the correct term for Recombinant Inbred Line.
+  // Recombinant Inbred Line in stock_type, there is another exact same
+  // in knowpulse_germplasm.
+  $sql_R = "SELECT t2.cvterm_id FROM {cv} AS t1 INNER JOIN {cvterm} AS t2 USING(cv_id)
+    WHERE t2.name = 'Recombinant Inbred Line' AND t1.name = 'stock_type'";
+  $result['Recombinant Inbred Line'] = chado_query($sql_R)->fetchField();
+
+  // If we were not able to pull the term out above then this is not KnowPulse.
+  // As such, we need to grab the term used for generic tripal.
+  if (empty($result['Recombinant Inbred Line'])) {
+    $r = chado_query("SELECT cvterm_id FROM {cvterm} WHERE name='414 inbred line'")->fetchField();
+    $result['Recombinant Inbred Line'] = $r;
+  }
+
+  // Finally, set the variables.
   variable_set('gs_var_ismom', $result['is_maternal_parent_of']);
   variable_set('gs_var_isdad', $result['is_paternal_parent_of']);
   variable_set('gs_var_issel', $result['is_selection_of']);
@@ -49,15 +78,6 @@ function germ_summary_enable() {
 
   variable_set('gs_var_fgens', serialize($prop));
 
-  // Recombinant Inbred Line in stock_type, there is another exact same
-  // in knowpulse_germplasm.
-  $sql_R = "SELECT t2.cvterm_id FROM {cv} AS t1 INNER JOIN {cvterm} AS t2 USING(cv_id)
-    WHERE t2.name = 'Recombinant Inbred Line' AND t1.name = 'stock_type'";
-
-  $ril = chado_query($sql_R)
-    ->fetchField();
-
-  variable_set('gs_var_isril', $ril);
 }
 
 
