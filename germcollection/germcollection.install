@@ -1,0 +1,64 @@
+<?php
+/**
+ * @file
+ * Hooks related to module install or uninstall.
+ */
+
+/**
+ * Implements hook_enable().
+ */
+function germcollection_enable() {
+
+  // Ensure needed cvterm are added.
+  if (!chado_get_cvterm(['cv_id' => ['name' => 'tripal'], 'name' => 'project_germcollection'])) {
+    chado_insert_cvterm([
+      'id' => 'local:project_germcollection',
+      'name' => 'project_germcollection',
+      'cv_name' => 'tripal',
+      'definition' => 'Connects related germplasm to a project.', 
+    ]);
+  }
+
+  // Add linking table between projects and stock collections.
+  $schema = array (
+    'table' => 'project_stockcollection',
+    'fields' => array (
+      'project_stockcollection_id' => array (
+        'type' => 'serial',
+        'not null' => true,
+      ),
+      'project_id' => array (
+        'type' => 'int',
+        'not null' => true,
+      ),
+      'stockcollection_id' => array (
+        'type' => 'int',
+        'not null' => true,
+      ),
+    ),
+    'primary key' => array (
+      0 => 'project_stockcollection_id',
+    ),
+    'unique keys' => array (
+      'project_stockcollection_c1' => array (
+        0 => 'project_id',
+        1 => 'stockcollection_id',
+      ),
+    ),
+    'foreign keys' => array (
+      'project' => array (
+        'table' => 'library',
+        'columns' => array (
+          'project_id' => 'project_id',
+        ),
+      ),
+      'stockcollection' => array (
+        'table' => 'stock',
+        'columns' => array (
+          'stockcollection_id' => 'stockcollection_id',
+        ),
+      ),
+    ),
+  );
+  chado_create_custom_table('project_stockcollection',$schema,TRUE,FALSE);
+}
