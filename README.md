@@ -19,3 +19,5 @@ This package includes modules which used to stand alone (germ_summary, tripal_ge
 3. Remove the old module directories.
 4. Clone this package and re-install the modules
 5. Re-apply the configuration you took note of above.
+
+**Note: the functionality from separate modules will still be available in this package and any new functionality will be developed here. Additionally, germ_summary has been renamed to rilsummary to reflect it's focus on RILs.**
