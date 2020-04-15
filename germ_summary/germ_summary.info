@@ -1,6 +1,0 @@
-name = Germplasm Summary
-description = Provides a matrix describing the number of germplasm (chado.stocks) per organism combination.
-core = 7.x
-package = KnowPulse
-dependencies[] = tripal
-dependencies[] = tripal_chado

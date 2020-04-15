@@ -1,0 +1,6 @@
+name = RIL (Recombinant Inbred Line) Summary
+description = Provides a matrix describing the number of RILs per species combination by looking at parentage.
+core = 7.x
+package = Tripal Germplasm
+dependencies[] = tripal
+dependencies[] = tripal_chado
