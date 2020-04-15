@@ -1,11 +1,12 @@
 <?php
 /**
- *
+ * @file
+ * Provides functionality required for installation of the module.
  */
 
- /**
-   * Implement hook_enable()
-   */
+/**
+ * Implement hook_enable()
+ */
 function tripal_germplasm_importer_enable(){
 
   // ensure we have the cvs and cvterms
@@ -186,11 +187,9 @@ function tripal_germplasm_importer_enable(){
       ),
     ),
   );
-
   chado_create_custom_table($table, $schema, TRUE, NULL, FALSE);
 
   global $user;
-
   // load required ontologies for this module, which includes:
   //  MCPD (Multi-Crop Passport Ontology)
   //  GCP germplasm ontology
@@ -198,6 +197,3 @@ function tripal_germplasm_importer_enable(){
   load_ontologies_job();
 
 }
-
-
-
