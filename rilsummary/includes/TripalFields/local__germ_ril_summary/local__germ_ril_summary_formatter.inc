@@ -44,7 +44,7 @@ class local__germ_ril_summary_formatter extends TripalFieldFormatter {
    *    hook_field_formatter_view() function.
    */
   public function view(&$element, $entity_type, $entity, $langcode, $items, $display) {
-    $module_path = drupal_get_path('module', 'germ_summary');
+    $module_path = drupal_get_path('module', 'rilsummary');
     $path = array(
       'base' => $GLOBALS['base_url'],
       'module' => $module_path,
