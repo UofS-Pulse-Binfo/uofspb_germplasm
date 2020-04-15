@@ -1,7 +1,7 @@
 name = Germplasm Collection
 description = Provides fields and views to support germplasm collections in Tripal.
 core = 7.x
+package = Tripal Germplasm
 
 dependencies[] = tripal
 dependencies[] = tripal_chado
-
