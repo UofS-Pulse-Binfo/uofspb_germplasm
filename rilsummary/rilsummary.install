@@ -3,7 +3,7 @@
 /**
  * Implements hook_install().
  */
-function germ_summary_install() {
+function rilsummary_install() {
   // Register term required by Germ RIL Summary.
   $germ_ril_summary = array(
     'id' => 'local:germ_ril_summary',
@@ -19,7 +19,7 @@ function germ_summary_install() {
 /**
  * Implements hook_enable().
  */
-function germ_summary_enable() {
+function rilsummary_enable() {
   // This hook will make the following terms available.
   // 1. is_maternal_parent_of
   // 2. is_paternal_parent_of
@@ -95,7 +95,7 @@ function germ_summary_enable() {
 /**
  * Implements hook_uninstall().
  */
-function germ_summary_uninstall() {
+function rilsummary_uninstall() {
   // Drop all system variable created in hook_enable().
   variable_del('gs_var_ismom');
   variable_del('gs_var_isdad');

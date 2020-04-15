@@ -6,17 +6,17 @@
 /**
  * Implements hook_bundle_field_info().
  */
-function germ_summary_bundle_field_info($entity_type, $bundle) {
+function rilsummary_bundle_field_info($entity_type, $bundle) {
    $info = [];
 
   // Make sure this bundle is an organism (OBI:0100026) then we'll attach our
   // field to display the genus.
   $term = tripal_load_term_entity(array('term_id' => $bundle->term_id));
   $term_accession = $term->vocab->vocabulary . '__' . $term->accession;
-  
+
   if ($term_accession == 'local__germ_ril_summary') {
     $field_type = $field_name = 'local__germ_ril_summary';
-    
+
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
@@ -36,12 +36,12 @@ function germ_summary_bundle_field_info($entity_type, $bundle) {
 /**
  * Implements hook_bundle_instances_info().
  */
-function analyzedphenotypes_bundle_instances_info($entity_type, $bundle) {
+function rilsummary_bundle_instances_info($entity_type, $bundle) {
   $info = [];
 
   $term = tripal_load_term_entity(array('term_id' => $bundle->term_id));
   $term_accession = $term->vocab->vocabulary . '__' . $term->accession;
-  
+
   if ($term_accession == 'local__germ_ril_summary') {
     $field_name = 'local__germ_ril_summary';
     $is_required = FALSE;
@@ -76,6 +76,6 @@ function analyzedphenotypes_bundle_instances_info($entity_type, $bundle) {
       ],
     ];
   }
-  
+
   return $info;
 }
