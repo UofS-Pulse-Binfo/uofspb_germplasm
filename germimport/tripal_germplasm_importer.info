@@ -1,0 +1,8 @@
+name = Germplasm Importer
+description = Import germplasm into the Chado stock tables.
+core = 7.x
+project = tripal
+package = Tripal Germplasm
+
+dependencies[] = tripal
+dependencies[] = tripal_chado
