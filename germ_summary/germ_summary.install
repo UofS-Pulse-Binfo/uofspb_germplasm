@@ -1,0 +1,105 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function germ_summary_install() {
+  // Register term required by Germ RIL Summary.
+  $germ_ril_summary = array(
+    'id' => 'local:germ_ril_summary',
+    'name' => 'germ ril summary',
+    'cv_name' => 'local',
+    'definition' => 'Germ RIL Summary',
+  );
+
+  chado_insert_cvterm($germ_ril_summary);
+}
+
+
+/**
+ * Implements hook_enable().
+ */
+function germ_summary_enable() {
+  // This hook will make the following terms available.
+  // 1. is_maternal_parent_of
+  // 2. is_paternal_parent_of
+  // 3. is_selection_of
+  // 4. F generations
+  // 5. RIL complete
+  // 6. RIL
+
+  // Stock relationship
+  $result = chado_query("SELECT name, cvterm_id FROM {cvterm} WHERE name
+    IN ('is_maternal_parent_of', 'is_paternal_parent_of', 'is_selection_of')")
+  ->fetchAllKeyed();
+
+  // Ensure we add relationships if they are not already present.
+  $rel_terms = ['is_maternal_parent_of', 'is_paternal_parent_of', 'is_selection_of'];
+  $result = (is_array($result)) ? $result : [];
+  foreach ($rel_terms as $term_name) {
+    if (!isset($result[$term_name])) {
+      $cvterm = chado_insert_cvterm([
+        'id' => 'tripal:'.$term_name,
+        'name' => $term_name,
+        'cv_name' => 'stock_relationship',
+        'is_relationship' => 1
+      ]);
+      $result[$term_name] = $cvterm->cvterm_id;
+    }
+  }
+
+  // Ensure we use the correct term for Recombinant Inbred Line.
+  // Recombinant Inbred Line in stock_type, there is another exact same
+  // in knowpulse_germplasm.
+  $sql_R = "SELECT t2.cvterm_id FROM {cv} AS t1 INNER JOIN {cvterm} AS t2 USING(cv_id)
+    WHERE t2.name = 'Recombinant Inbred Line' AND t1.name = 'stock_type'";
+  $result['Recombinant Inbred Line'] = chado_query($sql_R)->fetchField();
+
+  // If we were not able to pull the term out above then this is not KnowPulse.
+  // As such, we need to grab the term used for generic tripal.
+  if (empty($result['Recombinant Inbred Line'])) {
+    $r = chado_query("SELECT cvterm_id FROM {cvterm} WHERE name='414 inbred line'")->fetchField();
+    $result['Recombinant Inbred Line'] = $r;
+  }
+
+  // Finally, set the variables.
+  variable_set('gs_var_ismom', $result['is_maternal_parent_of']);
+  variable_set('gs_var_isdad', $result['is_paternal_parent_of']);
+  variable_set('gs_var_issel', $result['is_selection_of']);
+  variable_set('gs_var_isril', $result['Recombinant Inbred Line']);
+
+  // F Generations.
+  $sql_G = "SELECT t2.name, t2.cvterm_id FROM {cv} AS t1 INNER JOIN {cvterm} AS t2 USING(cv_id)
+    WHERE t2.name IN ('F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'RIL_complete')
+      AND t1.name = 'stock_property'";
+  $prop = chado_query($sql_G)
+    ->fetchAllKeyed();
+
+  // Make sure all the F-generation properties are available.
+  foreach (['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'RIL_complete'] as $f) {
+    if (!isset($prop[$f])) {
+      $cvterm = chado_insert_cvterm([
+        'id' => 'tripal:'.$f,
+        'name' => $f,
+        'cv_name' => 'stock_property',
+      ]);
+      $prop[$f] = $cvterm->cvterm_id;
+    }
+  }
+
+  variable_set('gs_var_fgens', serialize($prop));
+
+}
+
+
+/**
+ * Implements hook_uninstall().
+ */
+function germ_summary_uninstall() {
+  // Drop all system variable created in hook_enable().
+  variable_del('gs_var_ismom');
+  variable_del('gs_var_isdad');
+  variable_del('gs_var_issel');
+  variable_del('gs_var_fgens');
+  variable_del('gs_var_isril');
+}
