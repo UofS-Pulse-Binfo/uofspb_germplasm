@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/UofS-Pulse-Binfo/kp_germplasm.svg?branch=7.x-3.x)](https://travis-ci.org/UofS-Pulse-Binfo/kp_germplasm)
 ![Tripal Dependency](https://img.shields.io/badge/tripal-%3E=3.0-brightgreen)
 ![Module is Generic](https://img.shields.io/badge/generic-tested%20manually-yellow)
 
