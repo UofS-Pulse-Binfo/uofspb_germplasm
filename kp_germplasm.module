@@ -20,21 +20,131 @@ require_once('includes/job.load_ontolgies.inc');
  *    - terms: an array of terms if we only use a couple
  */
 function kp_germplasm_ontology_list(){
-  $ontologies = array();
+  $ontologies = [];
 
-  $ontologies['CO_010'] = array(
+  $ontologies['CO_010'] = [
     'name' => 'Crop Germplasm Ontology',
     'definition' => 'A controlled vocabulary to describe germplasm.',
     'file' => 'CO_010.obo',
     'all terms' => TRUE,
-  );
+  ];
 
-  $ontologies['MCPD'] = array(
+  $ontologies['MCPD'] = [
     'name' => 'Multi-Crop Passport Ontology',
     'definition' => 'FAO/Bioversity Multi-Crop Passport Descriptors V.2.1 [MCPD V.2.1] standard.',
     'file' => 'mcpd_v2.1_151215.obo',
     'all terms' => TRUE,
-  );
+  ];
 
-   return $ontologies;
+  $ontologies['stock_type'] = [
+    'name' => 'stock_type',
+    'definition' => 'A local vocabulary that contains a list of types for stocks.',
+    'all terms' => FALSE,
+    'terms' => [
+      [
+        'name' => 'F1',
+        'definition' => 'The first generation of offsprint from a parental cross.',
+        'cv_name' => 'stock_type',
+        'accession' => 'F1',
+        'db_name' => 'tripal'
+      ],
+    ],
+  ];
+
+  $ontologies['stock_property'] = [
+    'name' => 'stock_property',
+    'definition' => 'A local vocabulary that contains types of stock properties.',
+    'all terms' => FALSE,
+    'terms' => [
+      'season' => [
+        'name' => 'crossingblock_season',
+        'definition' => 'Indicates that the current stock was the progeny of a cross made in the season specified.',
+        'cv_name' => 'stock_property',
+        'accession' => 'crossingblock_season',
+        'db_name' => 'tripal'
+      ],
+      'year' => [
+        'name' => 'crossingblock_year',
+        'definition' => 'Indicates that the current stock was the progeny of a cross made in the year specified.',
+        'cv_name' => 'stock_property',
+        'accession' => 'crossingblock_year',
+        'db_name' => 'tripal'
+      ],
+      'cotyledon_colour' => [
+        'name' => 'cotyledon_colour',
+        'definition' => 'The colour of the cotyledon',
+        'cv_name' => 'stock_property',
+        'accession' => 'cotyledon_colour',
+        'db_name' => 'tripal'
+      ],
+      'seed_type' => [
+        'name' => 'seed_type',
+        'definition' => 'Characteristics or observable phenotypes of the seed.',
+        'cv_name' => 'stock_property',
+        'accession' => 'seed_type',
+        'db_name' => 'tripal'
+      ],
+      'seed_coat_colour' => [
+        'name' => 'seed_coat_colour',
+        'definition' => 'The colour of the seed coat',
+        'cv_name' => 'stock_property',
+        'accession' => 'seed_coat_colour',
+        'db_name' => 'tripal'
+      ],
+    ],
+  ];
+
+  $ontologies['stock_relationship'] = [
+    'name' => 'stock_relationship',
+    'definition' => 'A local vocabulary that contains types of relationships between stocks.',
+    'all terms' => FALSE,
+    'terms' => [
+      'maternal_parent' => [
+        'name' => 'is_maternal_parent_of',
+        'definition' => '',
+        'cv_name' => 'stock_relationship',
+        'accession' => 'is_maternal_parent_of',
+        'db_name' => 'tripal'
+      ],
+      'paternal_parent' => [
+        'name' => 'is_paternal_parent_of',
+        'definition' => '',
+        'cv_name' => 'stock_relationship',
+        'accession' => 'is_paternal_parent_of',
+        'db_name' => 'tripal'
+      ],
+    ],
+  ];
+
+  $ontologies['schema'] = [
+    'name' => 'schema',
+    'definition' => 'Schema.org. Schema.org is sponsored by Google, Microsoft, Yahoo and Yandex. The vocabularies are developed by an open community process.',
+    'all terms' => FALSE,
+    'terms' => [
+      'cross_type' => [
+        'name' => 'additionalType',
+        'definition' => '',
+        'cv_name' => 'schema',
+        'accession' => 'additionalType',
+        'db_name' => 'schema'
+      ],
+    ],
+  ];
+
+  $ontologies['local'] = [
+    'name' => 'local',
+    'definition' => 'Locally created terms.',
+    'all terms' => FALSE,
+    'terms' => [
+      'comment' => [
+        'name' => 'comment',
+        'definition' => 'Comments, typically from users. ',
+        'cv_name' => 'schema',
+        'accession' => 'comment',
+        'db_name' => 'schema'
+      ]
+    ],
+  ];
+
+  return $ontologies;
 }

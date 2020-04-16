@@ -11,8 +11,8 @@
  */
 function load_ontologies_job($job = NULL) {
 
-  $ontology_path = drupal_get_path('module', 'tripal_germplasm_importer') . '/ontologies/';
-  $ontologies = module_ontology_list();
+  $ontology_path = drupal_get_path('module', 'kp_germplasm') . '/ontologies/';
+  $ontologies = kp_germplasm_ontology_list();
   foreach ($ontologies as $abbrev => $details) {
 
     // If indicated then we want to load all terms for this ontology.
@@ -54,12 +54,24 @@ function load_ontologies_job($job = NULL) {
     else {
 
       // First add the cv.
-      tripal_insert_cv($details['name'], $details['definition']);
+      $exists = chado_get_cv([
+        'name' => $cv_value['cv_name'],
+      ]);
+      if (!$exists) {
+        chado_insert_cv($details['name'], $details['definition']);
+      }
 
       // Now add each term.
       foreach ($details['terms'] as $term) {
-        $term['cv_name'] = $details['name'];
-        tripal_insert_cvterm($term);
+        $term['cv_id'] = [ 'name' => $details['name'] ];
+
+        $exists = chado_get_cvterm([
+          'name' => $term['name'],
+          'cv_id' => $term['cv_id'],
+        ]);
+        if (!$exists) {
+          chado_insert_cvterm($term);
+        }
       }
     }
   }
