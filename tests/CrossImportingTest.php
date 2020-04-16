@@ -48,42 +48,70 @@ class CrossImportingTest extends TripalTestCase {
       $line_explode = explode("\t", $line);
 
       // test stock insertion in chado:stock
-      $results = chado_select_record('stock', ['stock_id', 'uniquename', 'type_id'], ['name'=> $line_explode[2], 'organism_id'=> $insertion_result['organism_id'] ]);
-
-      $this->assertEquals(1, count($results), "No or more than one $line_explode[2] in db chado:stock.");
+      $results = chado_select_record(
+        'stock',
+        ['stock_id', 'uniquename', 'type_id'],
+        [
+          'name'=> $line_explode[2],
+          'organism_id'=> $insertion_result['organism_id']
+        ]
+      );
+      $this->assertEquals(1, count($results),
+        "There should only be a single chado.stock record for $line_explode[2].");
       $germ_stock_id = $results[0]->stock_id;
 
       // test cvterm for germplams: F1
-      $result = chado_select_record('cvterm', ['name'], ['cvterm_id'=>$results[0]->type_id]);
-      $this->assertEquals('F1', $result[0]->name, "cvterm F1 does not match with cvterm in stock.");
+      $result = chado_select_record('cvterm', ['name'],
+        ['cvterm_id'=>$results[0]->type_id]);
+      $this->assertEquals('F1', $result[0]->name,
+        "The type for all crosses imported should be 'F1' but it is not for $line_explode[2].");
 
       // test prefix of uniquename
-      $this->assertEquals('0', strpos($results[0]->uniquename, $insertion_result['prefix']), "User input suffix is not updated in db.");
+      $this->assertEquals('0', strpos($results[0]->uniquename, $insertion_result['prefix']),
+        "The prefix, '".$insertion_result['prefix']."', is not in the uniquename: '".$results[0]->uniquename."'.");
 
       // test properties need to insert to chado:stockprop (use $cvterm_term_check)
-      foreach($cvterm_term_check as $key => $value){
-	      $result = chado_select_record('stockprop', ['type_id'], ['stock_id'=>$germ_stock_id, 'value'=>$line_explode[$key]]);
-	      $result = chado_select_record('cvterm', ['name'], ['cvterm_id'=>$result[0]->type_id]);
-        $this->assertEquals($value, $result[0]->name, "cvterm $value does not match with cvterm in stockprop.");
+      foreach($cvterm_term_check as $key => $value) {
+        if ($line_explode[$key]) {
+          // First select the type_id for the matching propery.
+  	      $stockprop = chado_select_record('stockprop', ['type_id'],
+            ['stock_id' => $germ_stock_id, 'value' => $line_explode[$key]]);
+          // Now get the cvterm name of the property type selected previously.
+  	      $cvterm = chado_select_record('cvterm', ['name'],
+            ['cvterm_id' => $stockprop[0]->type_id]);
+          $this->assertEquals($value, $cvterm[0]->name,
+            "The type ('".$cvterm[0]->name."') of the property with the value '".$line_explode[$key]."' does not match what we expected ('".$value."').");
+        }
       }
 
       // test relationship insertions in chado:stock_relationship
       // column 4, maternal parent
-      $result = chado_select_record('stock', ['stock_id'], ['name'=> $line_explode[3], 'organism_id'=> $insertion_result['organism_id'] ]);
-      if ($result){
-	      $result = chado_select_record('stock_relationship', ['type_id'], ['subject_id'=>$result[0]->stock_id, 'object_id'=>$germ_stock_id]);
-	      $result = chado_select_record('cvterm', ['name'], ['cvterm_id'=>$result[0]->type_id]);
-        $this->assertEquals('is_maternal_parent_of', $result[0]->name, "cvterm is_maternal_parent_of does not match with cvterm in table:cvterm.");
+      if ($line_explode[3]) {
+        $mom = chado_select_record('stock', ['stock_id'],
+          ['name' => $line_explode[3], 'organism_id' => $insertion_result['organism_id'] ]);
+        if ($mom){
+  	      $rel = chado_select_record('stock_relationship', ['type_id'],
+            ['subject_id' => $mom[0]->stock_id, 'object_id' => $germ_stock_id]);
+  	      $cvterm = chado_select_record('cvterm', ['name'],
+            ['cvterm_id' => $rel[0]->type_id]);
+          $this->assertEquals('is_maternal_parent_of', $cvterm[0]->name,
+            "The maternal parent, '".$line_explode[3]."', relationship type ('".$cvterm[0]->name."') does not match is_maternal_parent_of.");
+        }
       }
 
       // column 5, paternal parent
-      $result = chado_select_record('stock', ['stock_id'], ['name'=> $line_explode[4], 'organism_id'=> $insertion_result['organism_id'] ]);
-      if ($result){
-	      $result = chado_select_record('stock_relationship', ['type_id'], ['subject_id'=>$result[0]->stock_id, 'object_id'=>$germ_stock_id]);
-	      $result = chado_select_record('cvterm', ['name'], ['cvterm_id'=>$result[0]->type_id]);
-        $this->assertEquals('is_paternal_parent_of', $result[0]->name, "cvterm is_paternal_parent_of does not match with cvterm in table:cvterm.");
+      if ($line_explode[4]) {
+        $dad = chado_select_record('stock', ['stock_id'],
+          ['name'=> $line_explode[4], 'organism_id'=> $insertion_result['organism_id'] ]);
+        if ($result){
+  	      $rel = chado_select_record('stock_relationship', ['type_id'],
+            ['subject_id'=>$dad[0]->stock_id, 'object_id'=>$germ_stock_id]);
+  	      $cvterm = chado_select_record('cvterm', ['name'],
+            ['cvterm_id'=>$rel[0]->type_id]);
+          $this->assertEquals('is_paternal_parent_of', $cvterm[0]->name,
+            "The maternal parent, '".$line_explode[4]."', relationship type ('".$cvterm[0]->name."') does not match is_paternal_parent_of.");
+        }
       }
-
     }
     fclose($test_file);
   }
@@ -103,7 +131,7 @@ class CrossImportingTest extends TripalTestCase {
     module_load_include('inc', 'kp_germplasm', 'includes/TripalImporter/GermplasmCrossImporter');
 
     // Determine the parameters.
-    $file_path = DRUPAL_ROOT . '/' . drupal_get_path('module','kp_germplasm') . '/tests/test_files/unittest_sample_file.tsv';
+    $file_path = DRUPAL_ROOT . '/' . drupal_get_path('module','kp_germplasm') . '/tests/test_files/germplasm_cross_test1.tsv';
     $organism = factory('chado.organism')->create([
       'genus' => $faker->unique->word . uniqid(),
     ]);
