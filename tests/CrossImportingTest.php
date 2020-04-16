@@ -10,51 +10,20 @@ class CrossImportingTest extends TripalTestCase {
   use DBTransaction;
 
   /**
-   * Basic test example.
-   * Tests must begin with the word "test".
-   * See https://phpunit.readthedocs.io/en/latest/ for more information.
+   * TEST: did the importer work?
+   *
+   * Specifically,
+   *  - is insertion to table:stock is achieved
+   *  - test if each germplasm is inserted with right uniquename, cvterm
+   *
+   * @group importers
+   * @group cross-importer
    */
-  /**
-  * prepare all variables we need for test
-  * using test file to insert some germplams corsses
-  * use factory::create to generate organism
-  */
-  public function insert_test_file(){
-    $faker = Factory::create();
+  public function testCrossInsertion() {
 
-    $file_path = DRUPAL_ROOT . '/' . drupal_get_path('module','tripal_germplasm_importer') . '/tests/test_files/unittest_sample_file.tsv';
-    //alternative way: $arguments['file'][0]['file_path'] = __DIR__ . '/test_files/unittest_sample_file.tsv';
-
-    $organism = factory('chado.organism')->create([
-      'genus' => $faker->unique->word . uniqid(),
-    ]);
-
-    $organism_id = $organism->organism_id;
-
-    $user_prefix = 'UnitTest';
-
-    $importer = new \GermplasmCrossImporter();
-
-    $result = $importer->loadGermplasmCross($file_path, $organism_id, $user_prefix, $dbxref_id = NULL, $description = NULL, $is_obsolete = f);
-
-    return [
-      'test_file_path' => trim($file_path, '"'),
-      'organism_id' => $organism_id,
-      'prefix' => $user_prefix,
-    ];
-  }
-
-  /**
-  * Test if insertion to table:stock is achieved
-  * test if each germplasm is inserted with right uniquename, cvterm
-  */
-  public function testStockInsertion() {
-    // load our module
-    module_load_include('inc', 'tripal_germplasm_importer', 'includes/TripalImporter/GermplasmCrossImporter');
-
-    $insertion_result = $this -> insert_test_file();
-
-    $this->assertTrue(true);
+    $insertion_result = $this->insertTestFileHelper();
+    $this->assertNotNull($insertion_result['organism_id'],
+      "Test file Helper failed.");
 
     // build an array for testing cvterms, key is the column number , value is the cvterm in chado:cvterm
     // key is the column number-1 to match array of explode line , value is the expected cvterm for each property
@@ -119,4 +88,48 @@ class CrossImportingTest extends TripalTestCase {
     fclose($test_file);
   }
 
+  /**
+   * HELPER: Loads the test file into the database using the importer.
+   *
+   * File: test_files/unittest_sample_file.tsv
+   *
+   * Approach:
+   *  - prepare all variables we need for test
+   *  - using test file to insert some germplams corsses
+   *  - use factory::create to generate organism
+   */
+  public function insertTestFileHelper(){
+    $faker = Factory::create();
+    module_load_include('inc', 'kp_germplasm', 'includes/TripalImporter/GermplasmCrossImporter');
+
+    // Determine the parameters.
+    $file_path = DRUPAL_ROOT . '/' . drupal_get_path('module','kp_germplasm') . '/tests/test_files/unittest_sample_file.tsv';
+    $organism = factory('chado.organism')->create([
+      'genus' => $faker->unique->word . uniqid(),
+    ]);
+    $organism_id = $organism->organism_id;
+    $user_prefix = 'UnitTest';
+
+    // Now load the test file.
+    $importer = new \GermplasmCrossImporter();
+    ob_start();
+    $result = $importer->loadGermplasmCross(
+      $file_path,
+      $organism_id,
+      'UnitTest',
+      NULL,
+      NULL,
+      'f'
+    );
+    $output = ob_get_contents();
+    ob_end_clean();
+
+    // Return the info we'll need for the tests.
+    return [
+      'test_file_path' => trim($file_path, '"'),
+      'organism_id' => $organism_id,
+      'prefix' => $user_prefix,
+      'output' => $output,
+    ];
+  }
 }
