@@ -12,3 +12,4 @@ KP Germplasm Support!
 
    install
    importers
+   rilsummary
