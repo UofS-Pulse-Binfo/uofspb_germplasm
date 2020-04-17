@@ -10,6 +10,6 @@ KP Germplasm Support!
    :maxdepth: 2
    :caption: Contents:
 
-   install
-   importers
-   rilsummary
+   install/install
+   importers/importers
+   rilsummary/rilsummary

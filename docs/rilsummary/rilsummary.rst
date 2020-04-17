@@ -13,15 +13,15 @@ Functionality
 
 The RIL summary matrix can be found at ``[mytripalsite.com]/germplasm/summary/[genus]``. This is what it looks like for a fake ``Tripalus`` example.
 
-.. image:: rilsummary/rilsummary.png
+.. image:: rilsummary.png
 
 When you click on any of the cells in the RIL summary matrix you are taken to the following listing:
 
-.. image:: rilsummary/rillist.png
+.. image:: rillist.png
 
 The details for a given RIL can be summarized on the RIL Tripal Content Page using the field provided by this module.
 
-.. image:: rilsummary/rilfield.png
+.. image:: rilfield.png
 
 Adding RILs to the summary
 ----------------------------

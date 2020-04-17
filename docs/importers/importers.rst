@@ -7,8 +7,8 @@ Import for **Germplasm Accessions** and **Breeding Crosses** are currently suppo
    :maxdepth: 2
    :caption: Further Detail:
 
-   importers/germplasm_cross_importer
-   importers/germplasm_accession_importer
+   germplasm_cross_importer
+   germplasm_accession_importer
 
 .. note::
 
