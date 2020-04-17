@@ -12,4 +12,5 @@ KP Germplasm Support!
 
    install/install
    importers/importers
+   germcollection/germcollection
    rilsummary/rilsummary
