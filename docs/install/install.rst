@@ -56,3 +56,22 @@ For more information on the importers, See the Data Import section of these docs
 .. note::
 
   The importers add data to from your file into Chado. You then need to publish that data by going to Admin > Content > Tripal Content > Publish and selecting either "F1" for crosses or "Germplasm Accessions".
+
+Upgrade path from Separate Modules
+---------------------------------------
+
+This package includes modules which used to stand alone (germ_summary, tripal_germplasm_importer, germcollection). To upgrade,
+
+1. Take note of any existing configuration both in Tripal > Extensions and Structure > Tripal Content Types.
+2. Disable and uninstall the existing modules. This will not delete any data in chado; however, you will need to re-configure the functionality.
+3. Remove the old module directories.
+4. Clone this package and re-install the modules
+5. Re-apply the configuration you took note of above.
+
+.. warning::
+
+  You may need to re-configure after upgrading to this package so take careful note of your original configuration.
+
+.. note::
+
+	The functionality from separate modules will still be available in this package and any new functionality will be developed here. Additionally, germ_summary has been renamed to rilsummary to reflect it's focus on RILs.
