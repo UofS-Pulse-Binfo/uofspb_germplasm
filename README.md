@@ -15,10 +15,7 @@ Provides specialized Tripal fields and importers for germplasm. This package is 
 
 See [our documentation for detail installation and configuration instructions.](https://kp-germplasm.readthedocs.io/en/latest/install/install.html)
 
-### Upgrade path from Separate Modules
-This package includes modules which used to stand alone (germ_summary, tripal_germplasm_importer, germcollection). To upgrade,
-
-See [our documentation for detailed instructions.](https://kp-germplasm.readthedocs.io/en/latest/install/install.html#upgrade-path-from-separate-modules)
+If you were using germ_summary, tripal_germplasm_importer, germcollection then you will need to upgrade to this package to access new functionality and bug fixes. To upgrade, see [our documentation for detailed instructions.](https://kp-germplasm.readthedocs.io/en/latest/install/install.html#upgrade-path-from-separate-modules)
 
 **Note: the functionality from separate modules will still be available in this package and any new functionality will be developed here. Additionally, germ_summary has been renamed to rilsummary to reflect it's focus on RILs.**
 
