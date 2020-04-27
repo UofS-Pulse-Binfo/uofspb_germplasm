@@ -22,13 +22,11 @@ See [our documentation for detailed instructions.](https://kp-germplasm.readthed
 
 **Note: the functionality from separate modules will still be available in this package and any new functionality will be developed here. Additionally, germ_summary has been renamed to rilsummary to reflect it's focus on RILs.**
 
-## Documentation
-[![Documentation Status](https://readthedocs.org/projects/kp-germplasm/badge/?version=latest)](https://kp-germplasm.readthedocs.io/en/latest/?badge=latest)
+## Documentation [![Documentation Status](https://readthedocs.org/projects/kp-germplasm/badge/?version=latest)](https://kp-germplasm.readthedocs.io/en/latest/?badge=latest)
 
 There is extensive documentation available for this package through ReadtheDocs. You can [access our documentation here.](https://kp-germplasm.readthedocs.io/en/latest/index.html)
 
-## Automated Testing
-[![Build Status](https://travis-ci.org/UofS-Pulse-Binfo/kp_germplasm.svg?branch=7.x-3.x)](https://travis-ci.org/UofS-Pulse-Binfo/kp_germplasm)
+## Automated Testing [![Build Status](https://travis-ci.org/UofS-Pulse-Binfo/kp_germplasm.svg?branch=7.x-3.x)](https://travis-ci.org/UofS-Pulse-Binfo/kp_germplasm)
 
 Automated testing for this module was implemented using [Tripal Test Suite](https://github.com/tripal/TripalTestSuite) and is run automatically using Travis CI. You can see the build status above.
 
