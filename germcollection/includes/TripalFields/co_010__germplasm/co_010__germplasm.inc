@@ -1,10 +1,18 @@
 <?php
 /**
  * @class
- * Purpose:
+ * Purpose: Supply a germplasm list for a stockcollection.
  *
  * Data:
- * Assumptions:
+ *   Details for each germplasm are stored in stock and stockprop. The
+ *   connection between stockcollection and stocks is in stockcollection_stock.
+ * Assumptions: None known.
+ *
+ * NOTE: This field will optionally display a country of origin column. In order
+ *   to have it appear you must have the following term in the stock_property
+ *   cv and use it in the stockprop table to indicate the country of origin for
+ *   specific stocks.
+ *    TERM: internal:country_of_origin (country_of_origin)
  */
 class co_010__germplasm extends ChadoField {
 

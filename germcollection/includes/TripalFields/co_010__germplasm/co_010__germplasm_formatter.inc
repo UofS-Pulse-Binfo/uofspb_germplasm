@@ -1,10 +1,10 @@
 <?php
 /**
  * @class
- * Purpose:
+ * Purpose: Supply a germplasm list for a stockcollection page in table format.
  *
- * Display:
- * Configuration:
+ * Display: Uses an HTML tabe to display germplasm.
+ * Configuration: None.
  */
 class co_010__germplasm_formatter extends ChadoFieldFormatter {
 
