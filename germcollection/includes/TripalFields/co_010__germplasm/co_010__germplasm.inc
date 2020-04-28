@@ -38,7 +38,7 @@ class co_010__germplasm extends ChadoField {
   // Drupal will automatically change these settings for all fields.
   // Once instances exist for a field type then these settings cannot be
   // changed.
-  public static $default_settings = array(
+  public static $default_settings = [
     'storage' => 'field_chado_storage',
      // It is expected that all fields set a 'value' in the load() function.
      // In many cases, the value may be an associative array of key/value pairs.
@@ -46,15 +46,15 @@ class co_010__germplasm extends ChadoField {
      // be a controlled vocabulary term (e.g. rdfs:type). Keys in the load()
      // function that are supported by the query() function should be
      // listed here.
-     'searchable_keys' => array(),
-  );
+     'searchable_keys' => [],
+  ];
 
   // Indicates the download formats for this field.  The list must be the
   // name of a child class of the TripalFieldDownloader.
-  public static $download_formatters = array(
+  public static $download_formatters = [
      'TripalTabDownloader',
      'TripalCSVDownloader',
-  );
+  ];
 
   // Provide a list of instance specific settings. These can be access within
   // the instanceSettingsForm.  When the instanceSettingsForm is submitted
@@ -63,7 +63,7 @@ class co_010__germplasm extends ChadoField {
   // If you override this variable in a child class be sure to replicate the
   // term_name, term_vocab, term_accession and term_fixed keys as these are
   // required for all TripalFields.
-  public static $default_instance_settings = array(
+  public static $default_instance_settings = [
     // The DATABASE name, as it appears in chado.db.  This also builds the link-out url.  In most cases this will simply be the CV name.  In some cases (EDAM) this will be the SUBONTOLOGY.
     'term_vocabulary' => 'CO_010',
     // The name of the term.
@@ -85,7 +85,7 @@ class co_010__germplasm extends ChadoField {
     'chado_column' => '',
     // The base table.
     'base_table' => '',
-  );
+  ];
 
   // A boolean specifying that users should not be allowed to create
   // fields and instances of this field type through the UI. Such
@@ -99,11 +99,10 @@ class co_010__germplasm extends ChadoField {
   // the user but otherwise provides no data.
   public static $no_data = FALSE;
 
-   /**
-    * @see ChadoField::load()
-    *
-    **/
-
+  /**
+   * @see ChadoField::load()
+   *
+   */
   public function load($entity) {
 
     // We need the field name to ensure we save the data in the correct field!
@@ -112,7 +111,9 @@ class co_010__germplasm extends ChadoField {
     // Since the stock collection is the chado record...
     $stockcollection_id = $entity->chado_record_id;
 
-    $bundles = chado_query("SELECT tb.label, cb.chado_bundle_id FROM tripal_bundle tb LEFT JOIN chado_bundle cb ON cb.bundle_id=tb.id WHERE cb.data_table='stock'");
+    $bundles = chado_query("SELECT tb.label, cb.chado_bundle_id
+      FROM tripal_bundle tb LEFT JOIN chado_bundle cb ON cb.bundle_id=tb.id
+      WHERE cb.data_table='stock'");
     foreach ($bundles as $r) {
       $table = 'chado_bio_data_'.$r->chado_bundle_id;
       $bundle_tables[] = $table;
@@ -122,35 +123,35 @@ class co_010__germplasm extends ChadoField {
     // Our researchers are very concerned with origin so we're going to add
     // that to this table if the term exists and more then 50% of germplasm
     // have the property.
-    $origin_term = chado_get_cvterm(array('name' => 'country_of_origin', 'cv_id' => array('name' => 'stock_property'))); 
+    $origin_term = chado_get_cvterm(['name' => 'country_of_origin', 'cv_id' => ['name' => 'stock_property']]);
     $origin_accession = FALSE;
 
     if ($origin_term) {
       $origin_accession = 'internal:country_of_origin';
       $results = chado_query('
         SELECT s.stock_id, s.name, s.uniquename, o.genus, o.species, prop.value as origin
-        FROM {stock} s 
+        FROM {stock} s
         LEFT JOIN {organism} o ON o.organism_id=s.organism_id
-        LEFT JOIN {stockprop} prop ON prop.stock_id=s.stock_id 
+        LEFT JOIN {stockprop} prop ON prop.stock_id=s.stock_id
         WHERE
           prop.type_id = :origin_type AND
           s.stock_id IN (SELECT stock_id FROM {stockcollection_stock} WHERE stockcollection_id=:id)',
-        array(':id' => $stockcollection_id, ':origin_type' => $origin_term->cvterm_id));
+        [':id' => $stockcollection_id, ':origin_type' => $origin_term->cvterm_id]);
     }
     else {
       $results = chado_query('
         SELECT s.stock_id, s.name, s.uniquename, o.genus, o.species
-        FROM {stock} s 
+        FROM {stock} s
         LEFT JOIN {organism} o ON o.organism_id=s.organism_id
         WHERE s.stock_id IN (SELECT stock_id FROM {stockcollection_stock} WHERE stockcollection_id=:id)',
-        array(':id' => $stockcollection_id));
+        [':id' => $stockcollection_id]);
     }
     foreach ($results as $k => $r) {
 
       // Entity ID
       foreach ($bundle_tables as $bundle_table) {
-        $entity_id = db_query("SELECT entity_id FROM $bundle_table WHERE record_id=:id", 
-          array(':id' => $r->stock_id))->fetchField();
+        $entity_id = db_query("SELECT entity_id FROM $bundle_table WHERE record_id=:id",
+          [':id' => $r->stock_id])->fetchField();
         $bundle_label = $bundle_labels[$bundle_table];
         if ($entity_id) { break; }
       }
@@ -160,7 +161,7 @@ class co_010__germplasm extends ChadoField {
       $entity->{$field_name}['und'][$k]['chado-stockcollection__stockcollection_id'] = $stockcollection_id;
 
       // Save the value.
-      $entity->{$field_name}['und'][$k]['value'] = array();
+      $entity->{$field_name}['und'][$k]['value'] = [];
       $entity->{$field_name}['und'][$k]['value']['schema:name'] = $r->name;
       $entity->{$field_name}['und'][$k]['value']['data:identifier'] = $r->uniquename;
       $entity->{$field_name}['und'][$k]['value']['rdfs:type'] = $bundle_label;
@@ -174,39 +175,34 @@ class co_010__germplasm extends ChadoField {
 
 
 
-    /**
-    * @see ChadoField::query()
-    *
-    **/
-
+  /**
+   * @see ChadoField::query()
+   *
+   */
   public function query($query, $condition) {
   }
 
-    /**
-    * @see ChadoField::queryOrder()
-    *
-    **/
-
+  /**
+   * @see ChadoField::queryOrder()
+   *
+   */
   public function queryOrder($query, $order) {
   }
 
 
-    /**
-    * @see ChadoField::elementInfo()
-    *
-    **/
-    
+  /**
+   * @see ChadoField::elementInfo()
+   *
+   */
   public function elementInfo() {
     $field_term = $this->getFieldTermID();
-    return array(
-      $field_term => array(
-        'operations' => array('eq', 'ne', 'contains', 'starts'),
+    return [
+      $field_term => [
+        'operations' => ['eq', 'ne', 'contains', 'starts'],
         'sortable' => TRUE,
         'searchable' => TRUE,
-      ),
-    );
+      ],
+    ];
   }
 
 }
-
-

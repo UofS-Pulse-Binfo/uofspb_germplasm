@@ -12,12 +12,12 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
   public static $default_label = 'Germplasm List';
 
   // The list of field types for which this formatter is appropriate.
-  public static $field_types = array('co_010__germplasm');
+  public static $field_types = ['co_010__germplasm'];
 
   // The list of default settings for this formatter.
-  public static $default_settings = array(
+  public static $default_settings = [
     'setting1' => 'default_value',
-  );
+  ];
 
    /**
     * @see ChadoFieldFormatter::settingsForm()
@@ -36,11 +36,11 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
     // Get the settings
     $settings = $display['settings'];
 
-    $element[0] = array(
+    $element[0] = [
       '#theme' => 'table',
-      '#header' => array('Name', 'Accession', 'Type', 'Species', 'Country of Origin'),
-      '#rows' => array(),
-    );
+      '#header' => ['Name', 'Accession', 'Type', 'Species'],
+      '#rows' => [],
+    ];
 
     foreach ($items as $i) {
 
@@ -56,7 +56,17 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       $organism = $i['value']['taxrank:0000005'] . ' ' . $i['value']['taxrank:0000006'];
 
       // Compile the table row.
-      $element[0]['#rows'][] = array($name, $accession, $i['value']['rdfs:type'], $organism, $i['value']['internal:country_of_origin']);
+      $row = [
+        $name,
+        $accession,
+        $i['value']['rdfs:type'],
+        $organism,
+      ];
+      if (isset($i['value']['internal:country_of_origin'])) {
+        $row[] = $i['value']['internal:country_of_origin'];
+        $element[0]['#header'][4] = 'Country of Origin';
+      }
+      $element[0]['#rows'][] = $row;
     }
   }
 
