@@ -6,3 +6,37 @@
 
 module_load_include('inc','germcollection', 'includes/germcollection.fields');
 
+/**
+ * Implements hook_menu().
+ */
+function germcollection_menu() {
+	$items = [];
+
+	$bundle_id = db_query('SELECT bundle_id FROM {chado_bundle} WHERE data_table=:table',
+		[':table' => 'stockcollection'])->fetchField();
+	$bundle_name = 'bio_data_' . $bundle_id;
+
+	$items['ajax/tripal/autocomplete/germplasm-collection'] = [
+		'page callback' => 'germcollection_name_autocomplete',
+		// @todo figure out what permission this should be. Maybe view germcollection?
+		'access arguments' => ["view $bundle_name"],
+		'type' => MENU_CALLBACK
+	];
+
+	return $items;
+}
+
+/**
+ * Implements auto-complete callback.
+ */
+function germcollection_name_autocomplete($string){
+	$matches = [];
+
+	$results = chado_select_record('stockcollection',
+		['name'], ['name' => $string], ['regex_columns' => ['name']]);
+	foreach ($results as $r) {
+		$matches[$r->name] = $r->name;
+	}
+
+ 	drupal_json_output($matches);
+}

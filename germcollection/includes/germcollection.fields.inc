@@ -159,8 +159,8 @@ function germcollection_bundle_instances_info($entity_type, $bundle) {
         'term_name' => 'project_germcollection',
         'term_accession' => 'project_germcollection',
         'auto_attach' => FALSE,
-        'chado_table' => $bundle->data_table,
-        'chado_column' => 'project_id',
+        'chado_table' => 'project_stockcollection',
+        'chado_column' => 'project_stockcollection_id',
         'base_table' => $bundle->data_table,
       ),
       'widget' => array(

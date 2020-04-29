@@ -13,7 +13,7 @@ class local__project_germcollection_widget extends ChadoFieldWidget {
   public static $default_label = 'Project-Related Germplasm Collection';
 
   // The list of field types for which this formatter is appropriate.
-  public static $field_types = array('local__project_germcollection');
+  public static $field_types = ['local__project_germcollection'];
 
   /**
    * @see ChadoFieldWidget::form()
@@ -36,7 +36,7 @@ class local__project_germcollection_widget extends ChadoFieldWidget {
       $project_id = tripal_get_field_item_keyval($items, $delta, 'chado-project_stockcollection__project_id', $project_id);
       $stockcollection_id = tripal_get_field_item_keyval($items, $delta, 'chado-project_stockcollection__stockcollection_id', $stockcollection_id);
       $pkey_value = tripal_get_field_item_keyval($items, $delta, 'chado-project_stockcollection__'.$pkey, $pkey_value);
-      $stockcollection_name = $items[$delta]['value']['schema:name'];
+      $stockcollection_name = (isset($items[$delta]['value']['schema:name'])) ? $items[$delta]['value']['schema:name'] : '';
     }
 
     // Check $form_state['values'] to see if an AJAX call set the values.
@@ -48,27 +48,28 @@ class local__project_germcollection_widget extends ChadoFieldWidget {
       $stockcollection_name = $form_state['values'][$field_name]['und'][$delta]['value']['schema:name'];
     }
 
-    $widget['chado-project_stockcollection__project_id'] = array(
+    $widget['chado-project_stockcollection__project_id'] = [
       '#type' => 'hidden',
       '#value' => $project_id,
-    );
+    ];
 
-    $widget['chado-project_stockcollection__stockcollection_id'] = array(
+    $widget['chado-project_stockcollection__stockcollection_id'] = [
       '#type' => 'hidden',
       '#value' => $stockcollection_id,
-    );
+    ];
 
-    $widget['chado-project_stockcollection__'.$pkey] = array(
+    $widget['chado-project_stockcollection__'.$pkey] = [
       '#type' => 'hidden',
       '#value' => $pkey_value,
-    );
+    ];
 
-    $widget['stockcollection_name'] = array(
+    $widget['stockcollection_name'] = [
       '#type' => 'textfield',
       '#title' => 'Germplasm Collection',
       '#description' => 'Enter the name of the germplasm collection used for this experiment. The collection must already exist.',
       '#default_value' => $stockcollection_name,
-    );
+      '#autocomplete_path' => 'ajax/tripal/autocomplete/germplasm-collection',
+    ];
   }
 
   /**
@@ -78,40 +79,39 @@ class local__project_germcollection_widget extends ChadoFieldWidget {
   public function validate($element, $form, &$form_state, $langcode, $delta) {
     $field_name = $this->field['field_name'];
 
-    $value = $form_state['values'][$field_name]['und'][$delta]['chado-stockcollection__name'];
-    $form_state['values'][$field_name]['und'][$delta]['value'] = $value;
-
-    $project_id = $form_state['values'][$field_name]['und'][$delta]['chado-project_stockcollection__project_id'];
-    $stockcollection_id = $form_state['values'][$field_name]['und'][$delta]['chado-project_stockcollection__stockcollection_id'];
     $stockcollection_name = $form_state['values'][$field_name]['und'][$delta]['stockcollection_name'];
 
-    if (!$project_id AND isset($element['#entity']->chado_record_id)) {
-      $project_id = $element['#entity']->chado_record_id;
-    }
+    if ($stockcollection_name) {
+      $form_state['values'][$field_name]['und'][$delta]['value'] = $stockcollection_name;
+      $project_id = $form_state['values'][$field_name]['und'][$delta]['chado-project_stockcollection__project_id'];
+      $stockcollection_id = $form_state['values'][$field_name]['und'][$delta]['chado-project_stockcollection__stockcollection_id'];
+      $stockcollection_name = $form_state['values'][$field_name]['und'][$delta]['stockcollection_name'];
 
-    if (!$stockcollection_id AND $stockcollection_name) {
-      $stockcollection_id = chado_query('SELECT stockcollection_id FROM {stockcollection} WHERE name=:name',
-	array(':name' => trim($stockcollection_name)))->fetchField();
-    }
+      if (!$project_id AND isset($element['#entity']->chado_record_id)) {
+        $project_id = $element['#entity']->chado_record_id;
+      }
 
-    if ($stockcollection_id) {
-      $form_state['values'][$field_name]['und'][$delta]['chado-project_stockcollection--project_id'] = $project_id;
-      $form_state['values'][$field_name]['und'][$delta]['chado-project_stockcollection__stockcollection_id'] = $stockcollection_id;
+      if (!$stockcollection_id AND $stockcollection_name) {
+        $stockcollection_id = chado_query(
+          'SELECT stockcollection_id FROM {stockcollection} WHERE name=:name',
+          [':name' => trim($stockcollection_name)])->fetchField();
+      }
+
+      if ($stockcollection_id) {
+        $form_state['values'][$field_name]['und'][$delta]['chado-project_stockcollection__project_id'] = $project_id;
+        $form_state['values'][$field_name]['und'][$delta]['chado-project_stockcollection__stockcollection_id'] = $stockcollection_id;
+      }
+      else {
+        form_set_error(
+          $this->field['field_name'] . '][' . $langcode . '][' . $delta . '][stockcollection_name',
+          'Collection does not exists.'
+        );
+      }
     }
-    elseif ($stockcollection_name) {
-      form_set_error(
-        $this->field['field_name'] . '][' . $langcode . '][' . $delta . '][stockcollection_name',
-        'Collection does not exists.'
-      );
+    else {
+      // We need to delete any existing connection.
+      $form_state['values'][$field_name]['und'][$delta]['chado-project_stockcollection__project_id'] = '';
+      $form_state['values'][$field_name]['und'][$delta]['chado-project_stockcollection__stockcollection_id'] = '';
     }
   }
-
-  /**
-   * @see ChadoFieldWidget::submit()
-   *
-   */
-  public function submit($form, &$form_state, $entity_type, $entity, $langcode, $delta) {
-
-  }
-
 }
