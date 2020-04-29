@@ -151,8 +151,8 @@ function germcollection_bundle_instances_info($entity_type, $bundle) {
       'field_name' => $field_name,
       'entity_type' => $entity_type,
       'bundle' => $bundle->name,
-      'label' => 'Project-Related Germplasm Collection',
-      'description' => 'Lists germplasm related to a project.',
+      'label' => 'Germplasm Collection',
+      'description' => 'Lists germplasm collections related to a project.',
       'required' => FALSE,
       'settings' => array(
         'term_vocabulary' => 'local',

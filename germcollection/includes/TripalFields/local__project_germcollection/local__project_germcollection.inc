@@ -115,9 +115,11 @@ class local__project_germcollection extends ChadoField {
     $bundle_table = 'chado_bio_data_'.$bundle_id;
 
     $results = chado_query('
-      SELECT psc.project_stockcollection_id, sc.stockcollection_id, sc.name
-      FROM chado.stockcollection sc
-      LEFT JOIN chado.project_stockcollection psc ON psc.stockcollection_id=sc.stockcollection_id
+      SELECT psc.project_stockcollection_id, sc.stockcollection_id,
+        sc.name, sc.uniquename, cvt.name as type_name
+      FROM {stockcollection} sc
+      LEFT JOIN {project_stockcollection} psc ON psc.stockcollection_id=sc.stockcollection_id
+      LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=sc.type_id
       WHERE psc.project_id=:id',
         [':id' => $project_id]);
     $entity->{$field_name}['und'] = [];
@@ -139,6 +141,8 @@ class local__project_germcollection extends ChadoField {
       // Save the value.
       $entity->{$field_name}['und'][$k]['value'] = [];
       $entity->{$field_name}['und'][$k]['value']['schema:name'] = $r->name;
+      $entity->{$field_name}['und'][$k]['value']['data:identifier'] = $r->uniquename;
+      $entity->{$field_name}['und'][$k]['value']['schema:additional_type'] = $r->type_name;
       if (!empty($entity_id)) { $entity->{$field_name}['und'][$k]['value']['schema:url'] = 'bio_data/'.$entity_id; }
     }
   }
