@@ -19,6 +19,39 @@ function germcollection_enable() {
     ]);
   }
 
+  // Create stock collection content type.
+  $args = [
+    'vocabulary' => 'hydra',
+    'accession' => 'Collection',
+    'term_name' => 'Collection',
+    'label' => 'Germplasm Collection',
+    'storage_args' => [
+      'data_table' => 'stockcollection',
+    ],
+    'category' => 'Germplasm/Breeding',
+  ];
+  $bundle = tripal_load_bundle_entity(['accession' => $args['vocabulary'] . ':' . $args['accession']]);
+  if (!$bundle) {
+    drush_print("Creating " . $args['term_name'] . "...");
+    if (tripal_create_bundle($args, $job)) {
+      $msg = t('Created !type Content Type.', ['!type' => $args['term_name']]);
+      drupal_set_message($msg);
+    }
+    else {
+      $msg = t('Error encountered creating !type Content Type.', ['!type' => $args['term_name']]);
+      drupal_set_message($msg, 'error');
+    }
+  }
+  else {
+
+    // Update the bundle category in case it was set incorrectly.
+    $category = array_key_exists('category', $args) ? $args['category'] : 'Other';
+    tripal_set_bundle_variable('bundle_category', $bundle->id, $category);
+
+    $msg = t("Content type, !type, already created (skipping).", ['!type' => $args['term_name']]);
+    drupal_set_message($msg);
+  }
+
   // Add linking table between projects and stock collections.
   $schema = array (
     'table' => 'project_stockcollection',
