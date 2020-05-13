@@ -3,20 +3,25 @@
  * @file
  * Contains all field specific code outside the classes.
  */
+
 /**
- * Implements hook_bundle_field_info().
+ * Implements hook_bundle_fields_info().
  */
-function rilsummary_bundle_field_info($entity_type, $bundle) {
+function rilsummary_bundle_fields_info($entity_type, $bundle) {
    $info = [];
 
-  // Make sure this bundle is an organism (OBI:0100026) then we'll attach our
-  // field to display the genus.
+  // Make sure this bundle is an RIL (CO_010:414 inbred line)...
   $term = tripal_load_term_entity(array('term_id' => $bundle->term_id));
-  $term_accession = $term->vocab->vocabulary . '__' . $term->accession;
+  if ($term->name == '414 inbred line') {
 
-  if ($term_accession == 'local__germ_ril_summary') {
+    tripal_insert_cvterm(array(
+      'id' => 'local:germ_ril_summary',
+      'name' => 'germ_ril_summary',
+      'cv_name' => 'tripal',
+      'definition' => 'Summarizes RILs.',
+    ));
+
     $field_type = $field_name = 'local__germ_ril_summary';
-
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
@@ -39,22 +44,21 @@ function rilsummary_bundle_field_info($entity_type, $bundle) {
 function rilsummary_bundle_instances_info($entity_type, $bundle) {
   $info = [];
 
+  // Make sure this bundle is an RIL (CO_010:414 inbred line)...
   $term = tripal_load_term_entity(array('term_id' => $bundle->term_id));
-  $term_accession = $term->vocab->vocabulary . '__' . $term->accession;
+  if ($term->name == '414 inbred line') {
 
-  if ($term_accession == 'local__germ_ril_summary') {
     $field_name = 'local__germ_ril_summary';
-    $is_required = FALSE;
     $info[$field_name] =  [
       'field_name' => $field_name,
       'entity_type' => $entity_type,
       'bundle' => $bundle->name,
       'label' => 'Germplasm RIL Summary',
       'description' => 'Germplasm RIL Summary',
-      'required' => TRUE,
+      'required' => FALSE,
       'settings' => [
         'auto_attach' => TRUE,
-        'chado_table' => 'stock_prop',
+        'chado_table' => 'stockprop',
         'chado_column' => 'stock_id',
         'base_table' => 'stock',
         'term_accession' => 'germ_ril_summary',

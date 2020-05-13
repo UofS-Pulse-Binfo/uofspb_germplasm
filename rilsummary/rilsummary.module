@@ -6,7 +6,7 @@
  */
 
 // Initialize fields.
-module_load_include('inc', 'rilsummary', 'includes/TripalFields/rilsummary.fields');
+module_load_include('inc', 'rilsummary', 'includes/rilsummary.fields');
 
 /**
  * Implements hook_menu().
