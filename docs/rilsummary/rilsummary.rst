@@ -29,6 +29,7 @@ Adding RILs to the summary
 1. Create a ``Recombinant Inbred Line`` with the name of your RIL population (e.g. TR-01).
 2. Create a germplasm line (type doesn't matter; suggested ``Generated Germplasm (Breeding Line)``) with the name of the original cross giving rise to the RIL population (e.g. 1234S) and add a relationship: ``TR-01 is_selection_of 1234S``.
 3. Create parents for the Breeding cross (type does not matter) and related them using the is_maternal_parent and is_paternal_parent relationship types (e.g. ``CDC FRED is_maternal_parent_of 1234S`` and ``AABC is_paternal_parent_of 1234S``).
+4. Each subline for a RIL (i.e. TR-01-123) should be of type `stock_type:F2`.
 
 Adding the summary to RIL pages.
 ---------------------------------
