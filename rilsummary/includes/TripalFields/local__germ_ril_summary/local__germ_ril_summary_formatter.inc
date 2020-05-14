@@ -54,7 +54,7 @@ class local__germ_ril_summary_formatter extends TripalFieldFormatter {
     // Style information.
     drupal_add_css($path['field'] . 'theme/style_grs_field.css');
     // Data to render:
-    $data = $items[0]['value']['local:germ ril summary'];
+    $data = $items[0]['value'];
 
     // Table header Fs.
     // Data row.

@@ -198,7 +198,7 @@ class local__germ_ril_summary extends TripalField {
 
     // We need the field name to ensure we save the data in the correct field!
     $field_name = $this->instance['field_name'];
-    $entity->{$field_name}['und'][0]['value']['local:germ ril summary'] = $germ_ril_summary;
+    $entity->{$field_name}['und'][0]['value'] = $germ_ril_summary;
   }
 
   /**
