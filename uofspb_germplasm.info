@@ -1,4 +1,4 @@
-name = KP Germplasm
+name = UofS Pulse Binfo Germplasm
 description = Generic support for germplasm stored in chado stock.
 core = 7.x
 package = Tripal Germplasm

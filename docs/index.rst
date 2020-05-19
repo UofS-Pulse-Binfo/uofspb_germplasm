@@ -1,6 +1,6 @@
 
-KP Germplasm Support!
-=========================
+UofS Pulse Binfo Germplasm Documentation
+==========================================
 
 .. note::
 

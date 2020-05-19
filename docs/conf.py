@@ -57,7 +57,7 @@ master_doc = 'index'
 
 # -- Project information -----------------------------------------------------
 
-project = u'KP Germplasm'
+project = u'UofS Pulse Binfo Germplasm'
 copyright = u'2019, Shen Y, Sanderson LA, Tan R. University of Saskatchewan, Pulse Bioinformatics'
 author = u'Shen Y, Sanderson LA, Tan R. University of Saskatchewan, Pulse Bioinformatics'
 
@@ -112,7 +112,7 @@ def setup(app):
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'KPGermplasmdoc'
+htmlhelp_basename = 'uofspbGermplasmdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -139,7 +139,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'KPGermplasm.tex', u'KP Germplasm Documentation',
+    (master_doc, 'uofspb_germplasm.tex', u'UofS Pulse Binfo Germplasm Documentation',
      u'Shen Y, Sanderson LA, Tan R. University of Saskatchewan, Pulse Bioinformatics', 'manual'),
 ]
 
@@ -149,7 +149,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'kpgermplasm', u'KP Germplasm Documentation',
+    (master_doc, 'uofspb_germplasm', u'UofS Pulse Binfo Germplasm Documentation',
      [author], 1)
 ]
 
@@ -160,7 +160,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'KPGermplasm', u'KP Germplasm Documentation',
+    (master_doc, 'uofspb_germplasm', u'UofS Pulse Binfo Germplasm Documentation',
      author, 'Shen Y, Sanderson LA, Tan R. University of Saskatchewan, Pulse Bioinformatics', 'Extended Tripal support for germplasm.',
      'Tripal'),
 ]

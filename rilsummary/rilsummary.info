@@ -4,4 +4,4 @@ core = 7.x
 package = Tripal Germplasm
 dependencies[] = tripal
 dependencies[] = tripal_chado
-dependencies[] = kp_germplasm
+dependencies[] = uofspb_germplasm
