@@ -38,7 +38,7 @@ class local__project_germcollection extends ChadoField {
   // Drupal will automatically change these settings for all fields.
   // Once instances exist for a field type then these settings cannot be
   // changed.
-  public static $default_settings = array(
+  public static $default_settings = [
     'storage' => 'field_chado_storage',
      // It is expected that all fields set a 'value' in the load() function.
      // In many cases, the value may be an associative array of key/value pairs.
@@ -46,15 +46,15 @@ class local__project_germcollection extends ChadoField {
      // be a controlled vocabulary term (e.g. rdfs:type). Keys in the load()
      // function that are supported by the query() function should be
      // listed here.
-     'searchable_keys' => array(),
-  );
+     'searchable_keys' => [],
+  ];
 
   // Indicates the download formats for this field.  The list must be the
   // name of a child class of the TripalFieldDownloader.
-  public static $download_formatters = array(
+  public static $download_formatters = [
      'TripalTabDownloader',
      'TripalCSVDownloader',
-  );
+  ];
 
   // Provide a list of instance specific settings. These can be access within
   // the instanceSettingsForm.  When the instanceSettingsForm is submitted
@@ -63,7 +63,7 @@ class local__project_germcollection extends ChadoField {
   // If you override this variable in a child class be sure to replicate the
   // term_name, term_vocab, term_accession and term_fixed keys as these are
   // required for all TripalFields.
-  public static $default_instance_settings = array(
+  public static $default_instance_settings = [
     // The DATABASE name, as it appears in chado.db.  This also builds the link-out url.  In most cases this will simply be the CV name.  In some cases (EDAM) this will be the SUBONTOLOGY.
     'term_vocabulary' => 'local',
     // The name of the term.
@@ -80,12 +80,12 @@ class local__project_germcollection extends ChadoField {
     // attached asynchronously.
     'auto_attach' => FALSE,
     // The table in Chado that the instance maps to.
-    'chado_table' => 'project',
+    'chado_table' => 'project_stockcollection',
     // The column of the table in Chado where the value of the field comes from.
-    'chado_column' => 'project_id',
+    'chado_column' => 'project_sotckcollection_id',
     // The base table.
     'base_table' => 'project',
-  );
+  ];
 
   // A boolean specifying that users should not be allowed to create
   // fields and instances of this field type through the UI. Such
@@ -99,11 +99,10 @@ class local__project_germcollection extends ChadoField {
   // the user but otherwise provides no data.
   public static $no_data = FALSE;
 
-   /**
-    * @see ChadoField::load()
-    *
-    **/
-
+  /**
+   * @see ChadoField::load()
+   *
+   */
   public function load($entity) {
 
     // We need the field name to ensure we save the data in the correct field!
@@ -116,19 +115,21 @@ class local__project_germcollection extends ChadoField {
     $bundle_table = 'chado_bio_data_'.$bundle_id;
 
     $results = chado_query('
-      SELECT psc.project_stockcollection_id, sc.stockcollection_id, sc.name
-      FROM chado.stockcollection sc
-      LEFT JOIN chado.project_stockcollection psc ON psc.stockcollection_id=sc.stockcollection_id
+      SELECT psc.project_stockcollection_id, sc.stockcollection_id,
+        sc.name, sc.uniquename, cvt.name as type_name
+      FROM {stockcollection} sc
+      LEFT JOIN {project_stockcollection} psc ON psc.stockcollection_id=sc.stockcollection_id
+      LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=sc.type_id
       WHERE psc.project_id=:id',
-        array(':id' => $project_id));
-    $entity->{$field_name}['und'] = array();
+        [':id' => $project_id]);
+    $entity->{$field_name}['und'] = [];
     foreach ($results as $k => $r) {
 
       // Retrieve entity_id for current stockcollection.
       $entity_id= NULL;
       if ($bundle_id) {
-        $entity_id = db_query("SELECT entity_id FROM $bundle_table WHERE record_id=:id", 
-          array(':id' => $r->stockcollection_id))->fetchField();
+        $entity_id = db_query("SELECT entity_id FROM $bundle_table WHERE record_id=:id",
+          [':id' => $r->stockcollection_id])->fetchField();
       }
 
       // Save the chado data.
@@ -138,47 +139,44 @@ class local__project_germcollection extends ChadoField {
       $entity->{$field_name}['und'][$k]['chado-project_stockcollection__project_stockcollection_id'] = $r->project_stockcollection_id;
 
       // Save the value.
-      $entity->{$field_name}['und'][$k]['value'] = array();
+      $entity->{$field_name}['und'][$k]['value'] = [];
       $entity->{$field_name}['und'][$k]['value']['schema:name'] = $r->name;
+      $entity->{$field_name}['und'][$k]['value']['data:identifier'] = $r->uniquename;
+      $entity->{$field_name}['und'][$k]['value']['schema:additional_type'] = $r->type_name;
       if (!empty($entity_id)) { $entity->{$field_name}['und'][$k]['value']['schema:url'] = 'bio_data/'.$entity_id; }
     }
   }
 
 
 
-    /**
-    * @see ChadoField::query()
-    *
-    **/
-
+  /**
+   * @see ChadoField::query()
+   *
+   */
   public function query($query, $condition) {
   }
 
-    /**
-    * @see ChadoField::queryOrder()
-    *
-    **/
-
+  /**
+   * @see ChadoField::queryOrder()
+   *
+   */
   public function queryOrder($query, $order) {
   }
 
 
-    /**
-    * @see ChadoField::elementInfo()
-    *
-    **/
-    
+  /**
+   * @see ChadoField::elementInfo()
+   *
+   */
   public function elementInfo() {
     $field_term = $this->getFieldTermID();
-    return array(
-      $field_term => array(
-        'operations' => array('eq', 'ne', 'contains', 'starts'),
+    return [
+      $field_term => [
+        'operations' => ['eq', 'ne', 'contains', 'starts'],
         'sortable' => TRUE,
         'searchable' => TRUE,
-      ),
-    );
+      ],
+    ];
   }
 
 }
-
-

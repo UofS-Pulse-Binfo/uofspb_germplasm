@@ -1,7 +1,7 @@
 ![Tripal Dependency](https://img.shields.io/badge/tripal-%3E=3.0-brightgreen)
 ![Module is Generic](https://img.shields.io/badge/generic-tested%20manually-yellow)
 
-# KP Germplasm
+# UofS Pulse Binfo Germplasm
 
 Provides specialized Tripal fields and importers for germplasm. This package is a collection of modules for to ensure you have choice over what functionality most suits your datasets and Tripal site purpose.
 

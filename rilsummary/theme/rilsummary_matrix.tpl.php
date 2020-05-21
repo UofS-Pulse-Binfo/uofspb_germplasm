@@ -52,6 +52,12 @@
       <div class="div-line">&nbsp;</div>
       <?php print drupal_render($form['summary_table']); ?>
     </div>
-  <?php } ?>
+  <?php }
+        else {
+            print tripal_set_message('In order for a RIL to appear in this chart, it must be in the stock table with type "414 inbred line (CO_010:0000162)".',
+              TRIPAL_NOTICE, ['return_html' => TRUE]);
+            print tripal_set_message('RILs will show up with unknown parents unless they have an original cross and parents as specified <a href="https://kp-germplasm.readthedocs.io/en/latest/rilsummary/rilsummary.html#adding-rils-to-the-summary">here</a>.',
+              TRIPAL_NOTICE, ['return_html' => TRUE]);
+        } ?>
 
 </div>

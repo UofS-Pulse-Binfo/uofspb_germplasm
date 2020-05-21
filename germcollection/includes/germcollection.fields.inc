@@ -75,7 +75,7 @@ function germcollection_bundle_fields_info($entity_type, $bundle) {
     $fields[$field_name] = array(
       'field_name' => $field_name,
       'type' => $field_type,
-      'cardinality' => 1,
+      'cardinality' => -1,
       'locked' => FALSE,
       'storage' => array(
         'type' => 'field_chado_storage',
@@ -151,16 +151,16 @@ function germcollection_bundle_instances_info($entity_type, $bundle) {
       'field_name' => $field_name,
       'entity_type' => $entity_type,
       'bundle' => $bundle->name,
-      'label' => 'Project-Related Germplasm Collection',
-      'description' => 'Lists germplasm related to a project.',
+      'label' => 'Germplasm Collection',
+      'description' => 'Lists germplasm collections related to a project.',
       'required' => FALSE,
       'settings' => array(
         'term_vocabulary' => 'local',
         'term_name' => 'project_germcollection',
         'term_accession' => 'project_germcollection',
         'auto_attach' => FALSE,
-        'chado_table' => $bundle->data_table,
-        'chado_column' => 'project_id',
+        'chado_table' => 'project_stockcollection',
+        'chado_column' => 'project_stockcollection_id',
         'base_table' => $bundle->data_table,
       ),
       'widget' => array(

@@ -14,7 +14,7 @@ before_script:
   - docker pull statonlab/tripal3
 
 script:
-  - docker run -it -d --rm --name tripal -v "$(pwd)":/modules/kp_germplasm statonlab/tripal3
+  - docker run -it -d --rm --name tripal -v "$(pwd)":/modules/uofspb_germplasm statonlab/tripal3
   - sleep 45 # We pause here so postgres and apache complete booting up
-  - docker exec -it tripal drush pm-enable -y kp_germplasm germcollection rilsummary
-  - docker exec -it tripal bash -c "cd /modules/kp_germplasm && composer install && DRUPAL_ROOT=/var/www/html ./vendor/bin/phpunit"
+  - docker exec -it tripal drush pm-enable -y uofspb_germplasm germcollection rilsummary
+  - docker exec -it tripal bash -c "cd /modules/uofspb_germplasm && composer install && DRUPAL_ROOT=/var/www/html ./vendor/bin/phpunit"

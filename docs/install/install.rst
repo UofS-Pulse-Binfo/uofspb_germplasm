@@ -28,12 +28,13 @@ Another method that can enable our module is using drush:
 
 .. code:: bash
 
-  drush pm-enable kp_germplasm rilsummary germpcollection
+  drush pm-enable kp_germplasm
+  drush pm-enable rilsummary germpcollection
 
 
 .. note::
 
-  In this step, module required ontologies and controlled vocabularies will be inserted into Chado.
+  In this step, module required ontologies and controlled vocabularies will be inserted into Chado. **Make sure to run any Tripal jobs created by these modules before continuing.**
 
 
 Set Permissions

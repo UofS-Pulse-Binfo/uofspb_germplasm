@@ -6,7 +6,7 @@
  */
 
 // Initialize fields.
-module_load_include('inc', 'rilsummary', 'includes/TripalFields/rilsummary.fields');
+module_load_include('inc', 'rilsummary', 'includes/rilsummary.fields');
 
 /**
  * Implements hook_menu().
@@ -60,6 +60,11 @@ function rilsummary_form($form, &$form_state) {
 
     // Put the sps at the end.
     ksort($arr_species, SORT_NUMERIC);
+
+    // Add the unknown species if they're not already there.
+    if (array_search('sp. (unknown)', $arr_species) === FALSE) {
+      $arr_species[-1] = 'sp. (unknown)';
+    }
 
     // Which view mode below to render?
     // Determine parent species if they are in the path. If encoded it shuld be a list the user wants
@@ -458,13 +463,7 @@ function rilsummary_form($form, &$form_state) {
       );
     }
     else {
-      $num_rils = chado_query("SELECT count(*) FROM {stock} WHERE type_id=:type", [':type' => variable_get('gs_var_isril', NULL)])->fetchField();
-      if ($num_rils > 0) {
-        drupal_set_message("The RILs available for this genus are not associated with a corresponding original stock. Ensure you have a Breeding Cross related to each RIL via a 'stock_relationship:is_selected_from' relationship.", 'warning');
-      }
-      else {
-        drupal_set_message('There are no RILs available for this genus. Go to Content > Tripal Content > Recombinant Inbred Line to create one.', 'warning');
-      }
+      drupal_set_message('There are no RILs available for this genus. Go to Content > Tripal Content > Recombinant Inbred Line to create one.', 'warning');
     }
   // End has species.
   }

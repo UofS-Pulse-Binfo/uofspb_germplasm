@@ -128,10 +128,10 @@ class CrossImportingTest extends TripalTestCase {
    */
   public function insertTestFileHelper(){
     $faker = Factory::create();
-    module_load_include('inc', 'kp_germplasm', 'includes/TripalImporter/GermplasmCrossImporter');
+    module_load_include('inc', 'uofspb_germplasm', 'includes/TripalImporter/GermplasmCrossImporter');
 
     // Determine the parameters.
-    $file_path = DRUPAL_ROOT . '/' . drupal_get_path('module','kp_germplasm') . '/tests/test_files/germplasm_cross_test1.tsv';
+    $file_path = DRUPAL_ROOT . '/' . drupal_get_path('module','uofspb_germplasm') . '/tests/test_files/germplasm_cross_test1.tsv';
     $organism = factory('chado.organism')->create([
       'genus' => $faker->unique->word . uniqid(),
     ]);
