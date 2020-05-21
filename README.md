@@ -7,7 +7,7 @@ Provides specialized Tripal fields and importers for germplasm. This package is 
 
 ## Module Summary
 
- - KP Germplasm: provides data importers and general fields for all germplasm.
+ - UofS Pulse Binfo Germplasm: provides data importers and general fields for all germplasm.
  - RIL Summary: provides a germplasm matrix summarizing RIL parentage including species.
  - Germplasm Collection: provides specialized fields for supporting germplasm collections.
 
