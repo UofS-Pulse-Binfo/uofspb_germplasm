@@ -15,7 +15,7 @@ function rilsummary_menu() {
   // Home - display a summary matrix showing siblings count under parents.
   $items['germplasm/summary'] = array(
     'title' => 'Germplasm Summary',
-    'access arguments' => array('access content'),
+    'access arguments' => array('access ril summary'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rilsummary_form', 2),
     'type' => MENU_NORMAL_ITEM,
@@ -24,7 +24,7 @@ function rilsummary_menu() {
   // Menu callback - display number of siblings table. (% - /mom/dad)
   $items['germplasm/list/%/%/%'] = array(
     'title' => 'Germplasm List',
-    'access arguments' => array('access content'),
+    'access arguments' => array('access ril summary'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rilsummary_form', 2, 3, 4),
     'type' => MENU_CALLBACK,
@@ -33,6 +33,17 @@ function rilsummary_menu() {
   return $items;
 }
 
+/**
+ * Implements hook_permission().
+ */
+function rilsummary_permission() {
+  return array(
+    'access ril summary' => array(
+      'title' => t('Access RIL Summary'),
+      'description' => t('Allows registered users to load RIL summary matrix and access lines.'),
+    ),
+  );
+}
 
 /**
  * Function callback: Construct matrix and table.
