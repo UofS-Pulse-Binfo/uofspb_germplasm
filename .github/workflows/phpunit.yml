@@ -70,7 +70,7 @@ jobs:
         mkdir -p $DRUPAL_ROOT/sites/all/modules/uofsbp_germplasm
         cp -R * $DRUPAL_ROOT/sites/all/modules/uofsbp_germplasm
         cd $DRUPAL_ROOT
-        $DRUSH en -y uofsbp_germplasm
+        $DRUSH en -y uofspb_germplasm germcollection rilsummary
 
     # 5) Runs the PHPUnit tests.
     # https://github.com/mheap/phpunit-github-actions-printer is used
