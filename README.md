@@ -23,7 +23,7 @@ If you were using germ_summary, tripal_germplasm_importer, germcollection then y
 
 There is extensive documentation available for this package through ReadtheDocs. You can [access our documentation here.](https://kp-germplasm.readthedocs.io/en/latest/index.html)
 
-## Automated Testing [![Build Status](https://travis-ci.org/UofS-Pulse-Binfo/kp_germplasm.svg?branch=7.x-3.x)](https://travis-ci.org/UofS-Pulse-Binfo/kp_germplasm)
+## Automated Testing ![Run PHPUnit Tests](https://github.com/UofS-Pulse-Binfo/uofspb_germplasm/workflows/Run%20PHPUnit%20Tests/badge.svg)
 
 Automated testing for this module was implemented using [Tripal Test Suite](https://github.com/tripal/TripalTestSuite) and is run automatically using Travis CI. You can see the build status above.
 
