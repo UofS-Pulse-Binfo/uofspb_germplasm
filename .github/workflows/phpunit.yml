@@ -67,8 +67,8 @@ jobs:
         DRUSH: ${{ steps.tripalsetup.outputs.drush_path }}
         DRUPAL_ROOT: ${{ steps.tripalsetup.outputs.drupal_root }}
       run: |
-        mkdir -p $DRUPAL_ROOT/sites/all/modules/uofsbp_germplasm
-        cp -R * $DRUPAL_ROOT/sites/all/modules/uofsbp_germplasm
+        mkdir -p $DRUPAL_ROOT/sites/all/modules/uofspb_germplasm
+        cp -R * $DRUPAL_ROOT/sites/all/modules/uofspb_germplasm
         cd $DRUPAL_ROOT
         $DRUSH en -y uofspb_germplasm germcollection rilsummary
 
