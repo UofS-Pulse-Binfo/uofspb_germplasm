@@ -5,6 +5,8 @@
  */
 
 module_load_include('inc','germcollection', 'includes/germcollection.fields');
+module_load_include('inc','germcollection', 'api/germcollection.api');
+
 
 /**
  * Implements hook_menu().
@@ -22,8 +24,28 @@ function germcollection_menu() {
 		'access arguments' => ["view $bundle_name"],
 		'type' => MENU_CALLBACK
 	];
+    
+    // Create a file for germplasm collection download.
+	$items['download-germplasm-collection/%'] = array(
+	  'title' => 'Download Germplasm Collection',
+	  'page arguments' => array(1),
+	  'page callback' => 'germcollection_download_file',
+	  'access arguments' => array("access germcollection"),
+	  'type' => MENU_CALLBACK
+	);
 
 	return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function germcollection_permission() {
+  return array(
+    'access germcollection' => array(
+	  'title' => 'View and download germplasm collection'
+	)
+  );
 }
 
 /**
@@ -39,4 +61,56 @@ function germcollection_name_autocomplete($string){
 	}
 
  	drupal_json_output($matches);
+}
+
+/**
+ * Menu callback.
+ * Prepare data file for download.
+ */
+function germcollection_download_file($query_string) {
+  // values for experiment and germplasm collection id number.
+  parse_str(base64_decode($query_string), $values);
+
+  $germplasm = germcollection_get_germplasm($values['collection']);
+  $experiment = germcollection_get_experiment($values['experiment']);
+
+  if ($experiment && count($germplasm) > 0) {
+	$filename = 'germplasm-collection-' . $experiment->project_id . '-' . date('Ymd') . '-' . time() . '.csv';
+    $path = 'public://';
+	$tmp_file = file_create_url($path . $filename);
+    $FILE = fopen(drupal_realpath($path) . '/' . $filename, 'w') or die('Unable to read temporary file.');
+	
+	// Add the project/experiment name in the first line of the file
+	// as a comment marked by # character.
+	fwrite($FILE, '# Germplasm Collection: ' . $experiment->name . "\n");
+	fwrite($FILE, "# knowpulse.usask.ca \n");
+	// Column headers.
+	fputcsv($FILE, array('Name', 'Accession', 'Source Species', 'Origin'), "\t");
+	// Write each germplasm.
+	foreach($germplasm as $row) {
+	  fputcsv($FILE, array($row[0], $row[1], ucfirst($row[3]. ' ' . $row[4]), $row[5]), "\t");
+	}
+
+	fclose($FILE);
+
+	$http_headers = array(
+	  'Content-Type' => 'text/csv',
+	  'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+	  'Content-Length' => filesize($path . $filename),
+	);
+    
+	// Ensure that this will still work using IE browsers.
+	if(strpos($_SERVER['HTTP_USER_AGENT'], 'MSIE')) {
+	  $http_headers['Cache-Control'] = 'must-revalidate, post-check=0, pre-check=0';
+	  $http_headers['Pragma'] = 'public';
+	} 
+	else {
+	  $http_headers['Pragma'] = 'no-cache';
+	}
+  
+	file_transfer($path . $filename, $http_headers); 
+  }
+  else {
+    die('Experiment and collection not found');
+  }
 }

@@ -32,7 +32,10 @@ function germcollection_enable() {
   ];
   $bundle = tripal_load_bundle_entity(['accession' => $args['vocabulary'] . ':' . $args['accession']]);
   if (!$bundle) {
-    drush_print("Creating " . $args['term_name'] . "...");
+    if (function_exists(drush_print)) {
+      drush_print("Creating " . $args['term_name'] . "...");
+    }
+
     if (tripal_create_bundle($args, $job)) {
       $msg = t('Created !type Content Type.', ['!type' => $args['term_name']]);
       drupal_set_message($msg);
@@ -51,10 +54,14 @@ function germcollection_enable() {
     $msg = t("Content type, !type, already created (skipping).", ['!type' => $args['term_name']]);
     drupal_set_message($msg);
   }
+}
 
-  // Add linking table between projects and stock collections.
-  $schema = array (
-    'table' => 'project_stockcollection',
+/**
+ * Implements hook_schema().
+ */
+function germcollection_schema() {
+  $schema['project_stockcollection'] = array (
+    'description' => t('Linking table between projects and stock collections'),
     'fields' => array (
       'project_stockcollection_id' => array (
         'type' => 'serial',
@@ -69,29 +76,24 @@ function germcollection_enable() {
         'not null' => true,
       ),
     ),
-    'primary key' => array (
-      0 => 'project_stockcollection_id',
-    ),
+    'primary key' => array ('project_stockcollection_id'),
     'unique keys' => array (
       'project_stockcollection_c1' => array (
-        0 => 'project_id',
-        1 => 'stockcollection_id',
+        'project_id',
+        'stockcollection_id',
       ),
     ),
     'foreign keys' => array (
       'project' => array (
         'table' => 'library',
-        'columns' => array (
-          'project_id' => 'project_id',
-        ),
+        'columns' => array ('project_id' => 'project_id'),
       ),
       'stockcollection' => array (
         'table' => 'stock',
-        'columns' => array (
-          'stockcollection_id' => 'stockcollection_id',
-        ),
+        'columns' => array ('stockcollection_id' => 'stockcollection_id'),
       ),
     ),
   );
-  chado_create_custom_table('project_stockcollection',$schema,TRUE,NULL,FALSE);
+
+  return $schema;
 }

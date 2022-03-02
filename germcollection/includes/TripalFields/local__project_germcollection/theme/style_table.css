@@ -1,0 +1,26 @@
+/**
+ * Style theme table (germplasm collection summary table and components).
+ */
+ 
+ #germplasm-collection-field-container div:first-child {
+   font-size: 1.1em;
+   margin: 0 0 10px 0;
+ }
+
+ #germplasm-collection-field-container div:first-child a {
+   background: url(infographics-new-window.gif) no-repeat right;
+   padding-right: 18px;
+ }
+
+ #project-germpcollection-wrapper {
+   border-top: 6px solid #E7E7E7;
+ }
+
+ #project-germpcollection-wrapper table {
+   margin: 0;
+   padding: 0;
+ }
+
+ #project-germpcollection-wrapper table td:not(:first-child) {
+   width: 20%;
+ }
