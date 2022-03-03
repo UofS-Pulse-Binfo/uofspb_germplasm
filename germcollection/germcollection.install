@@ -54,14 +54,10 @@ function germcollection_enable() {
     $msg = t("Content type, !type, already created (skipping).", ['!type' => $args['term_name']]);
     drupal_set_message($msg);
   }
-}
 
-/**
- * Implements hook_schema().
- */
-function germcollection_schema() {
-  $schema['project_stockcollection'] = array (
-    'description' => t('Linking table between projects and stock collections'),
+  // Add linking table between projects and stock collections.
+  $schema = array (
+    'table' => 'project_stockcollection',
     'fields' => array (
       'project_stockcollection_id' => array (
         'type' => 'serial',
@@ -76,24 +72,30 @@ function germcollection_schema() {
         'not null' => true,
       ),
     ),
-    'primary key' => array ('project_stockcollection_id'),
+    'primary key' => array (
+      0 => 'project_stockcollection_id',
+    ),
     'unique keys' => array (
       'project_stockcollection_c1' => array (
-        'project_id',
-        'stockcollection_id',
+        0 => 'project_id',
+        1 => 'stockcollection_id',
       ),
     ),
     'foreign keys' => array (
       'project' => array (
         'table' => 'library',
-        'columns' => array ('project_id' => 'project_id'),
+        'columns' => array (
+          'project_id' => 'project_id',
+        ),
       ),
       'stockcollection' => array (
         'table' => 'stock',
-        'columns' => array ('stockcollection_id' => 'stockcollection_id'),
+        'columns' => array (
+          'stockcollection_id' => 'stockcollection_id',
+        ),
       ),
     ),
   );
-
-  return $schema;
+  
+  chado_create_custom_table('project_stockcollection',$schema,TRUE,NULL,FALSE);
 }
