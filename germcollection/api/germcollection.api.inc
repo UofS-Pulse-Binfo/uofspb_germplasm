@@ -7,7 +7,7 @@
  *   Integer, collection id number.
  * 
  * @return array
- *   Germplasm collection where each item in the array is - Name, Accession, Genus, Species and Origin (Country of origin).
+ *   Germplasm collection where each item in the array is - Name, Accession, Entity ID, Genus, Species and Origin (Country of origin).
  */
 function germcollection_get_germplasm($collection_id) {
   // Our researchers are very concerned with origin so we're going to add
