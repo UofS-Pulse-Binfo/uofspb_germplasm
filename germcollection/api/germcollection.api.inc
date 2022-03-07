@@ -72,6 +72,7 @@ function germcollection_get_entity_id($stock_id, $type_id) {
   // This character is also used to tell JS if node should be rendered as link or a text.
   $entity_id = '#';
 
+  // Retrieves the name of the Tripal bundle based on the stock type_id
   $m = db_query('SELECT t2.name
     FROM {tripal_term} AS t1 INNER JOIN {tripal_bundle} AS t2 ON t1.id = t2.term_id
     WHERE t1.accession = (
