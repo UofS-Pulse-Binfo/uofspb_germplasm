@@ -84,9 +84,7 @@ function germcollection_get_entity_id($stock_id, $type_id) {
   if ($m) {
     $chado_bundle = 'chado_' . $m;
 
-    $sql = sprintf('SELECT t1.entity_id FROM %s AS t1 INNER JOIN {stock} AS t2 ON t1.record_id = t2.stock_id
-      WHERE stock_id = :stock_id LIMIT 1', $chado_bundle);
-
+    $sql = sprintf('SELECT entity_id FROM %s WHERE stock_id = :stock_id LIMIT 1', $chado_bundle);
     $result = chado_query($sql, array(':stock_id' => $stock_id));
 
     if ($result->rowCount() > 0) {
