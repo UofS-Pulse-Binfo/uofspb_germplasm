@@ -85,10 +85,10 @@ function germcollection_download_file($query_string) {
 	fwrite($FILE, '# Germplasm Collection: ' . $experiment->name . "\n");
 	fwrite($FILE, "# knowpulse.usask.ca \n");
 	// Column headers.
-	fputcsv($FILE, array('Name', 'Accession', 'Source Species', 'Origin'), "\t");
+	fputcsv($FILE, array('Name', 'Accession', 'Source Species', 'Origin'));
 	// Write each germplasm.
 	foreach($germplasm as $row) {
-	  fputcsv($FILE, array($row[0], $row[1], ucfirst($row[3]. ' ' . $row[4]), $row[5]), "\t");
+	  fputcsv($FILE, array($row[0], $row[1], ucfirst($row[3]. ' ' . $row[4]), $row[5]));
 	}
 
 	fclose($FILE);
