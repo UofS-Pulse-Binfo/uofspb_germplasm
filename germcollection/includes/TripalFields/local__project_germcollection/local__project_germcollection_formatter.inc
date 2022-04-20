@@ -34,20 +34,21 @@ class local__project_germcollection_formatter extends ChadoFieldFormatter {
     **/
 
   public function view(&$element, $entity_type, $entity, $langcode, $items, $display) {
-    // Attach styling.
-    drupal_add_css(drupal_get_path('module', 'germcollection') . '/includes/TripalFields/local__project_germcollection/theme/style_table.css');
-
     // Get the settings
     $settings = $display['settings'];
-    // Table components.
-    $summary_tables = '';
-    $header = array('Name', 'Accession', 'Source Species', 'Origin');
 
+    // Table components.
+    $summary_tables = '';    
+    $title = "<div><span>%s</span>: <span>%d Germplasm</span> <span>%s</span></div>";
+    $header = array('Name', 'Accession', 'Source Species', 'Origin');
+    $query_string = 'experiment=%d&collection=%d';
+    
     // For each germplasm collection.
     foreach ($items as $delta => $item) {
       $link = '';
       if (is_array($item['value'])) {
         $link = $item['value']['schema:name'];
+
         if (isset($item['value']['schema:url'])) {
           $link = l($item['value']['schema:name'], $item['value']['schema:url']);
         }
@@ -63,38 +64,34 @@ class local__project_germcollection_formatter extends ChadoFieldFormatter {
             $row[5]
           );
         }
+        
+        $download_link = '';
+        $collection_table = '';
 
-        $summary_tables .= theme('table', array('sticky' => TRUE, 'header' => $header, 'rows' => $table_rows));  
+        if(user_is_logged_in() && user_access('access germcollection')) {
+          $query_string = sprintf($query_string, $item['chado-project__project_id'], $item['chado-project_stockcollection__stockcollection_id']);
+          $download_link = l('Download Collection', 'download-germplasm-collection/' . base64_encode($query_string),
+            array('attributes' => array('target' => '_blank'))
+          );
+
+          $collection_table = theme('table', array('sticky' => FALSE, 'header' => $header, 'rows' => $table_rows));  
+          $collection_table = '<div>' . $collection_table . '</div>';
+        }
+
+        $summary_tables = sprintf($title, $link, count($rows), $download_link);
+        $summary_tables .= $collection_table;
       }
     }
 
-    // Refer to this id for styling summary table.
-    $id = 'project-germpcollection-wrapper';
-    $query_string = 'experiment=' . $item['chado-project__project_id'] . '&collection=' . $item['chado-project_stockcollection__stockcollection_id'];
-    $download_link = l('Download Collection', 'download-germplasm-collection/' . base64_encode($query_string),
-      array('attributes' => array('target' => '_blank'))
-    );
-
-    $has_permission = TRUE;
-    if(!user_is_logged_in() && !user_access('access germcollection')) {
-      $has_permission = FALSE;
-      $summary_tables = '';
-    }
-
-    $field_markup = '
-      <div id="germplasm-collection-field-container">
-        <div>' . count($rows) . '  Germplasm | ' . $download_link . '</div>
-        <div id="' . $id . '" style="height: 300px; overflow-y: scroll">' . $summary_tables . '</div>
-      </div>
-    ';
-
-    $markup = (!$has_permission || $summary_tables == '') 
-      ? 'Germplasm collection not available' 
-      : $field_markup;
-
+    // Refer to this id for styling field elements.
+    $id = 'germplasm-collection-field-container';
+    $field_markup = '<div id="' . $id . '">' . $summary_tables . '</div>';
     $element[0] = [
       '#type' => 'markup',
-      '#markup' => $markup
+      '#markup' => $field_markup,
+      '#attached' => array(
+        'css' => array(drupal_get_path('module', 'germcollection') . '/includes/TripalFields/local__project_germcollection/theme/style_table.css')
+      )
     ];
   }
 

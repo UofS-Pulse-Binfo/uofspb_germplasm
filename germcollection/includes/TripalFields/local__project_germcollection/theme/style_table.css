@@ -1,26 +1,47 @@
 /**
  * Style theme table (germplasm collection summary table and components).
  */
+
+#germplasm-collection-field-container {
+  margin: 0;
+  padding: 0;
+} 
  
- #germplasm-collection-field-container div:first-child {
-   font-size: 1.1em;
-   margin: 0 0 10px 0;
- }
+#germplasm-collection-field-container div:first-child span:last-child a {
+  background: url(infographics-new-window.gif) no-repeat right;
+  display: inline;
+  float: right;
+  padding-right: 18px;
+}
 
- #germplasm-collection-field-container div:first-child a {
-   background: url(infographics-new-window.gif) no-repeat right;
-   padding-right: 18px;
- }
+/* style collection table as scroll-window */
+#germplasm-collection-field-container div:nth-child(2) {
+  border-top: 6px solid #E7E7E7;
+  height: 320px; 
+  margin-top: 5px;
+  overflow-y: scroll;  
+}
 
- #project-germpcollection-wrapper {
-   border-top: 6px solid #E7E7E7;
- }
+#germplasm-collection-field-container div:nth-child(2) table {
+  margin: 0;
+  padding: 0;
+}
 
- #project-germpcollection-wrapper table {
-   margin: 0;
-   padding: 0;
- }
+#germplasm-collection-field-container div:nth-child(2) table td:not(:first-child) {
+  width: 20%;
+}
 
- #project-germpcollection-wrapper table td:not(:first-child) {
-   width: 20%;
- }
+#germplasm-collection-field-container div:nth-child(2) table tr {
+  cursor: pointer;
+}
+
+#germplasm-collection-field-container div:nth-child(2) table tr:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+
+  -webkit-transition: background-color 0.9s ease-out;
+  -moz-transition: background-color 0.9s ease-out;
+  -o-transition: background-color 0.9s ease-out;
+  transition: background-color 0.9s ease-out;
+
+  border-left: 2px solid #314355;
+}
