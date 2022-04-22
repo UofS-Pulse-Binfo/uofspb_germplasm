@@ -34,6 +34,32 @@
 function germcollection_bundle_fields_info($entity_type, $bundle) {
   $fields = array();
 
+  // Because we are expecting data housed in Chado we can use the 'data_table'
+  // property of the bundle to determine if this bundle is really the one
+  // we want the field to be associated with.
+  if (isset($bundle->data_table) AND ($bundle->data_table == 'stockcollection')) {
+    // First add my term.
+    tripal_insert_cvterm(array(
+      'id' => 'CO_010:0000251',
+      'name' => 'germplasm',
+      'cv_name' => 'GCP germplasm ontology',
+      'definition' => '',
+    ));
+
+    // Then describe the field defined by that term.
+    $field_name = 'co_010__germplasm';
+    $field_type = 'co_010__germplasm';
+    $fields[$field_name] = array(
+      'field_name' => $field_name,
+      'type' => $field_type,
+      'cardinality' => 1,
+      'locked' => FALSE,
+      'storage' => array(
+        'type' => 'field_chado_storage',
+      ),
+    );
+  }
+
   if (isset($bundle->data_table) AND ($bundle->data_table == 'project')) {
     // First add my term.
     tripal_insert_cvterm(array(
@@ -84,6 +110,39 @@ function germcollection_bundle_fields_info($entity_type, $bundle) {
  */
 function germcollection_bundle_instances_info($entity_type, $bundle) {
   $instances = array();
+
+  if (isset($bundle->data_table) AND ($bundle->data_table == 'stockcollection')) {
+    $field_name = 'co_010__germplasm';
+    $field_type = 'co_010__germplasm';
+    $instances[$field_name] =  array(
+      'field_name' => $field_name,
+      'entity_type' => $entity_type,
+      'bundle' => $bundle->name,
+      'label' => 'Germplasm List',
+      'description' => 'A listing of germplasm in a stock collection.',
+      'required' => FALSE,
+      'settings' => array(
+        'term_vocabulary' => 'CO_010',
+        'term_name' => 'germplasm',
+        'term_accession' => '0000251',
+        'auto_attach' => FALSE,
+        'chado_table' => $bundle->data_table,
+        'chado_column' => 'stockcollection_id',
+        'base_table' => $bundle->data_table,
+      ),
+      'widget' => array(
+        'type' => 'co_010__germplasm_widget',
+        'settings' => array(),
+      ),
+      'display' => array(
+        'default' => array(
+          'label' => 'hidden',
+          'type' => 'co_010__germplasm_formatter',
+          'settings' => array(),
+        ),
+      ),
+    );
+  }
 
   if (isset($bundle->data_table) AND ($bundle->data_table == 'project')) {
     $field_name = 'local__project_germcollection';
