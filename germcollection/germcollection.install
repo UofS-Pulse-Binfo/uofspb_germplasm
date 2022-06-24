@@ -32,7 +32,10 @@ function germcollection_enable() {
   ];
   $bundle = tripal_load_bundle_entity(['accession' => $args['vocabulary'] . ':' . $args['accession']]);
   if (!$bundle) {
-    drush_print("Creating " . $args['term_name'] . "...");
+    if (function_exists(drush_print)) {
+      drush_print("Creating " . $args['term_name'] . "...");
+    }
+
     if (tripal_create_bundle($args, $job)) {
       $msg = t('Created !type Content Type.', ['!type' => $args['term_name']]);
       drupal_set_message($msg);
@@ -93,5 +96,6 @@ function germcollection_enable() {
       ),
     ),
   );
+  
   chado_create_custom_table('project_stockcollection',$schema,TRUE,NULL,FALSE);
 }

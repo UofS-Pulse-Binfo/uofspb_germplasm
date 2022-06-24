@@ -122,9 +122,10 @@ class local__project_germcollection extends ChadoField {
       LEFT JOIN {cvterm} cvt ON cvt.cvterm_id=sc.type_id
       WHERE psc.project_id=:id',
         [':id' => $project_id]);
+        
     $entity->{$field_name}['und'] = [];
-    foreach ($results as $k => $r) {
 
+    foreach ($results as $k => $r) {
       // Retrieve entity_id for current stockcollection.
       $entity_id= NULL;
       if ($bundle_id) {
@@ -144,10 +145,15 @@ class local__project_germcollection extends ChadoField {
       $entity->{$field_name}['und'][$k]['value']['data:identifier'] = $r->uniquename;
       $entity->{$field_name}['und'][$k]['value']['schema:additional_type'] = $r->type_name;
       if (!empty($entity_id)) { $entity->{$field_name}['und'][$k]['value']['schema:url'] = 'bio_data/'.$entity_id; }
+
+      // If a stock collection has been setup, prepare stock collection for formatter to create
+      // a summary table.
+      if ($project_id && $r->stockcollection_id) {      
+        $collection = germcollection_get_germplasm($r->stockcollection_id);
+        $entity->{$field_name}['und'][ $k ]['value']['local:project_germcollection'] = $collection;
+      }
     }
   }
-
-
 
   /**
    * @see ChadoField::query()
@@ -178,5 +184,4 @@ class local__project_germcollection extends ChadoField {
       ],
     ];
   }
-
 }
