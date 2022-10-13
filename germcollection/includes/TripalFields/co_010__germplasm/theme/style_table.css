@@ -1,0 +1,11 @@
+/**
+ * Style theme table (stock collection germplasm list and components).
+ */
+
+/* Main field container */
+#stock-collection-field-container {
+  background-color: #F2F2F2;
+  margin: 0;
+  padding: 0;
+} 
+ 

@@ -98,6 +98,7 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
     **/
   public function settingsSummary($view_mode) {
     return '';
+    
   }
 
 }
