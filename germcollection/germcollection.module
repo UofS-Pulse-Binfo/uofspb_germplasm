@@ -34,8 +34,28 @@ function germcollection_menu() {
 	  'type' => MENU_CALLBACK
 	);
 
+    $items['germcollection/autocomplete-stockname/%'] = array(
+	  'title' => 'Autocomplete for stock names',
+	  'page arguments' => array(2),
+	  'page callback' => '_stockname_autocomplete',
+	  'access arguments' => array("access germcollection"),
+	  'type' => MENU_CALLBACK
+	);
+
 	return $items;
 }
+
+
+/**
+ * @TODO: autocomplete callback function
+ * query matching germplasm.
+ */
+function _stockname_autocomplete($organism, $string) {
+  $matches = ['hello', $organism];
+  drupal_json_output($matches);
+}
+
+
 
 /**
  * Implements hook_permission().

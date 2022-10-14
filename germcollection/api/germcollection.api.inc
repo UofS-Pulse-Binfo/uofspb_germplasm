@@ -111,3 +111,24 @@ function germcollection_get_experiment($experiment_id) {
 
   return ($experiment->rowCount() > 0) ? $experiment->fetchObject() : 0;
 }
+
+/**
+ * Get genus + species (scientific name)
+ * 
+ * @return array
+ *   Associative array where the key is organism id number and value
+ *   is combination of genus and species.
+ */
+function germcollection_get_scientific_name() {
+  $names = array();
+  
+  // Query names in chado.organism.
+  $sql = "SELECT organism_id, CONCAT(genus, ' ', species) FROM {organism} ORDER BY genus ASC";
+  $query = chado_query($sql);
+
+  if ($query->rowCount() > 0) {
+    $names = $query->fetchAllKeyed();
+  }
+
+  return $names;
+}

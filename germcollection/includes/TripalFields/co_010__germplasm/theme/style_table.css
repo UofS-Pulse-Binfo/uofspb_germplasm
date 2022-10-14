@@ -2,10 +2,54 @@
  * Style theme table (stock collection germplasm list and components).
  */
 
-/* Main field container */
-#stock-collection-field-container {
-  background-color: #F2F2F2;
+fieldset {
+  clear: both;
+  position: relative;
+}
+
+.stock-collection-fld {
+  float: left;
+  margin: 0 7px 0 0;
+}
+
+#stock-collection-fld-select-species,
+.stock-collection-fld input[type=text] {
+  font-size: 1.2em;
+  padding: 5px;
   margin: 0;
+}
+
+#stock-collection-fld-button-add {
+  margin-top: 10px;
+}
+
+.stock-collection-fld-right {
+  float: right;
+  font-size: 1.1em;
+  margin-top: 10px;
+}
+
+/* Germplasm table */
+#stock-collection-header {
+  background-color: #E7E7E7;
+  font-size: 1.1em;
+  height: 30px; 
+  line-height: 35px;
+  padding: 0 10px;
+}
+
+#stock-collection-germplasm-container {
+  border-top: 6px solid #E7E7E7;
+  border-bottom: 2px solid #E7E7E7;
+  height: 320px; 
+  overflow-y: scroll;  
+}
+
+#stock-collection-germplasm-container table {
   padding: 0;
-} 
- 
+  margin: 0;
+}
+
+#stock-collection-germplasm-container table td:first-child {
+  width: 97%;
+}
