@@ -29,49 +29,63 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
     drupal_add_css($field_theme_dir . 'style_table.css');
     // Script.
     drupal_add_js($field_theme_dir . 'script_stockcollection.js');
-    // jQuery UI autocomplete library - used in custom autocomplete.
-    drupal_add_library('system', 'ui.autocomplete');
-
+    
     // # FIELDSET: main fieldset.
-    $widget['main_fieldset'] = array(
+    $form['main_fieldset'] = array(
       '#type' => 'fieldset',
       '#title' => t('Germplasm'),
       '#id' => 'stock-collection-field-container',
     );
-      
+
       // Warn user (admin), to review germplasm collection list before
       // clicking submit button as modifying list after would require elevated permission.
       // Will be done manually through update query.
-      $widget['main_fieldset']['reminder'] = array(
+      $form['main_fieldset']['reminder'] = array(
         '#markup' => '<div class="messages warning">Please review the final Germplasm List before clicking Save button
           To add or remove germplasm from a Stock Collection will require permission.</div>'
       );
 
       // # FIELD:  Select spieces.
       $species = germcollection_get_scientific_name();
-      $widget['main_fieldset']['fld_select_species'] = array(
+      $form['main_fieldset']['fld_select_species'] = array(
         '#type' => 'select',
         '#options' => array(0 => '- Scientific Name -') + $species,
         '#prefix' => '<div class="stock-collection-fld">',
         '#suffix' => '</div>',
+
+        '#ajax' => array(
+          'event' => 'change',
+          'wrapper' => 'stock-collection-wrapper-fldgermplasm', 
+          'callback' => [$this, 'stock_collection_ajax_callback'],
+          'progress'  => array('type' => '', 'message' => ''),
+        ),
+
         '#id' => 'stock-collection-fld-select-species'
       );
 
       // # FIELD: Auto-complete search germplasm.
       // Disable everything when there is no species.
+      $organism = 0;
+      
+      // Update organism to filter germplasm only to that organism value.
+      if (isset($form_state['values']) && $form_state['values']['fld_select_species'] > 0) {
+        $organism = $form_state['values']['fld_select_species'];
+      }
+
       $disabled = (count($species) < 1) ? TRUE : FALSE; 
-      $widget['main_fieldset']['fld_textfield_germplasm'] = array(
+      $form['main_fieldset']['fld_textfield_germplasm'] = array(
         '#type' => 'textfield',
         '#size' => 40,
         '#disabled' => $disabled,
         '#attributes' => array('placeholder' => t('Germplasm / Stock Name')),
-        '#prefix' => '<div class="stock-collection-fld">',
+        '#prefix' => '<div id="stock-collection-wrapper-fldgermplasm" class="stock-collection-fld">',
         '#suffix' => '</div>',
         '#id' => 'stock-collection-fld-textfield-germplasm',
+        '#autocomplete_path' => 'ajax/tripal/autocomplete-stockname/' . $organism
       );
 
       // # FIELD: Add germplasm to collection (manual insert).
-      $widget['main_fieldset']['fld_button_add'] = array(
+      $form['main_fieldset']['fld_button_add'] = array(
         '#type' => 'button',
         '#value' => t('Add to Collection'),
         '#disabled' => $disabled,
@@ -82,30 +96,32 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
 
       // # LINK: Link to upload gerplasm in bulk.
       $link = l(t('Upload File'), '#', array('#attributes'));
-      $widget['main_fieldset']['link_upload'] = array(
-        '#markup' => '<div class="stock-collection-fld-right">Bulk Germplasm: ' . $link . '</div>'
+      $form['main_fieldset']['link_upload'] = array(
+        '#markup' => '<div id="stock-collection-bulk-upload" class="stock-collection-fld-right">Bulk Germplasm: ' . $link . '</div>
+          <div style="clear: both"></div>'
       );
 
-      // # FIELDSET: Secondary fieldset - controls for bulk germplasm upload.
-      $widget['main_fieldset']['fieldset_1'] = array(
-        '#type' => 'fieldset',
-        '#title' => t('FILE UPLOAD: Upload Bulk Germplasm File is a TSV format with UNIQUENAME, NAME and SCIENTIFIC NAME column headers.'),
-        '#collapsible' => TRUE, 
-        '#collapsed' => TRUE,
+      // # CONTAINER: Contain controls for bulk germplasm upload.
+      $form['main_fieldset']['container_bulk_upload'] = array(
+        '#prefix' => '<div id="stock-collection-container-bulk-upload">', 
+        '#suffix' => '</div>',
       );
       
         // # FIELD: Upload field object.
-        $widget['main_fieldset']['fieldset_1']['fld_upload'] = array(
+        $form['main_fieldset']['container_bulk_upload']['fld_upload'] = array(
           '#type' => 'file',
+          '#title' => t('FILE UPLOAD: Upload Bulk Germplasm File is a TSV format with UNIQUENAME, NAME and SCIENTIFIC NAME column headers.'),
           '#disabled' => $disabled,
         );
 
         // # LINK: Link to upload gerplasm in bulk.
         unset($Link);
         $link = l(t('Cancel File Upload'), '#', array('#attributes'));
-        $widget['main_fieldset']['fieldset_1']['link_cancel'] = array(
+        $form['main_fieldset']['container_bulk_upload']['link_cancel'] = array(
           '#markup' => '<div>' . $link . '</div>'
         );
+
+      
       
       // Container, list of germplasm active in the collection.
       $header = array();
@@ -119,13 +135,18 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
 
       // Use id to manage items in the list.
       $id = 'stock-collection-germplasm-container';
-      $widget['main_fieldset']['container'] = array(
+      $form['main_fieldset']['container'] = array(
         '#markup' => '<div id="stock-collection-header">&#9205; Germplasm Collection: <span>11 Germplasm</span></div>
           <div  id="' . $id . '">' . $stock_collection . '</div>',
       );  
-
   }
 
+  /**
+   * Ajax callback method.  
+   */  
+  public function stock_collection_ajax_callback($form, $form_state) {
+    return $form['main_fieldset']['fld_textfield_germplasm'];
+  }
 
   /**
    * @see ChadoFieldWidget::validate()
@@ -142,6 +163,7 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
   }
 
 }
+
 
 
 

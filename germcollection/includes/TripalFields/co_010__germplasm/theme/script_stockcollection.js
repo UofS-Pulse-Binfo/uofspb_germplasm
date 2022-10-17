@@ -6,29 +6,33 @@
 (function ($) {
   Drupal.behaviors.scriptStockCollection = {
     attach: function (context, settings) {   
-      var organism;
-
-      $('#stock-collection-fld-select-species').change(function() {
-        console.log($(this).val());
-        organism = $(this).val();
-      });
-      
-      $('#stock-collection-fld-textfield-germplasm')
-      .autocomplete({
-        source: function(request, response) {
-          $.ajax({
-            url: 'germcollection/autocomplete-stockname/' + organism,
-            dataType: 'json',
-            data: {
-              term: request.term
-            },
-            success: function(data) {
-              response(data);
-            }
-          })  
-        }
-    });
     
+    // Select field value when on focus.
+    var fldGermplasm = $('#stock-collection-fld-textfield-germplasm');
+    fldGermplasm.click(function() {
+        $(this).select();
+      });
+    
+    // Reset germplasm field with organism select field reset.
+    $('#stock-collection-fld-select-species')
+      .change(function() {
+        if ($(this).val() == 0) {
+          fldGermplasm.val('');
+        }
+      });
 
+    // Expand bulk upload.
+    $('#stock-collection-bulk-upload a').once(function() {
+      $(this).click(function(e) {
+        e.preventDefault();
+
+        $(this).text(function() {
+          return ($(this).text() == 'Upload File') 
+            ? 'Cancel File Upload' : 'Upload File';
+        });
+
+        $('#stock-collection-container-bulk-upload').slideToggle(200);
+      });
+    });
 
 }};}(jQuery));

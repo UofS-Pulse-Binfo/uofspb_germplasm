@@ -29,6 +29,24 @@ fieldset {
   margin-top: 10px;
 }
 
+
+/* Bulk upload area */
+#stock-collection-container-bulk-upload {
+  clear: both;
+  display: none;
+  position: relative;
+  border-bottom: 1px solid #CCCCCC;
+  cursor: pointer;
+  margin: 20px 0;
+  padding: 10px 0 20px 0;
+  text-align: left;
+  
+  -moz-box-shadow:    0 5px 7px -9px #333333;
+  -webkit-box-shadow: 0 5px 7px -9px #333333;
+  box-shadow:         0 5px 7px -9px #333333;
+}
+
+
 /* Germplasm table */
 #stock-collection-header {
   background-color: #E7E7E7;
