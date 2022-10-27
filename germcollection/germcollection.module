@@ -32,9 +32,8 @@ function germcollection_menu() {
 	  'type' => MENU_CALLBACK
 	);
 
-	$items['ajax/tripal/stockprop/%'] = array(
+	$items['ajax/tripal/stockprop'] = array(
 	  'page callback' => 'germpcollection_stockprop',
-	  'page arguments' => array(3),
 	  'type' => MENU_CALLBACK,
 	  'access arguments' => array('access germcollection'),
 	);  
@@ -56,8 +55,9 @@ function germcollection_menu() {
 /**
  * Prepare metadata of a stock. 
  */
-function germpcollection_stockprop($id) {
-  $id = (int) strip_tags($id);
+function germpcollection_stockprop() {
+  $params = drupal_get_query_parameters();
+  $id = (int) strip_tags($params['id']);
   $stockprop = array();
 
   if ($id > 0) {
@@ -110,9 +110,11 @@ function germcollection_name_autocomplete($string){
   // Autocomplete germplasm name.
   if ($arg2 == 'autocomplete-stockname') {
 	$organism = strip_tags(arg(3));
-
+    
     if (is_numeric($organism) && (int) $organism > 0) {
-	  $sql = "SELECT CONCAT(stock_id, ':', name) AS id, name FROM {stock} WHERE LOWER(name) LIKE :name AND organism_id = :organism LIMIT 10";
+	  $sql = "SELECT CONCAT(stock_id, ':', name) AS id, name FROM {stock} 
+	    WHERE LOWER(name) LIKE :name AND organism_id = :organism LIMIT 10";
+	  
 	  $result = chado_query($sql, array(':name' => '%' . strtolower($string) . '%', ':organism' => $organism));
 
 	  if ($result->rowCount() > 0) {

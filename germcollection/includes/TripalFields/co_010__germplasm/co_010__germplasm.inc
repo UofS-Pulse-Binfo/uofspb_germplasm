@@ -88,11 +88,11 @@ class co_010__germplasm extends ChadoField {
     // attached asynchronously.
     'auto_attach' => FALSE,
     // The table in Chado that the instance maps to.
-    'chado_table' => '',
+    'chado_table' => 'stockcollection',
     // The column of the table in Chado where the value of the field comes from.
-    'chado_column' => '',
+    'chado_column' => 'stockcollection_id',
     // The base table.
-    'base_table' => '',
+    'base_table' => 'stockcollection',
   ];
 
   // A boolean specifying that users should not be allowed to create

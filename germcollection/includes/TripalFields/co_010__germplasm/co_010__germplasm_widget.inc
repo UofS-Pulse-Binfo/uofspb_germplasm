@@ -24,36 +24,35 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
    * @see ChadoFieldWidget::form()
    *
    */
-  public function form(&$widget, &$form, &$form_state, $langcode, $items, $delta, $element) { 
-    // Add scripts and style.
-    $field_theme_dir = drupal_get_path('module', 'germcollection') . '/includes/TripalFields/co_010__germplasm/theme/'; 
-    // Library, style and scripts.
-    drupal_add_library('system', 'drupal.ajax');
-    drupal_add_library('system', 'ui.autocomplete');
-        
-    $widget['#attached']['css'] = array($field_theme_dir . 'style_stockcollection.css');
-    $widget['#attached']['js'] = array($field_theme_dir . 'script_stockcollection.js');
-
-
+  public function form(&$widget, &$form, &$form_state, $langcode, $items, $delta, $element) {     
+    parent::form($widget, $form, $form_state, $langcode, $items, $delta, $element);
+  
     // # FIELDSET: main fieldset.
+    // All form elements are contained in this fieldset.
     $widget['main_fieldset'] = array(
       '#type' => 'fieldset',
       '#title' => t('Germplasm'),
       '#id' => 'stock-collection-field-container',
     );
-
+      
       // Warn user (admin), to review germplasm collection list before
-      // clicking submit button as modifying list after would require elevated permission.
-      // Will be done manually through update query.
+      // clicking submit button as modifying list after would require 
+      // elevated permission and will be done manually through update query.
       $widget['main_fieldset']['reminder'] = array(
-        '#markup' => '<div class="messages warning">Please review the final Germplasm List before clicking Save button.
-          To add or remove germplasm from a Stock Collection will require permission.</div>'
+        '#markup' => '<div class="messages warning">' .
+          t('Please review the final Germplasm List before clicking Save button. 
+             To add or remove germplasm from a Stock Collection will require permission.')
+        . '</div>'
       );
 
-      // # FIELD:  Select spieces.
+      // # FIELD:  Select spieces/organism.
+      // Fetch all genus + species in organism table. 
+      // @see api/germcollection.api.inc.
       $species = germcollection_get_scientific_name();
       $widget['main_fieldset']['fld_select_species'] = array(
         '#type' => 'select',
+        '#title' => t('Scientific Name'),
+        '#title_display' => 'invisible',
         '#options' => array(0 => '- Scientific Name -') + $species,
         '#prefix' => '<div class="stock-collection-fld">',
         '#suffix' => '</div>',
@@ -62,37 +61,40 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
 
       // # FIELD: Auto-complete search germplasm.
       // Disable everything when there is no species.
-      $organism = 0;
-      
       $disabled = (count($species) < 1) ? TRUE : FALSE; 
+
       $widget['main_fieldset']['fld_textfield_germplasm'] = array(
         '#type' => 'textfield',
-        '#size' => 40,
+        '#title' => t('Germplasm Name'),
+        '#title_display' => 'invisible',
+        '#size' => 30,
+        '#maxlength' => 50,
         '#disabled' => $disabled,
+        '#attached' => array(
+          'library' => array(array('system', 'ui.autocomplete'))
+        ),
         '#attributes' => array('placeholder' => t('Germplasm / Stock Name')),
         '#prefix' => '<div id="stock-collection-wrapper-fldgermplasm" class="stock-collection-fld">',
         '#suffix' => '</div>',
         '#id' => 'stock-collection-fld-textfield-germplasm',
-        //'#autocomplete_path' => 'ajax/tripal/autocomplete-stockname/' . $organism
       );
 
-      // # FIELD: Add germplasm to collection (manual insert).
+      // # FIELD: Add germplasm to collection.
       // Use id to manage items in the list/table below.
       $container_id = 'stock-collection-germplasm-container';
       
-      // This checkbox field acts as a clickable element with ajax functionality.
-      // Type=button, link or submit breaks: callback class is incomplete.
       $widget['main_fieldset']['fld_button_add'] = array(
         '#type' => 'button',
         '#value' => t('Add to Collection'),
         '#disabled' => $disabled,
-        '#prefix' => '<div id="wrapper-fld-button-add" class="stock-collection-fld">',
-        '#suffix' => '</div>',
         '#attributes' => array('onclick' => 'return (false);'),
         '#executes_submit_callback' => false,
+        '#prefix' => '<div class="stock-collection-fld">',
+        '#suffix' => '</div>',
         '#id' => 'stock-collection-fld-button-add',
       );
-
+      
+      // # FIELD: Collection field.
       // Save germplasm entered in this field.
       $widget['stock_collection_set_id'] = array(
         '#type' => 'hidden',
@@ -103,8 +105,8 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
       // # LINK: Link to upload gerplasm in bulk.
       $link = l(t('Upload File'), '#', array('#attributes'));
       $widget['main_fieldset']['link_upload'] = array(
-        '#markup' => '<div id="stock-collection-bulk-upload" class="stock-collection-fld-right">Bulk Germplasm: ' . $link . '</div>
-          <div style="clear: both"></div>'
+        '#markup' => '<div id="stock-collection-bulk-upload" class="stock-collection-fld-right">
+          Bulk Germplasm: ' . $link . '</div><div style="clear: both"></div>'
       );
 
       // # CONTAINER: Contain controls for bulk germplasm upload.
@@ -116,7 +118,8 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
         // # FIELD: Upload field object.
         $widget['main_fieldset']['container_bulk_upload']['fld_upload'] = array(
           '#type' => 'file',
-          '#title' => t('FILE UPLOAD: Upload Bulk Germplasm File is a TSV format with UNIQUENAME, NAME and SCIENTIFIC NAME column headers.'),
+          '#title' => t('FILE UPLOAD: Upload Bulk Germplasm File is a 
+            TSV format with UNIQUENAME, NAME and SCIENTIFIC NAME column headers.'),
           '#disabled' => $disabled,
         );
       
@@ -126,52 +129,46 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
 
       // Summary header.
       $widget['main_fieldset']['header'] = array(
-        '#markup' => '<div id="stock-collection-header">&#9205; Germplasm Collection: <span>0 Germplasm</span></div>'
+        '#markup' => '<div id="stock-collection-header">&#9205; Germplasm Collection: 
+          <span>0</span> Germplasm <div id="stock-collection-wait"></div></div>'
       );
 
       // @see $id set in add collection button.
       $widget['main_fieldset']['container'] = array(
         '#markup' => '<div  id="' . $container_id . '">' . $stock_collection . '</div>',
       );  
+
+
+    // Add scripts and style.
+    $field_theme_dir = drupal_get_path('module', 'germcollection') 
+      . '/includes/TripalFields/co_010__germplasm/theme/'; 
     
-    // Path:
-    $path = array(
-      'autocomplete' => '/ajax/tripal/autocomplete-stockname/',
-      'stockprop' => '/ajax/tripal/stockprop/',
-      'biodata' => '/bio_data/'
+    $widget['#attached'] = array(
+      'css' => array($field_theme_dir . 'style_stockcollection.css'),
+      'js'  => array($field_theme_dir . 'script_stockcollection.js')
     );
-
-    drupal_add_js(
-      array('germcollection' => array('path' => $path)), 
-      array('type' => 'setting')
+    
+    // Path as Drupal settings.
+    $widget['germcollection']['#attached']['js'][] = array(
+      'data' => array('germcollectionPath' => array(
+        'autocomplete' => '/ajax/tripal/autocomplete-stockname/',
+        'stockprop' => '/ajax/tripal/stockprop/',
+        'biodata' => '/bio_data/'
+      )),
+      'type' => 'setting'
     );
-
-    return $widget;
   }
-  /**
-   * Ajax callback method - add stock name to germplasm collection.
-   */
-  public function stock_collection_add_ajax_callback($form, $form_state) {
-    // Add stock name to this germplasm collection.
-    return $form['main_fieldset']['container'];
-  }
-
-  /**
-   * Ajax callback method - set species/organism to restrict autocomplete search.
-   */  
-  public function stock_collection_select_ajax_callback($form, $form_state) {
-    // Update autocomplete to attach selected species to narrow down
-    // suggestion to only that match the organism.
-    return $form['main_fieldset']['fld_textfield_germplasm'];
-  }
-  
-
 
   /**
    * @see ChadoFieldWidget::validate()
    *
    */
   public function validate($element, $form, &$form_state, $langcode, $delta) {
+    $field_name = $this->field['field_name'];
+    $stock_collection = $form_state['values'][ $field_name ]['und'][ $delta ]['stock_collection_set_id'];
+    if (empty($stock_collection)) {
+      form_set_error('fld_select_species', 'Germplasm collection has 0 germplasm.');
+    }
   }
 
   /**
@@ -179,8 +176,49 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
    *
    */
   public function submit($form, &$form_state, $entity_type, $entity, $langcode, $delta) {
+    parent::submit($form, $form_state, $entity_type, $entity, $langcode, $delta);
+    $field_name = $this->field['field_name'];
+    $stock_collection = $form_state['values'][ $field_name ]['und'][ $delta ]['stock_collection_set_id'];
+    
+    // Cache germplasm: at this point the stockcollection has not been 
+    // created yet, storing the germplasm for callback function below.
+    $entity->collection = $stock_collection;
   }
+}
 
+
+//////
+
+
+/**
+ * Entity insert callback. Insert all germplasm selected
+ * from the interface into the stockcollection.
+ */
+function germcollection_entity_insert($entity, $type) {
+  if ($type == 'TripalEntity' && !empty($entity->collection)) {
+    $table = $entity->chado_table;
+    $pk = $table . '_id';
+    // Get lastest generated id in stockcollection table.
+    $sql = sprintf("SELECT %s FROM {%s} ORDER BY %s DESC LIMIT 1", $pk, $table, $pk);
+    $stockcollection_id = chado_query($sql)->fetchField();
+    
+    $TRANSACTION = db_transaction();
+
+    try {
+      $germplasm = explode(':', $entity->collection);  
+      foreach($germplasm as $stock_id) {
+        chado_insert_record($table . '_stock',
+          array(
+            'stockcollection_id' => $stockcollection_id,
+            'stock_id' => $stock_id
+          )
+        );
+      }
+    }
+    catch(Exception $e) {
+      $TRANSACTION->rollback();
+    }
+  }
 }
 
 
