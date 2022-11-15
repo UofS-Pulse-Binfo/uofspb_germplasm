@@ -147,7 +147,7 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
       $note_file = t('TSV file format (.tsv) with UNIQUENAME, NAME and SCIENTIFIC NAME 
                    (genus + species, ie. Lens culinaris) headers.');
 
-      $widget['main_fieldset']['collection_bulkfile_container']['germcollection_bulk_file'] = array(
+      $widget['main_fieldset']['collection_bulkfile_container']['germcollection_file_id'] = array(
         '#type' => 'managed_file',
         '#title' => t('FILE UPLOAD: Upload Bulk Germplasm File'),
         '#disabled' => $disabled,
@@ -188,7 +188,7 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
       // Validate when save button has been clicked.
       $field_name = $this->field['field_name'];
       $stock_collection_set_id  = $form_state['values'][ $field_name ]['und'][ $delta ]['germcollection_set_id'];
-      $stock_collection_file_id = $form_state['values'][ $field_name ]['und'][ $delta ]['main_fieldset']['collection_bulkfile_container']['germcollection_bulk_file'];
+      $stock_collection_file_id = $form_state['values'][ $field_name ]['und'][ $delta ]['main_fieldset']['collection_bulkfile_container']['germcollection_file_id'];
       
       if (empty($stock_collection_file_id) && empty($stock_collection_set_id)) {
         // No germplasm to save for this collection.
@@ -214,18 +214,27 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
                 $cur_line = fgets($handle);
 
                 if ($i == 0) { 
-                  // Skip headers.
+                  // Validate headers.
+                  $headers = str_getcsv($cur_line, "\t");
+                  if (strtolower($headers[0]) != 'uniquename' 
+                      || strtolower($headers[1]) != 'name'
+                      || strtolower($headers[2]) != 'scientific name') {
+                    
+                    $failed = t('Invalid column header found. Please remove file and upload again.');  
+                    form_set_error('germcollection_bulk_file', $failed);
+                  }
+ 
                   $i++;
                 }
                 else {
                   // 0:uniquename, 1:name, 2:scientific name (genus + sepecies).
                   $value = str_getcsv($cur_line, "\t");
                   $exits = germcollection_get_stock_id($value[0], $value[1], $value[2]);
-      
+
                   if ($exits == 0) {
                     // Germplasm does not exists.
-                    $failed = t('Germplasm collection file has germplasm that does not exist. LINE# ' . ($i + 1) 
-                      . 'Please remove file and upload again.');  
+                    $failed = t('Germplasm collection file has germplasm that does not exist. LINE# ' . ($i + 1) . ' ' . $value[1] 
+                      . ' Please remove file and upload again.');  
                     form_set_error('germcollection_bulk_file', $failed);
                   }
                 
@@ -256,8 +265,8 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
     if (!isset($form['#entity']->chado_record_id)) {
       $entity->collection = 0;
       $field_name = $this->field['field_name'];
-      $stock_collection_set_id  = $form_state['values'][ $field_name ]['und'][ $delta ]['stock_collection_set_id'];
-      $stock_collection_file_id = $form_state['values'][ $field_name ]['und'][ $delta ]['main_fieldset']['collection_bulkfile_container']['germcollection_bulk_file'];
+      $stock_collection_set_id  = $form_state['values'][ $field_name ]['und'][ $delta ]['germcollection_set_id'];
+      $stock_collection_file_id = $form_state['values'][ $field_name ]['und'][ $delta ]['main_fieldset']['collection_bulkfile_container']['germcollection_file_id'];
     
       // Bulk upload (file) has higher priority over manual upload.
 

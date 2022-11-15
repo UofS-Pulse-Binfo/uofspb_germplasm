@@ -113,7 +113,7 @@ function germcollection_name_autocomplete($string){
     
     if (is_numeric($organism) && (int) $organism > 0 && strlen($string) >= 2) {
 	  $sql = "SELECT CONCAT(stock_id, ':', name) AS id, name FROM {stock} 
-	    WHERE LOWER(name) LIKE :name AND organism_id = :organism LIMIT 10";
+	    WHERE LOWER(name) LIKE :name AND organism_id = :organism LIMIT 20";
 	  
 	  $result = chado_query($sql, array(':name' => '%' . strtolower($string) . '%', ':organism' => $organism));
 

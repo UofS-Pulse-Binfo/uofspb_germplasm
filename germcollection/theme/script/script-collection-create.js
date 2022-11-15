@@ -36,7 +36,14 @@
             .css('background-color', '#F7F7F7');
 
           fldGermplasm.val('').attr('disabled', 'disabled')
-            .css('background-color', '#F7F7F7');  
+            .css('background-color', '#F7F7F7'); 
+
+          // Clear any items from previous manual entry.
+          if (fldCollection.val() != 0) { 
+            stockCount('reset');
+            $('#germcollection-collection-table table').empty();
+            fldCollection.val('0');
+          } 
         }
         else {
           // Canceled bulk upload.
@@ -54,19 +61,21 @@
     });
 
     // Load germplasm when collection field has value.
-    $(document).ready(function() { 
-      if (fldCollection.val() != 0) { 
-        var e = fldCollection.val().split(':');
-        if (e.length > 0) {
-          $.each(e, function(i, v) {
-            var isIn = stockCollection(v, 'exits');
-            
-            if (!isIn) {
-              stockPost(v);
-            }
-          });
+    $(document).ready(function() {
+      fldCollection.once(function() {
+        if (fldCollection.val() != 0) { 
+          var e = fldCollection.val().split(':');
+          if (e.length > 0) {
+            $.each(e, function(i, v) {
+              var isIn = stockCollection(v, 'exits');
+              
+              if (!isIn) {
+                stockPost(v);
+              }
+            });
+          }
         }
-      }
+      }); 
     }); 
 
     // Select text value of germplasm field when clicked
@@ -161,7 +170,7 @@
         }
       }
     }, false, {once : true});
-
+    
 
     ////
   
@@ -175,7 +184,7 @@
      *   - decrement: less 1.
      */
     function stockCount(action) {
-      var e = $('#stock-collection-header span');
+      var e = $('#germcollection-collection-header span');
       var count = e.text();
 
       if (action == 'increment') {
@@ -183,6 +192,9 @@
       }
       else if (count > 0 && action == 'decrement') {
         count = parseInt(count) - 1;
+      }
+      else if (action == 'reset') {
+        count = 0;
       }
 
       e.text(count);
