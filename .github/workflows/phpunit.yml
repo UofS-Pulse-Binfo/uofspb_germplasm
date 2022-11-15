@@ -13,7 +13,7 @@ jobs:
     # Matrix Build for this job.
     strategy:
       matrix:
-        php-versions: ['7.4.0']
+        php-versions: ['7.1', '7.2']
     # Name the matrix build so we can tell them apart.
     name: PHP Unit Testing of UofS PB Germplasm (PHP ${{ matrix.php-versions }})
 
@@ -22,7 +22,7 @@ jobs:
       # Label used to access the service container
       postgres:
         # Docker Hub image
-        image: postgres:9.3
+        image: postgres
         env:
           POSTGRES_USER: tripaladmin
           POSTGRES_PASSWORD: somesupersecurepassword
@@ -59,6 +59,13 @@ jobs:
         postgres_user: tripaladmin
         postgres_pass: somesupersecurepassword
         postgres_db: testdb
+        tripal_version: 7.x-3.x
+      run: |
+        cd $DRUPAL_ROOT
+        wget --no-check-certificate https://drupal.org/files/drupal.pgsql-bytea.27.patch
+        patch -p1 < drupal.pgsql-bytea.27.patch
+        wget --no-check-certificate https://www.drupal.org/files/issues/2022-06-20/3284424-7.patch
+        patch -p1 < 3284424-7.patch
 
     # 4) Install Tripal Extension Module.
     - name: Install UofS PB Germplasm Module
