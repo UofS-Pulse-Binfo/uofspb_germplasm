@@ -111,7 +111,7 @@ function germcollection_name_autocomplete($string){
   if ($arg2 == 'autocomplete-stockname') {
 	$organism = strip_tags(arg(3));
     
-    if (is_numeric($organism) && (int) $organism > 0) {
+    if (is_numeric($organism) && (int) $organism > 0 && strlen($string) >= 2) {
 	  $sql = "SELECT CONCAT(stock_id, ':', name) AS id, name FROM {stock} 
 	    WHERE LOWER(name) LIKE :name AND organism_id = :organism LIMIT 10";
 	  
@@ -181,4 +181,34 @@ function germcollection_download_file($query_string) {
   else {
     die('Experiment and collection not found');
   }
+}
+  
+/**
+ * Implements hook_form_fied_ui_field_edit_form_alter().
+ * This is to ensure that germplasm collection field will contain
+ * one instance of the germplasm picker/entry form.
+ */
+function germcollection_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+  if ($form['#field']['type'] == 'co_010__germplasm') {
+	$form['field']['cardinality']['#options'] = array(1 => 1);
+	$form['field']['cardinality']['#default_value'] = 1;
+  }
+}
+
+/**
+ * Implements hook_theme().
+ * Theme germplasm collection summary view.
+ * 
+ * @see theme/germcollection-collection-view.tpl.php
+ */
+function germcollection_theme($existing, $type, $theme, $path) {
+  $items = array();
+
+  $items['germcollection_collection_view'] = array(
+    'template' => 'germcollection_collection_view',
+    'path' => $path . '/theme',
+    'variables' => array()
+  );
+
+  return $items;
 }

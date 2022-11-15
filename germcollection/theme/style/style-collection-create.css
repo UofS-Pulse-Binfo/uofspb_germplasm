@@ -1,0 +1,292 @@
+/**
+ * Style theme table (stock collection germplasm list and components).
+ */
+
+
+#germcollection-collection-create-container {
+  position: relative;
+}
+
+#germcollection-collection-create-container .messages {
+  margin-bottom: 20px;
+}
+
+#germcollection-collection-create-container .form-item {
+  padding: 0;
+  margin: 0 10px 0 0;
+}
+
+#germcollection-collection-create-container .form-item input[type=text],
+#germcollection-collection-create-container .form-item select {
+  border: 1px solid #ccc;
+  border-top-color: rgb(204, 204, 204);
+  border-top-color: #999999;
+  color: #333333;
+  font-size: 1.3em;
+  font-weight: 200;
+  padding: 5px;
+  width: 250px;
+}
+
+#germcollection-collection-create-container input[type=submit] {
+  margin-left: 20px;
+}
+
+#germcollection-collection-create-container .form-item {
+  float: left;
+  width: 250px;
+}
+
+#germcollection-collection-create-container span {
+  float: right;
+}
+
+
+/* Bulk upload */
+#germcollection-bulk-upload {
+  border-bottom: 1px solid #CCCCCC;
+  clear: both;
+  cursor: pointer;
+  display: none;
+  margin: 20px 0;
+  position: relative;
+  padding: 10px 0 20px 0;
+  text-align: left;
+  
+  -moz-box-shadow:    0 5px 7px -9px #333333;
+  -webkit-box-shadow: 0 5px 7px -9px #333333;
+  box-shadow:         0 5px 7px -9px #333333;
+}
+
+#germcollection-bulk-upload .form-item {
+  float: none;
+  width: 70%;
+}
+
+
+/* Collection summary table header */
+#germcollection-collection-header {
+  background-color: #E7E7E7;
+  font-size: 1.1em;
+  height: 40px; 
+  line-height: 45px;
+  padding: 0 10px;
+}
+
+#germcollection-collection-header span {
+  float: none;
+}
+
+#germcollection-collection-header div {
+  color: #840;
+  display: inline;
+  font-size: 1em;
+  float: right;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+}
+
+/* Collection summary table */
+#germcollection-collection-table {
+  border: 1px solid #BEBFB9;
+  clear: both;
+  display: block;
+  height: 320px; 
+  overflow-y: scroll;
+  padding: 10px; 
+  position: relative;
+}
+
+#germcollection-collection-table small {
+  font-style: italic;
+}
+
+#germcollection-collection-table table {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+#germcollection-collection-table table tr {
+ border-bottom: 1px solid #FFFFFF;
+ cursor: pointer;
+}
+
+#germcollection-collection-table table td,
+#germcollection-collection-table table tr {
+  border: none;
+}
+
+#germcollection-collection-table table td:first-child {
+  width: 97%;
+}
+
+
+/* Autocomplete */
+.germcollection-autocomplete-inactive { 
+  background: url(../images/throbber-inactive.png) no-repeat right center; 
+}
+
+.ui-autocomplete-loading { 
+  background: url(../images/throbber-active.gif) no-repeat right center; 
+}
+
+.ui-menu-item a:hover {
+  background-color: #0072B9;
+  color: #FFFFFF;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+
+
+fieldset {
+  clear: both;
+  position: relative;
+}
+
+.stock-collection-fld {
+  float: left;
+  margin: 0 7px 0 0;
+}
+
+.stock-collection-fld-right {
+  float: right;
+  font-size: 1.1em;
+  margin-top: 10px;
+}
+
+
+#stock-collection-fld-select-species,
+.stock-collection-fld input[type=text] {
+  font-size: 1.2em;
+  margin: 0;
+  padding: 5px;
+  width: 200px;
+}
+
+#stock-collection-fld-button-add {
+  margin-top: 10px;
+}
+
+#stock-collection-fld-textfield-germplasm {
+  border: 1px solid #ccc;
+  border-top-color: rgb(204, 204, 204);
+  border-top-color: #999999;
+  color: #333333;
+  padding: 5px;
+}
+
+.stock-collection-autocomplete-inactive { 
+  background: url(../images/throbber-inactive.png) no-repeat right center; 
+}
+
+.ui-autocomplete-loading { 
+  background: url(../images/throbber-active.gif) no-repeat right center; 
+}
+
+.ui-menu-item a:hover {
+  background-color: #0072B9;
+  color: #FFFFFF;
+}
+
+
+#stock-collection-container-bulk-upload {
+  border-bottom: 1px solid #CCCCCC;
+  clear: both;
+  cursor: pointer;
+  display: none;
+  margin: 20px 0;
+  position: relative;
+  padding: 10px 0 20px 0;
+  text-align: left;
+  
+  -moz-box-shadow:    0 5px 7px -9px #333333;
+  -webkit-box-shadow: 0 5px 7px -9px #333333;
+  box-shadow:         0 5px 7px -9px #333333;
+}
+
+#stock-collection-field-container input[type=file] {
+  width: 40%;
+}
+
+
+#stock-collection-header {
+  background-color: #E7E7E7;
+  font-size: 1.1em;
+  height: 40px; 
+  line-height: 45px;
+  padding: 0 10px;
+}
+
+#stock-collection-germplasm-container {
+  border: 1px solid #BEBFB9;
+  clear: both;
+  display: block;
+  height: 320px; 
+  overflow-y: scroll;
+  padding: 10px; 
+  position: relative;
+}
+
+#stock-collection-germplasm-container small {
+  font-style: italic;
+}
+
+#stock-collection-germplasm-container table {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+#stock-collection-germplasm-container tr {
+ border-bottom: 1px solid #FFFFFF;
+ cursor: pointer;
+}
+
+#stock-collection-germplasm-container td,
+#stock-collection-germplasm-container tr {
+  border: none;
+}
+
+#stock-collection-germplasm-container table td:first-child {
+  width: 97%;
+}
+
+
+#stock-collection-wait {
+  color: #840;
+  display: inline;
+  font-size: 1em;
+  float: right;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+}
+
+*/

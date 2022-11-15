@@ -5,12 +5,20 @@
 (function ($) {
   Drupal.behaviors.scriptStockCollection = {
     attach: function (context, settings) {   
-    
+    // Reference elements.
+    var mainContainer = $('#germcollection-collection-create-container');
+    // Organism select.
+    var selOrganism = $('#germcollection-fld-select-species');
+    // Germplasm field.
+    var fldNameGermplasm = 'germcollection-fld-textfield-germplasm';
+    var fldGermplasm = $('#' + fldNameGermplasm);
+    // Germplasm collection field.
+    var fldCollection = $('#germcollection-set-id');
     // Host.
     var host = window.location.protocol + '//' + window.location.hostname;
     
     // Expand bulk upload window.
-    $('#stock-collection-bulk-upload a').once(function() {
+    mainContainer.find('span a').once(function() {
       $(this).click(function(e) {
         e.preventDefault();
         
@@ -19,38 +27,47 @@
             ? 'Cancel File Upload' : 'Upload File';
         });
 
-        $('#stock-collection-container-bulk-upload')
+        // Bulk upload: file provided, disable germplasm table.
+        var container = $('#germcollection-collection-table');
+        if ($(this).text() == 'Cancel File Upload') {
+          // File bulk upload activated.
+          container.slideUp();
+          selOrganism.val(0).attr('disabled', 'disabled')
+            .css('background-color', '#F7F7F7');
+
+          fldGermplasm.val('').attr('disabled', 'disabled')
+            .css('background-color', '#F7F7F7');  
+        }
+        else {
+          // Canceled bulk upload.
+          container.slideDown();
+          selOrganism.attr('disabled', '')
+            .css('background-color', '#FFFFFF');
+          
+          fldGermplasm.attr('disabled', '')
+            .css('background-color', '#FFFFFF');
+        }
+
+        $('#germcollection-bulk-upload')
           .slideToggle();
       });
     });
 
-
-    // Reference elements.
-    // Organism select.
-    var selOrganism = $('#stock-collection-fld-select-species');
-    // Germplasm field.
-    var fldNameGermplasm = 'stock-collection-fld-textfield-germplasm';
-    var fldGermplasm = $('#' + fldNameGermplasm);
-    // Germplasm collection field.
-    var fldCollection = $('#stock-collection-set-id');
-
     // Load germplasm when collection field has value.
-    $(document).ready(function() {
-      $(this).once(function() {
-      if (fldCollection.val() != 0) {
+    $(document).ready(function() { 
+      if (fldCollection.val() != 0) { 
         var e = fldCollection.val().split(':');
         if (e.length > 0) {
           $.each(e, function(i, v) {
             var isIn = stockCollection(v, 'exits');
-            console.log(isIn);
+            
             if (!isIn) {
               stockPost(v);
             }
           });
         }
       }
-      });
-    });
+    }); 
 
     // Select text value of germplasm field when clicked
     // to assist quick modification/replacement of search text.
@@ -68,23 +85,23 @@
     // Autocomplete search germplasm.
     fldGermplasm
       .removeClass('form-text')
-      .addClass('stock-collection-autocomplete-inactive')
+      .addClass('germcollection-autocomplete-inactive')
       .autocomplete({     
         source: function(request, response) {
           $.getJSON(host + Drupal.settings.germcollectionPath.autocomplete 
             + selOrganism.val() 
             + '/' 
             + request.term, {
-            term:request.term }, function(data) {
-              response($.map(data, function(item) {
-                return (item) ? { label: item.name, value: item.id } : false;
-              }))
+          term:request.term }, function(data) {
+            response($.map(data, function(item) {
+              return (item) ? { label: item.name, value: item.id } : false;
+            }))
           });
         },
       });
-
+    
     // Insert germplasm to collection.
-    $('#stock-collection-fld-button-add').once(function() {
+    $('#germcollection-fld-button-add').once(function() {
       $(this).click(function(e) {
         e.preventDefault();
         
@@ -107,6 +124,10 @@
 
             var id = e[0];
             stockPost(id);
+
+            // Put the cursor back to
+            // germplasm field.
+            fld.focus();
           }
         }
       });
@@ -115,15 +136,15 @@
     // Remove germplasm from collection.
     // This is dynamically created element.
     document.addEventListener('click', function (e) {
-      if (e.target.classList.contains('stock-collection-remove')) {
+      if (e.target.classList.contains('germcollection-remove')) {
         e.preventDefault();
-
+        
         if (confirm('Are you sure you want to remove?') == true) {
           // Removing germplasm from collection.
           // Prepare stock id encoded in the class.
           // stock-collection-stock-id.
           var tableRowId = e.target.className.replace('remove stock-', '');
-          var id = tableRowId.replace('stock-collection-', '').trim(); 
+          var id = tableRowId.replace('germcollection-', '').trim(); 
           
           // See if this id does exist in the collection
           // before removing.
@@ -139,7 +160,7 @@
           }
         }
       }
-    });
+    }, false, {once : true});
 
 
     ////
@@ -182,7 +203,7 @@
      */
     function stockCollection(id, action) {
       // Field to hold germplasm entered into collection.
-      var collection = $('#stock-collection-set-id');
+      var collection = $('#germcollection-set-id');
       var collectionVal = collection.val();
 
       if (action == 'exists') {
@@ -221,7 +242,7 @@
      */
     function stockPost(id) {
       // Tell the user to wait and disable add button.
-      var waitWindow = $('#stock-collection-wait');
+      var waitWindow = $('#germcollection-collection-header div');
       waitWindow.text('Adding germplasm, please wait...');
 
       $.ajax({
@@ -238,11 +259,11 @@
             stockCollection(id, 'insert');
             
             // Post row into the frontend.
-            var table = $('#stock-collection-germplasm-container table');  
+            var table = $('#germcollection-collection-table table');  
             // Create an alternating bg colour for each row.
             var bg = (table.find('tr').length % 2) ? '#FBFBFB' : '#F7F7F7';
             // Germplasm table row - id using the stock id for quick reference.
-            var markup = '<tr id="stock-collection-' 
+            var markup = '<tr id="germcollection-' 
               + data.stock_id 
               + '" style="background-color: ' 
               + bg 
@@ -266,7 +287,7 @@
             // DELETE FROM COLLECTION:
             // Tag each line with the same stock id used in each row
             // and use this id to construct id of selected row for deletion.
-            var remove = '<a href="#" class="stock-collection-remove stock-' 
+            var remove = '<a href="#" class="germcollection-remove stock-' 
               + data.stock_id 
               + '">&#x2715;</a>';
             
