@@ -60,12 +60,6 @@ jobs:
         postgres_pass: somesupersecurepassword
         postgres_db: testdb
         tripal_version: 7.x-3.x
-      run: |
-        cd $DRUPAL_ROOT
-        wget --no-check-certificate https://drupal.org/files/drupal.pgsql-bytea.27.patch
-        patch -p1 < drupal.pgsql-bytea.27.patch
-        wget --no-check-certificate https://www.drupal.org/files/issues/2022-06-20/3284424-7.patch
-        patch -p1 < 3284424-7.patch
 
     # 4) Install Tripal Extension Module.
     - name: Install UofS PB Germplasm Module
