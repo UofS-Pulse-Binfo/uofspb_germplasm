@@ -149,7 +149,7 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
 
       $widget['main_fieldset']['collection_bulkfile_container']['germcollection_file_id'] = array(
         '#type' => 'managed_file',
-        '#title' => t('FILE UPLOAD: Upload Bulk Germplasm File'),
+        '#title' => t('FILE UPLOAD: Upload Bulk Germplasm File (.tsv)'),
         '#disabled' => $disabled,
         '#upload_location' => 'public://germcollection/',
         '#upload_validators' => array(

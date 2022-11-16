@@ -51,9 +51,11 @@ function germcollection_menu() {
 	return $items;
 }
 
-
 /**
- * Prepare metadata of a stock. 
+ * Fetch row of a stock/germplasm by stock_id.
+ * 
+ * @return object
+ *   Stock id number, name, organism (genus + species) and entity id (when available). 
  */
 function germpcollection_stockprop() {
   $params = drupal_get_query_parameters();
@@ -197,13 +199,11 @@ function germcollection_form_field_ui_field_edit_form_alter(&$form, &$form_state
 
 /**
  * Implements hook_theme().
- * Theme germplasm collection summary view.
- * 
- * @see theme/germcollection-collection-view.tpl.php
  */
 function germcollection_theme($existing, $type, $theme, $path) {
   $items = array();
-
+  
+  // Style germplasm collection view.
   $items['germcollection_collection_view'] = array(
     'template' => 'germcollection_collection_view',
     'path' => $path . '/theme',

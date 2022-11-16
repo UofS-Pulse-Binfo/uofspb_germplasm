@@ -3,7 +3,7 @@
  * Script containing events from stock collection field widget.
  */
 (function ($) {
-  Drupal.behaviors.scriptStockCollection = {
+  Drupal.behaviors.scriptCollectionCreate = {
     attach: function (context, settings) {   
     // Reference elements.
     var mainContainer = $('#germcollection-collection-create-container');
@@ -17,46 +17,64 @@
     // Host.
     var host = window.location.protocol + '//' + window.location.hostname;
     
-    // Expand bulk upload window.
+    // Expand/collapse bulk upload window.
+    // Expand/collapse collection table.
     mainContainer.find('span a').once(function() {
       $(this).click(function(e) {
         e.preventDefault();
         
-        $(this).text(function() {
-          return ($(this).text() == 'Upload File') 
-            ? 'Cancel File Upload' : 'Upload File';
-        });
+        var collectionWindow = $('#germcollection-collection-table');
+        var uploadWindow     = $('#germcollection-bulk-upload'); 
+        var states = {
+          text : 'Cancel File Upload',
+          fldDisabled : 'disabled',
+          fldBg : '#F7F7F7'
+        };
 
-        // Bulk upload: file provided, disable germplasm table.
-        var container = $('#germcollection-collection-table');
-        if ($(this).text() == 'Cancel File Upload') {
-          // File bulk upload activated.
-          container.slideUp();
-          selOrganism.val(0).attr('disabled', 'disabled')
-            .css('background-color', '#F7F7F7');
+        if ($(this).text() == 'Upload File') {
+          // Collapse collection window and load upload window.
+          // Reset select and autocomplete fields:
+          selOrganism.val(0);
+          fldGermplasm.val('');
 
-          fldGermplasm.val('').attr('disabled', 'disabled')
-            .css('background-color', '#F7F7F7'); 
-
-          // Clear any items from previous manual entry.
+          // Clear items entered previously.
           if (fldCollection.val() != 0) { 
             stockCount('reset');
-            $('#germcollection-collection-table table').empty();
+            $('#germcollection-collection-table table')
+              .empty();
+            
             fldCollection.val('0');
-          } 
+          }
+
+          collectionWindow.slideUp();
+          uploadWindow.slideDown();
         }
         else {
-          // Canceled bulk upload.
-          container.slideDown();
-          selOrganism.attr('disabled', '')
-            .css('background-color', '#FFFFFF');
-          
-          fldGermplasm.attr('disabled', '')
-            .css('background-color', '#FFFFFF');
+          // See if there is undeleted file in the field and
+          // let user clear this before loading collecion window.
+          if ($('.file a').length > 0) {
+            alert('Please remove file and try again.')
+          }
+          else {
+            // Expand collection window and collapse upload window.
+            states.text = 'Upload File';
+            states.fldDisabled = '';
+            states.fldBg = '#FFFFFF';
+
+            uploadWindow.slideUp();
+            collectionWindow.slideDown();
+          }
         }
 
-        $('#germcollection-bulk-upload')
-          .slideToggle();
+        // Update link text.
+        $(this).text(states.text);
+
+        // Disable fields.
+        selOrganism.attr('disabled', states.fldDisabled)
+          .css('background-color', states.fldBg);
+
+        fldGermplasm.attr('disabled', states.fldDisabled)
+          .css('background-color', states.fldBg); 
       });
     });
 
@@ -75,7 +93,13 @@
             });
           }
         }
-      }); 
+      });
+
+      mainContainer.find('span a').once(function(e) {
+        if ($(this).text() == 'Upload File'  && $('.file a').length > 0) {  
+          $(this).click();
+        }
+      });
     }); 
 
     // Select text value of germplasm field when clicked
@@ -317,5 +341,4 @@
         }
       });
     }
-
 }};}(jQuery));
