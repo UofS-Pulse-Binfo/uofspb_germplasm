@@ -75,6 +75,31 @@
    * @see TripalImporter::form()
    */
   public function form($form, &$form_state) {
+
+    $form['info'] = [
+      '#type' => 'item',
+      '#markup' => 'This importer will create individuals of a population and relate them back to the population stock. More specifically, for every line in the file, a new chado stock record with that information will be created. Then a relationship as specified in this form will be made between that new stock record and the population stock selected in this form. As such this importer can be used in any case where you want to create a number of new stock records related to an existing stock. Examples of such situations are recombinant inbred line populations or nested association mapping panels.',
+      '#weight' => -100,
+    ];
+
+    $form['population_stock'] = [
+      '#title' => 'Population Stock Name',
+      '#description' => 'This is the grouping stock record for your population. For example, if this is a RIL, you may select RIL-123 here. This record must already exist.',
+      '#type' => 'textfield',
+      '#autocomplete_path' => 'admin/tripal/storage/chado/auto_name/stock',
+      '#weight' => -49,
+    ];
+
+    /**
+    $form['relationship_type'] = [
+      '#title' => 'Relationship Type',
+      '#description' => 'This is the type of relationship to connect the grouping populati0on stock record and the new individual stock records from the file.',
+      '#type' => 'textfield',
+      '#autocomplete_path' => 'admin/tripal/storage/chado/auto_name/stock',
+      '#weight' => -48,
+    ];
+    **/
+
     return $form;
   }
 
