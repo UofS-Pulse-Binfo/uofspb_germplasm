@@ -23,10 +23,6 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
    */
   public function form(&$widget, &$form, &$form_state, $langcode, $items, $delta, $element) {     
     parent::form($widget, $form, $form_state, $langcode, $items, $delta, $element);
-    // In some older browsers - custom autocomplete search triggers an origin error
-    // that CORS headers is missing. Allow access request coming from the same host.
-    $host = $GLOBALS['base_url'];
-    header("Access-Control-Allow-Origin: $host");
 
     // # FIELDSET: main fieldset.
     // All form elements are contained in this fieldset.
@@ -173,8 +169,10 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
     );
     
     // Path as Drupal settings.
+    $host = url($GLOBALS['base_url'], array('absolute' => true));
     $widget['germcollection']['#attached']['js'][] = array(
       'data' => array('germcollectionPath' => array(
+        'host' => $host . '/', 
         'autocomplete' => '/ajax/tripal/autocomplete-stockname/',
         'stockprop' => '/ajax/tripal/stockprop/',
         'biodata' => '/bio_data/'

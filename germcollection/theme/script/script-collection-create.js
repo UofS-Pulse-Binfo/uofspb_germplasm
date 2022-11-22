@@ -15,7 +15,7 @@
     // Germplasm collection field.
     var fldCollection = $('#germcollection-set-id');
     // Host.
-    var host = window.location.protocol + '//' + window.location.hostname;
+    var host = Drupal.settings.germcollectionPath.host;
     
     // Expand/collapse bulk upload window.
     // Expand/collapse collection table.
