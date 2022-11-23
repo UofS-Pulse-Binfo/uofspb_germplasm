@@ -172,10 +172,10 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
     $host = url($GLOBALS['base_url'], array('absolute' => true));
     $widget['germcollection']['#attached']['js'][] = array(
       'data' => array('germcollectionPath' => array(
-        'host' => $host . '/', 
         'autocomplete' => '/ajax/tripal/autocomplete-stockname/',
         'stockprop' => '/ajax/tripal/stockprop/',
-        'biodata' => '/bio_data/'
+        'biodata' => '/bio_data/',
+        'host' => $host . '/' 
       )),
       'type' => 'setting'
     ); 

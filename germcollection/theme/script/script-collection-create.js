@@ -139,23 +139,26 @@
         e.preventDefault();
         
         // Gemplasm field value returned/suggested by autocomplete
-        // comprises of the stock id and the stock name separated by
-        // colon : character. ie 111:stock 1 where 111 is the stock id 
-        // and stock 1 is the stock name.
+        // comprises of the stock id and the stock name in the following notation:
+        // stock name [id:stock id number].
         var fld = $('#' + fldNameGermplasm);
         var curVal = fld.val();
-        var e = curVal.split(':');
-      
-        if (e[1] != '' && parseInt(e[0]) > 0) {
+        // Remove brackets and split string by id: isolating
+        // the stock name and the stock id number.
+        var e = curVal
+          .replace(/[\[\]]/g, '')
+          .split('id:');
+
+        if (e[0].trim() != '' && e[1].match(/^[0-9]+$/) && parseInt(e[1]) > 0) {
           // Has stock id and stock name - is a valid entry.
           // Inspect the id if it is currently in the collection.
-          var isIn = stockCollection(e[0], 'exists');
+          var isIn = stockCollection(e[1], 'exists');
           
           if (!isIn) {
             // Clear field.
             fld.val('');
 
-            var id = e[0];
+            var id = e[1];
             stockPost(id);
 
             // Put the cursor back to
@@ -264,7 +267,8 @@
         if (i > -1) {
           ids.splice(i, 1);
           var restore = ids.join(':');
-          collection.val(restore);
+          var checkVal = (restore.length > 0) ? restore : 0;
+          collection.val(checkVal);
         }
       }
     }
@@ -277,6 +281,8 @@
      *   field in the interface. 
      */
     function stockPost(id) {
+      var id = parseInt(id);
+
       // Tell the user to wait and disable add button.
       var waitWindow = $('#germcollection-collection-header div');
       waitWindow.text('Adding germplasm, please wait...');
