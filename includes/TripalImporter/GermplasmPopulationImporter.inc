@@ -90,15 +90,13 @@
       '#weight' => -49,
     ];
 
-    /**
     $form['relationship_type'] = [
       '#title' => 'Relationship Type',
-      '#description' => 'This is the type of relationship to connect the grouping populati0on stock record and the new individual stock records from the file.',
+      '#description' => 'This is the type of relationship to connect the grouping population stock record and the new individual stock records from the file.',
       '#type' => 'textfield',
-      '#autocomplete_path' => 'admin/tripal/storage/chado/auto_name/stock',
+      '#autocomplete_path' => 'admin/tripal/storage/chado/auto_name/cvterm/',
       '#weight' => -48,
     ];
-    **/
 
     return $form;
   }
