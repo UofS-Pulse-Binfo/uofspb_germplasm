@@ -127,7 +127,8 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
       // Collection summary table header.
       $widget['main_fieldset']['collecion_header'] = array(
         '#markup' => '<div id="germcollection-collection-header">
-          &#9205; Germplasm Collection: <span>' . $collection_count . '</span> Germplasm 
+          <strong>Germplasm Collection:</strong> 
+          <span>' . $collection_count . '</span> Germplasm 
           <div></div>
         </div>'
       );
