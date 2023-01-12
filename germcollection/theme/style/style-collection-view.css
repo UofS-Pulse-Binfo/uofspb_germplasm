@@ -19,7 +19,7 @@
   width: 50%;
 }
 
-#germcollection-page-context a:last-child {
+#germcollection-page-context a {
   background: url(../images/infographics-new-window.gif) right center no-repeat;
   padding-right: 15px;
 }

@@ -134,6 +134,25 @@ function germcollection_get_scientific_name() {
 }
 
 /**
+ * Get stock collection.
+ * 
+ * @param id
+ *   Integer, stock collection id number. 
+ * 
+ * @return array
+ *   Content type data row of the matching stock collection (id, name, shortname)
+ */
+function germcollection_get_collection($id) {  
+  // Query stock collection in chado.stockcollection.
+  $sql = "SELECT stockcollection_id, name, uniquename 
+    FROM {stockcollection} WHERE stockcollection_id = :id LIMIT 1";
+  $collection = chado_query($sql, array(':id' => $id));
+
+  // stockcollection: stockcollection_id, name, uniquename, type_id.
+  return ($collection->rowCount() > 0) ? $collection->fetchObject() : 0;
+}
+
+/**
  * Get stock by name+uniquename+organism.
  * 
  * @param $uniquename

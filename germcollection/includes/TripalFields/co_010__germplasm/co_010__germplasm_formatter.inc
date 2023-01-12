@@ -98,7 +98,24 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
           'name' => 'germcollection-item-per-page'
         ],
       ];
+
+      # FIELD: search box text field.
+      $fld_search = [
+        '#type' => 'textfield',
+        '#id' => 'germcollection-fld-textfield-search',
+        '#attributes' => ['placeholder' => 'Stock Name']
+      ];
+
       
+      // Download link - export list to a csv file.
+      // Identical to project collection, this link is available only with
+      // access germcollection permission set.
+      if(user_is_logged_in() && user_access('access germcollection')) {
+        $download_link = l(t('Download Collection'), 'download-germplasm-collection/' . base64_encode('collection=' . $collection_id),
+          ['attributes' => ['target' => '_blank']]
+        );
+      }
+
       // Outbound link to search germplasm with collection search
       // criterial pre-selected.
       $link =  $GLOBALS['base_url'] . '/search/germplasm/all?collection=' . $collection_id;
@@ -168,7 +185,8 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       // and germplasm summary table.
       $field_markup = theme('germcollection_collection_view', array(
         'fld_no_per_page' => $fld_items_per_page,
-        'context_links' => $filter_link,
+        'fld_search' => $fld_search,
+        'context_links' => $download_link . ' | ' . $filter_link,
         'germplasm_count' => $collection_count,
         'collection_table' => $collection_table,
       ));
@@ -179,6 +197,9 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
         '#markup' => $field_markup . $pager,
         '#attached' => [
           'css' => [$field_theme_dir . 'style/style-collection-view.css'],
+          'js' => [$field_theme_dir . 'script/script-collection-view.js', ],
+          'library' => [['system', 'ui.autocomplete']],
+          'settings' => ['abc' => 1]
         ]
       ];
     }

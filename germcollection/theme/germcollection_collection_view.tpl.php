@@ -20,6 +20,8 @@
       <?php 
         // Field select # of germplasm per page.
         print drupal_render($variables['fld_no_per_page']); 
+        // Field search box.
+        print drupal_render($variables['fld_search']); 
       ?>
     </div>
     
