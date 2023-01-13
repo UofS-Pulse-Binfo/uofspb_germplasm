@@ -192,14 +192,20 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       ));
 
       $field_theme_dir = drupal_get_path('module', 'germcollection') . '/theme/'; 
+      $host = url($GLOBALS['base_url'], ['absolute' => true]);
+      // Settings:
+      drupal_add_js(['germcollection' => [
+        'autocomplete' => '/ajax/tripal/autocomplete-stockname/',
+        'host' => $host . '/' 
+      ]], ['type' => 'setting']);
+
       $element[0] = [
         '#type' => 'markup',
         '#markup' => $field_markup . $pager,
         '#attached' => [
           'css' => [$field_theme_dir . 'style/style-collection-view.css'],
-          'js' => [$field_theme_dir . 'script/script-collection-view.js', ],
+          'js' => [$field_theme_dir . 'script/script-collection-view.js'],
           'library' => [['system', 'ui.autocomplete']],
-          'settings' => ['abc' => 1]
         ]
       ];
     }

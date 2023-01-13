@@ -42,3 +42,21 @@
 
   border-left: 2px solid #314355;
 }
+
+#germcollection-fld-textfield-search {
+  width: 170px;
+}
+
+/* Autocomplete */
+.germcollection-autocomplete-inactive { 
+  background: url(../images/throbber-inactive.png) no-repeat right center; 
+}
+
+.ui-autocomplete-loading { 
+  background: url(../images/throbber-active.gif) no-repeat right center; 
+}
+
+.ui-menu-item a:hover {
+  background-color: #0072B9;
+  color: #FFFFFF;
+}
