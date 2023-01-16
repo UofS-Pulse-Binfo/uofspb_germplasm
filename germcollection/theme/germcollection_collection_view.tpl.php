@@ -15,14 +15,17 @@
 ?>
 
 <div id="germcollection-collection-view-container">
-  <form method="post">
+  <form id="germcollection-form" method="post">
     <div id="germcollection-page-fields">
       <?php 
         // Field select # of germplasm per page.
         print drupal_render($variables['fld_no_per_page']); 
+
         // Field search box.
         print drupal_render($variables['fld_search']); 
       ?>
+
+      <div id="germcollection-search-submit">&nbsp;</div>
     </div>
     
     <div id="germcollection-page-context">

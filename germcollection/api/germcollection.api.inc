@@ -134,7 +134,7 @@ function germcollection_get_scientific_name() {
 }
 
 /**
- * Get stock collection.
+ * Get stock collection information.
  * 
  * @param id
  *   Integer, stock collection id number. 

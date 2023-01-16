@@ -12,6 +12,10 @@
   width: 50%;
 }
 
+#germcollection-page-fields div {
+  float: left
+}
+
 #germcollection-page-context {
   float: left;
   margin-top: 1em;
@@ -44,7 +48,21 @@
 }
 
 #germcollection-fld-textfield-search {
-  width: 170px;
+  border: 1px solid #ccc;
+  color: #333333;
+  font-size: 1em;
+  font-weight: 200;
+  margin-top: 0;
+  margin-left: 10px;
+  padding: 4px;
+  width: 124px;
+}
+
+#germcollection-search-submit {
+  background: url('../images/icon-lens.png') no-repeat 5px 2px;
+  cursor: pointer;
+  height: 30px;
+  width: 30px;
 }
 
 /* Autocomplete */
@@ -56,7 +74,9 @@
   background: url(../images/throbber-active.gif) no-repeat right center; 
 }
 
-.ui-menu-item a:hover {
-  background-color: #0072B9;
-  color: #FFFFFF;
+.ui-menu-item a {
+  color: #000000;
+  font-family: "Lucida Grande", "Lucida Sans Unicode", sans-serif;
+  font-size: 0.9em;
+  line-height: 1.538em;
 }

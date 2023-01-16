@@ -46,6 +46,25 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       $params = (isset($_POST['germcollection-item-per-page'])) 
         ? (int) $_POST['germcollection-item-per-page'] : 0;
       
+      // Search a specific germplasm in a collection.
+      $search = (isset($_POST['germcollection-search'])) 
+        ? strip_tags($_POST['germcollection-search']) : '';
+        
+      // Extract id of germplasm to search since the search box
+      // formats the autocomplete selection to stock name [id: stock id]
+      $search_stock_id = 0;
+      $found_stock_id = '';
+
+      if ($search != '') {
+        preg_match('/\[id:(\d+)\]$/', $search, $match);
+        if (isset($match[1]) && $match[1] > 0) {
+          $search_stock_id = $match[1];
+          
+          $stock_ids = array_column($items, 'chado-stockcollection__stock_id');
+          $found_stock_id = array_search($search_stock_id, $stock_ids);
+        }
+      }  
+
       if ($params && $params >= 1 && $params <= 3) {
         // Cache # of germplasm value selected to make it available
         // thoughout every page in the pager.
@@ -103,7 +122,8 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       $fld_search = [
         '#type' => 'textfield',
         '#id' => 'germcollection-fld-textfield-search',
-        '#attributes' => ['placeholder' => 'Stock Name']
+        '#attributes' => ['placeholder' => 'Stock Name'],
+        '#attributes' => ['name' => 'germcollection-search']
       ];
 
       
@@ -138,6 +158,12 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
 
       // Now only show the elements for the current page.
       $start_item = $current_page * $items_per_page;
+      if ($found_stock_id != '') {
+        $start_item = $found_stock_id;
+        $end_item = $found_stock_id;
+        $items_per_page = 1;
+      }
+
       $end_item = $start_item + ($items_per_page - 1);
       for ($key = $start_item; $key <= $end_item; $key++) {
         if (isset($items[$key])) {
@@ -195,7 +221,7 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       $host = url($GLOBALS['base_url'], ['absolute' => true]);
       // Settings:
       drupal_add_js(['germcollection' => [
-        'autocomplete' => '/ajax/tripal/autocomplete-stockname/',
+        'autocomplete' => '/ajax/tripal/autocomplete-germcollection/' . $collection_id . '/',
         'host' => $host . '/' 
       ]], ['type' => 'setting']);
 
