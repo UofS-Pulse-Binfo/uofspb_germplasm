@@ -54,14 +54,19 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       // formats the autocomplete selection to stock name [id: stock id]
       $search_stock_id = 0;
       $found_stock_id = '';
-
+      $search_result = '';
+      
       if ($search != '') {
         preg_match('/\[id:(\d+)\]$/', $search, $match);
         if (isset($match[1]) && $match[1] > 0) {
           $search_stock_id = $match[1];
-          
+
           $stock_ids = array_column($items, 'chado-stockcollection__stock_id');
           $found_stock_id = array_search($search_stock_id, $stock_ids);
+          $search_result = ($found_stock_id === false) ? 'Not found' : '';
+        }
+        else {
+          $search_result = 'Not found';
         }
       }  
 
@@ -119,19 +124,27 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       ];
 
       # FIELD: search box text field.
+      // Search is available when items shown per page
+      // is all items.
       $fld_search = [
         '#type' => 'textfield',
         '#id' => 'germcollection-fld-textfield-search',
-        '#attributes' => ['placeholder' => 'Stock Name'],
-        '#attributes' => ['name' => 'germcollection-search']
+        '#attributes' => [
+          'placeholder' => 'Stock Name', 
+          'name' => 'germcollection-search'
+        ],
+        '#disabled' => TRUE
       ];
-
+      
+      if ($per_page > 1) {
+        $fld_search['#attributes']['disabled'] = 'disabled';
+      }
       
       // Download link - export list to a csv file.
       // Identical to project collection, this link is available only with
       // access germcollection permission set.
       if(user_is_logged_in() && user_access('access germcollection')) {
-        $download_link = l(t('Download Collection'), 'download-germplasm-collection/' . base64_encode('collection=' . $collection_id),
+        $download_link = l(t('Download'), 'download-germplasm-collection/' . base64_encode('collection=' . $collection_id),
           ['attributes' => ['target' => '_blank']]
         );
       }
@@ -139,8 +152,13 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       // Outbound link to search germplasm with collection search
       // criterial pre-selected.
       $link =  $GLOBALS['base_url'] . '/search/germplasm/all?collection=' . $collection_id;
-      $filter_link = l(t('Filter Collection'), $link, ['attributes' => ['target' => '_blank']]);
+      $filter_link = l(t('Filter'), $link, ['attributes' => ['target' => '_blank']]);
       
+      // Germplasm count as link to reload all germplasm in a collection
+      // in one clickable link.
+      $link =  $GLOBALS['base_url'] . '/germplasm-collection/' . $entity->chado_record->uniquename;
+      $count_link = l(t($collection_count . ' Germplasm'), $link);
+
       // Construct germplasm summary table.
       $collection_table = [
         '#theme' => 'table',
@@ -158,10 +176,11 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
 
       // Now only show the elements for the current page.
       $start_item = $current_page * $items_per_page;
-      if ($found_stock_id != '') {
+      if ($found_stock_id >= 0 && $found_stock_id != 0) {
         $start_item = $found_stock_id;
         $end_item = $found_stock_id;
         $items_per_page = 1;
+        $total_pages = 0;
       }
 
       $end_item = $start_item + ($items_per_page - 1);
@@ -182,7 +201,7 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
 
           // Compile the table row.
           $row = [
-            ($key + 1),
+            ($found_stock_id != '') ? 1 : ($key + 1),
             $name,
             $accession,
             $i['value']['rdfs:type'],
@@ -212,8 +231,9 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       $field_markup = theme('germcollection_collection_view', array(
         'fld_no_per_page' => $fld_items_per_page,
         'fld_search' => $fld_search,
+        'txt_search_result' => $search_result,
         'context_links' => $download_link . ' | ' . $filter_link,
-        'germplasm_count' => $collection_count,
+        'germplasm_count' => $count_link,
         'collection_table' => $collection_table,
       ));
 

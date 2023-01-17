@@ -25,7 +25,10 @@
         print drupal_render($variables['fld_search']); 
       ?>
 
-      <div id="germcollection-search-submit">&nbsp;</div>
+      <div id="germcollection-search-submit">
+        &nbsp;
+        <small title="Stock name/Germplasm not found"><?php print $variables['txt_search_result']; ?></small>
+      </div>
     </div>
     
     <div id="germcollection-page-context">
@@ -33,7 +36,7 @@
         // Quick summary count of germplasm in a collection and
         // outbound link to search germplasm where the collection will 
         // be pre-selected on page load.
-        print $variables['germplasm_count'] . ' Germplasm | ' . $variables['context_links']; 
+        print 'Collection: ' . $variables['germplasm_count'] . ' [ ' . $variables['context_links'] . ' ]'; 
       ?>
     </div>
 

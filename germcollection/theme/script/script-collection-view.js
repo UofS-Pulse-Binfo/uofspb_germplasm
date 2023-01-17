@@ -15,6 +15,8 @@
     // to assist quick modification/replacement of search text.
     fldSearch.click(function(e) {
       $(this).select();
+      // Remove search result message.
+      $('#germcollection-search-submit small').text('');
     });
     
     // Autocomplete search germplasm in a collection.
@@ -38,6 +40,4 @@
         $('#germcollection-form').submit();
       }
     });
-
-
   }};}(jQuery));
