@@ -66,16 +66,48 @@
     // Allow the user to upload a file to the server.
     'file_upload' => TRUE,
     // Allow the user to provide the path on the Tripal server for the file.
-    'file_local' => TRUE,
+    'file_local' => FALSE,
     // Allow the user to provide a remote URL for the file.
-    'file_remote' => TRUE,
+    'file_remote' => FALSE,
   );
 
   /**
    * @see TripalImporter::form()
    */
   public function form($form, &$form_state) {
+    // Population Entry.
+    // # FIELDSET: Population Entry fieldset.
+    $form['fieldset_population_entry'] = [
+      '#type' => 'fieldset',
+      '#title' => t('Population Entry'),
+      '#weight' => -1000
+    ];
 
+    // Relationship Verb.
+    // # FIELDSET: Relationship Verb fieldset.
+    $form['fieldset_relationship_verb'] = [
+      '#type' => 'fieldset',
+      '#title' => t('Relationship Verb'),
+      '#weight' => -2000
+    ];
+
+    // Population Individuals.
+    // # FIELDSET: Population Individuals fieldset.
+    // This is Tripal Importer.
+    
+    // Submit button.
+    // # FIELD: Submit
+    // This button is provided by Tripal Importer.
+
+
+
+
+
+
+
+
+
+    /*
     $form['info'] = [
       '#type' => 'item',
       '#markup' => 'This importer will create individuals of a population and relate them back to the population stock. More specifically, for every line in the file, a new chado stock record with that information will be created. Then a relationship as specified in this form will be made between that new stock record and the population stock selected in this form. As such this importer can be used in any case where you want to create a number of new stock records related to an existing stock. Examples of such situations are recombinant inbred line populations or nested association mapping panels.',
@@ -97,7 +129,10 @@
       '#autocomplete_path' => 'admin/tripal/storage/chado/auto_name/cvterm/',
       '#weight' => -48,
     ];
-
+    */
+    
+    dpm($form);
+    
     return $form;
   }
 
