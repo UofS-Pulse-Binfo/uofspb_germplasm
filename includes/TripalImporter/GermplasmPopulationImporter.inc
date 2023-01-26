@@ -51,13 +51,14 @@
    * may include a description of the file types allowed.
    */
   public static $upload_description = 'Germplasm file should be a tab separated file containing a header with the following colums:<ol>
-      <li>Individual Name: Name of the individual to be added to the germplasm population.</li>
-      <li>Type Name: The name of the controlled vocabulary term indicating the type of germplasm (e.g. accession).</li>
-      <li>Type Accession: The full accession of the controlled vocabulary term indicating the type of germplasm (e.g. CO_010:0000044).</li>
-      <li>Genus: The genus of the individual germplasm.</li>
-      <li>Species: The species of the individual germplasm.</li>
-      <li>Accession (OPTIONAL): A unique identifier for the individual germplasm.</li>
-    </ol>';
+      <li><strong>Name</strong>: The name of the RIL individual.</li>
+      <li><strong>Type</strong>: The name of the cvterm which should be used for the stock record, must exist.</li>
+      <li><strong>Scientific Name</strong>: The genus + species of the organism to be used for the stock record, must exist.</li>
+      <li><strong>Uniquename</strong>: The uniquename to use if you do not want to use the pattern/prefix below.</li>
+    </ol>
+    
+    <p>Each row in the file should describe a specific individual to be created and linked to the Population Entry with the specified relationship.</p>
+  ';
 
   /**
    * Indicates the methods that the file uploader will support.
@@ -71,6 +72,10 @@
     'file_remote' => FALSE,
   );
 
+  // Alters default impoter title to match population load combination illustrations.
+  public static $upload_title = 'Population Individuals';
+
+
   /**
    * @see TripalImporter::form()
    */
@@ -80,20 +85,78 @@
     $form['fieldset_population_entry'] = [
       '#type' => 'fieldset',
       '#title' => t('Population Entry'),
-      '#weight' => -1000
+      '#weight' => -2000
     ];
+      
+      # FIELD: Autocomplete search.
+      // Search germplasm/stock as the population entry.
+      $form['fieldset_population_entry']['fld_text_autocomplet_germplasm'] = [
+        '#type' => 'textfield',   
+        '#autocomplete_path' => 'admin/tripal/storage/chado/auto_name/stock',
+        '#attributes' => array(
+          'placeholder' => t('Germplasm / Stock Name')
+        ),
+        '#id' => 'population-importer-fld-text-autocomplet-germplasm'
+      ];
+
 
     // Relationship Verb.
     // # FIELDSET: Relationship Verb fieldset.
     $form['fieldset_relationship_verb'] = [
       '#type' => 'fieldset',
       '#title' => t('Relationship Verb'),
-      '#weight' => -2000
+      '#weight' => -1000
     ];
+
+      # FIELD: Select relationship verb.
+      // Query all terms under cv = stock_relationship, text process replacing
+      // all underscore with spaces and capitalized to improve readability. 
+      // Cvterm id is returned.
+      $stock_relationship = chado_select_record('cvterm', 
+        ['cvterm_id',  'UPPER(REPLACE(name, \'_\', \' \')) AS name'], 
+        ['cv_id' => ['name' => 'stock_relationship']], 
+        ['order by' => ['name' => 'asc']]
+      );
+      
+      $fld_relationship_options = [];
+      // This is the default option.
+      $fld_relationship_options[0] = '- Select -';
+
+      foreach($stock_relationship as $rel) {
+        // Cvterm id as key and name as value. Cvterm id is returned
+        // when selection is made.
+        $fld_relationship_options[$rel->cvterm_id] = $rel->name;
+      }
+
+      $form['fieldset_relationship_verb']['fld_select_relationship_verb'] = [
+        '#type' => 'select',
+        '#default_value' => 0,
+        '#options' => $fld_relationship_options
+      ];
+
+      # FIELD: Radio buttons.
+      // Set stock position in the relationship.
+      $form['fieldset_relationship_verb']['fld_radio_position'] = [
+        '#type' => 'radios',
+        '#default_value' => 1,
+        '#options' => [
+          1 => t('Population Entry as SUBJECT and Population Individuals as OBJECT of the relationship.'),
+          2 => t('Population Individuals as SUBJECT and Population Entry as OBJECT of the relationship.')
+        ]
+      ];
+      
+      # IMAGE: Population load illustration.
+      $path = $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'uofspb_germplasm');
+      $form['fieldset_relationship_verb']['image_illustration'] = [
+        '#markup' => '<div style="margin-top: 20px"><img src="' . $path . '/theme/images/population-load-combination.gif" /></div>'
+      ];
 
     // Population Individuals.
     // # FIELDSET: Population Individuals fieldset.
     // This is Tripal Importer.
+    // Default fieldset title of the importer is File Upload, 
+    // Replacement to match illustration showing as Population Individuals in declaration.
+    
     
     // Submit button.
     // # FIELD: Submit
@@ -131,7 +194,6 @@
     ];
     */
     
-    dpm($form);
     
     return $form;
   }
