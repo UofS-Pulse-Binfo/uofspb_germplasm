@@ -148,3 +148,21 @@ function uofspb_germplasm_ontology_list(){
 
   return $ontologies;
 }
+
+/**
+ * Implements hook_form_alter()
+ * Hook will insert a form field to Tripal Importer file fieldset.
+ */
+function uofspb_germplasm_form_alter(&$form, &$form_state, $form_id) {
+  if (isset($form['importer_class']['#value']) && $form['importer_class']['#value'] == 'GermplasmPopulationImporter') {
+    $form['file']['fld_text_prefix'] = [
+      '#type' => 'textfield',
+      '#title' => 'Prefix',
+      '#description' => t('Please give a prefix for this germplasm individuals. Unique names for germplasm contained in file will 
+        be this prefix followed by stock id. Unique prefix can help you track this germplasm in the future, and default prefix 
+        is GERM. <br /><strong>NOTE:</strong> Unique names for existed germplasm individual will be updated with new prefix too.
+      '),
+      '#id' => 'population-importer-fld-text-prefix'
+    ];
+  }
+}

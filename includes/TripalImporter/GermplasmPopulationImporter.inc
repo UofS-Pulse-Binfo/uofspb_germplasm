@@ -80,6 +80,20 @@
    * @see TripalImporter::form()
    */
   public function form($form, &$form_state) {
+    # INFO:
+    $form['info'] = [
+      '#type' => 'item',
+      '#weight' => -3000,
+      '#markup' => t('This importer will create individuals of a population and 
+        relate them back to the population stock. More specifically, for every line 
+        in the file, a new chado stock record with that information will be created. 
+        Then a relationship as specified in this form will be made between that new 
+        stock record and the population stock selected in this form. As such this 
+        importer can be used in any case where you want to create a number of new 
+        stock records related to an existing stock. Examples of such situations are 
+        recombinant inbred line populations or nested association mapping panels.')
+    ];
+
     // Population Entry.
     // # FIELDSET: Population Entry fieldset.
     $form['fieldset_population_entry'] = [
@@ -90,13 +104,14 @@
       
       # FIELD: Autocomplete search.
       // Search germplasm/stock as the population entry.
-      $form['fieldset_population_entry']['fld_text_autocomplet_germplasm'] = [
+      $form['fieldset_population_entry']['fld_text_autocomplete_germplasm'] = [
         '#type' => 'textfield',   
         '#autocomplete_path' => 'admin/tripal/storage/chado/auto_name/stock',
+        '#required' => TRUE,
         '#attributes' => array(
           'placeholder' => t('Germplasm / Stock Name')
         ),
-        '#id' => 'population-importer-fld-text-autocomplet-germplasm'
+        '#id' => 'population-importer-fld-text-autocomplete-germplasm'
       ];
 
 
@@ -157,45 +172,26 @@
     // Default fieldset title of the importer is File Upload, 
     // Replacement to match illustration showing as Population Individuals in declaration.
     
+    # FIELD: Text field.
+    // Allow user to specify which prefix to use in naming germplasm uniquename.
+    // @see hook_form_alter().
     
     // Submit button.
     // # FIELD: Submit
     // This button is provided by Tripal Importer.
-
-
-
-
-
-
-
-
-
-    /*
-    $form['info'] = [
-      '#type' => 'item',
-      '#markup' => 'This importer will create individuals of a population and relate them back to the population stock. More specifically, for every line in the file, a new chado stock record with that information will be created. Then a relationship as specified in this form will be made between that new stock record and the population stock selected in this form. As such this importer can be used in any case where you want to create a number of new stock records related to an existing stock. Examples of such situations are recombinant inbred line populations or nested association mapping panels.',
-      '#weight' => -100,
-    ];
-
-    $form['population_stock'] = [
-      '#title' => 'Population Stock Name',
-      '#description' => 'This is the grouping stock record for your population. For example, if this is a RIL, you may select RIL-123 here. This record must already exist.',
-      '#type' => 'textfield',
-      '#autocomplete_path' => 'admin/tripal/storage/chado/auto_name/stock',
-      '#weight' => -49,
-    ];
-
-    $form['relationship_type'] = [
-      '#title' => 'Relationship Type',
-      '#description' => 'This is the type of relationship to connect the grouping population stock record and the new individual stock records from the file.',
-      '#type' => 'textfield',
-      '#autocomplete_path' => 'admin/tripal/storage/chado/auto_name/cvterm/',
-      '#weight' => -48,
-    ];
-    */
-    
     
     return $form;
+  }
+
+  
+  /**
+   * Validate form field values.
+   */
+  public function formValidate($form, &$form_state) {
+    // Validate Population Entry.
+    // Validate Relationship Verb.
+    // Validate Prefix (If provided with).
+    // Validate file.
   }
 
   /**
@@ -206,5 +202,4 @@
     $file_path = $this->arguments['files'][0]['file_path'];
 
   }
-
 } //end of this class
