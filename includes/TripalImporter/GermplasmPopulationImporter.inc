@@ -75,11 +75,14 @@
   // Alters default impoter title to match population load combination illustrations.
   public static $upload_title = 'Population Individuals';
 
-
   /**
    * @see TripalImporter::form()
    */
   public function form($form, &$form_state) {
+    // Enable all field elements to work and let configration 
+    // check below decide should fields be disabled.
+    $disabled = FALSE;
+
     # INFO:
     $form['info'] = [
       '#type' => 'item',
@@ -93,6 +96,19 @@
         stock records related to an existing stock. Examples of such situations are 
         recombinant inbred line populations or nested association mapping panels.')
     ];
+
+    // Do allow importer if not configured.
+    $configuration = $this->getConfigurationSettings();
+    if ($configuration == 0) {
+      $l = l(t('Configure Importer'), 'admin/tripal/extension/germplasm_population_importer/configure');
+      $form['not_configured'] = [
+        '#markup' => '<div class="messages error">
+          This germplasm population importer is not configured correctly. ' . $l . '</div>',
+        '#weight' => -2500  
+      ];
+
+      $disabled = TRUE;
+    }  
 
     // Population Entry.
     // # FIELDSET: Population Entry fieldset.
@@ -111,6 +127,7 @@
         '#attributes' => array(
           'placeholder' => t('Germplasm / Stock Name')
         ),
+        '#disabled' => $disabled,
         '#id' => 'population-importer-fld-text-autocomplete-germplasm'
       ];
 
@@ -129,7 +146,7 @@
       // Cvterm id is returned.
       $stock_relationship = chado_select_record('cvterm', 
         ['cvterm_id',  'UPPER(REPLACE(name, \'_\', \' \')) AS name'], 
-        ['cv_id' => ['name' => 'stock_relationship']], 
+        ['cv_id' => ['cv_id' => $configuration]], 
         ['order by' => ['name' => 'asc']]
       );
       
@@ -140,13 +157,15 @@
       foreach($stock_relationship as $rel) {
         // Cvterm id as key and name as value. Cvterm id is returned
         // when selection is made.
-        $fld_relationship_options[$rel->cvterm_id] = $rel->name;
+        $fld_relationship_options[ $rel->cvterm_id ] = $rel->name;
       }
 
       $form['fieldset_relationship_verb']['fld_select_relationship_verb'] = [
         '#type' => 'select',
         '#default_value' => 0,
-        '#options' => $fld_relationship_options
+        '#options' => $fld_relationship_options,
+        '#disabled' => $disabled,
+        '#attributes' => ['style' => ['width: 449px']]
       ];
 
       # FIELD: Radio buttons.
@@ -154,6 +173,7 @@
       $form['fieldset_relationship_verb']['fld_radio_position'] = [
         '#type' => 'radios',
         '#default_value' => 1,
+        '#disabled' => $disabled,
         '#options' => [
           1 => t('Population Entry as SUBJECT and Population Individuals as OBJECT of the relationship.'),
           2 => t('Population Individuals as SUBJECT and Population Entry as OBJECT of the relationship.')
@@ -163,7 +183,7 @@
       # IMAGE: Population load illustration.
       $path = $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'uofspb_germplasm');
       $form['fieldset_relationship_verb']['image_illustration'] = [
-        '#markup' => '<div style="margin-top: 20px"><img src="' . $path . '/theme/images/population-load-combination.gif" /></div>'
+        '#markup' => '<div style="margin-top: 20px"><img src="' . $path . '/theme/images/population-load-combination.gif" style="max-width: 80%" /></div>'
       ];
 
     // Population Individuals.
@@ -201,5 +221,13 @@
     $arguments = $this->arguments['run_args'];
     $file_path = $this->arguments['files'][0]['file_path'];
 
+  }
+
+  /**
+   * Get configuration settings.
+   */
+  public function getConfigurationSettings() {
+    $configuration = 'germplasm_population_importer_verb_cv';
+    return variable_get($configuration);
   }
 } //end of this class

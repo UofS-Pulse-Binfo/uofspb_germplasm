@@ -150,8 +150,26 @@ function uofspb_germplasm_ontology_list(){
 }
 
 /**
- * Implements hook_form_alter()
- * Hook will insert a form field to Tripal Importer file fieldset.
+ * Implements hook_menu().
+ */
+function uofspb_germplasm_menu() {
+  // Configuration page for Germplasm Importer Page.
+  $items['admin/tripal/extension/germplasm_population_importer/configure'] = array(
+    'title' => t('Germplasm Population Importer Configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('germplasm_population_importer_config_form'),
+    'access arguments' => array('administer tripal'),
+    'file' => 'includes/germplasm_population_importer.config.form.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_form_alter().
+ * Hook will insert a form field to Tripal Importer file fieldset
+ * in Germplasm Population Importer.
  */
 function uofspb_germplasm_form_alter(&$form, &$form_state, $form_id) {
   if (isset($form['importer_class']['#value']) && $form['importer_class']['#value'] == 'GermplasmPopulationImporter') {
