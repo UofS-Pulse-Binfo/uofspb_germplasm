@@ -173,13 +173,18 @@ function uofspb_germplasm_menu() {
  */
 function uofspb_germplasm_form_alter(&$form, &$form_state, $form_id) {
   if (isset($form['importer_class']['#value']) && $form['importer_class']['#value'] == 'GermplasmPopulationImporter') {
+    $default_prefix = variable_get('germplasm_population_importer_default_prefix');
+
     $form['file']['fld_text_prefix'] = [
       '#type' => 'textfield',
       '#title' => 'Prefix',
       '#description' => t('Please give a prefix for this germplasm individuals. Unique names for germplasm contained in file will 
         be this prefix followed by stock id. Unique prefix can help you track this germplasm in the future, and default prefix 
-        is GERM. <br /><strong>NOTE:</strong> Unique names for existed germplasm individual will be updated with new prefix too.
+        is ' . $default_prefix . '. <br /><strong>NOTE:</strong> Unique names for existed germplasm individual will be updated with new prefix too.
       '),
+      '#attributes' => array(
+        'placeholder' => t($default_prefix)
+      ),
       '#id' => 'population-importer-fld-text-prefix'
     ];
   }

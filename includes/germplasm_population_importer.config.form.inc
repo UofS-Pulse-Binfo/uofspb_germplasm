@@ -37,6 +37,18 @@ function germplasm_population_importer_config_form($form, &$form_state) {
         vocabulary containing the terms that represent relationship verb.'),
     ];
   
+    # FIELD: Germplasm name default prefix.
+    // Configuration name, set during install/enable to GERM.
+    $config_prefix = 'germplasm_population_importer_default_prefix';
+    // Default/current value of the configuration.
+    $default_prefix = variable_get($config_prefix);
 
+    $form['fieldset_importer_configuration'][ $config_prefix ] = [
+      '#type' => 'textfield',
+      '#default_value' => $default_prefix,
+      '#description' => t('Use this field value as germplasm prefix.'),
+    ];
+
+    
   return system_settings_form($form);
 }

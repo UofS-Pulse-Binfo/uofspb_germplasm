@@ -128,6 +128,7 @@
           'placeholder' => t('Germplasm / Stock Name')
         ),
         '#disabled' => $disabled,
+        '#required' => TRUE,
         '#id' => 'population-importer-fld-text-autocomplete-germplasm'
       ];
 
@@ -165,7 +166,9 @@
         '#default_value' => 0,
         '#options' => $fld_relationship_options,
         '#disabled' => $disabled,
-        '#attributes' => ['style' => ['width: 449px']]
+        '#attributes' => ['style' => ['width: 449px']],
+        '#required' => TRUE,
+        '#id' => 'population-importer-fld-select-relationship-verb'
       ];
 
       # FIELD: Radio buttons.
@@ -208,10 +211,84 @@
    * Validate form field values.
    */
   public function formValidate($form, &$form_state) {
-    // Validate Population Entry.
-    // Validate Relationship Verb.
-    // Validate Prefix (If provided with).
-    // Validate file.
+    // Always call the TripalImporter (i.e. parent) formValidate as it provides
+    // some important feature needed to make the form work properly.
+    parent::formValidate($form, $form_state);
+
+    # Validate Population Entry.
+    $fld_name_population_entry = 'fld_text_autocomplete_germplasm';
+    $fld_value_population_entry = $form_state['values'][ $fld_name_population_entry ];
+    
+    // Gerplasm Autocomplete Notation: ABC 123 [id: 123]:
+    preg_match('/^.* \[id: (\d*)\]$/', $fld_value_population_entry, $match);
+    if ($match !== FALSE && $match[1] > 0) {
+      // Check if germplasm id do exist.
+      $stock_id = $match[1];
+      $stock = chado_select_record('stock', ['stock_id'], ['stock_id' => $stock_id]);
+      if (!$stock) {
+        // Confirmed, germplasm does not exist.
+        form_set_error($fld_name_population_entry, t('Germplasm does not exist. Please enter a valid germplasm in Population Entry.'));
+      }
+    }
+    else {
+      // Could not establish germplasm id.
+      form_set_error($fld_name_population_entry, t('Please enter a valid germplasm in Population Entry.'));
+    }
+
+    # Validate Relationship Verb.
+    $fld_name_relationship_verb = 'fld_select_relationship_verb';
+    $fld_value_relationship_verb = $form_state['values'][ $fld_name_relationship_verb ];
+    if ($fld_value_relationship_verb == 0) {
+      // None selected in relationship verb select field.
+      form_set_error($fld_name_relationship_verb, t('Please select a value in Relationship Verb.'));
+    }
+
+    # Validate Prefix (If provided with).
+    // No more than 10 characters for prefix.
+    $fld_name_prefix = 'fld_text_prefix';
+    $fld_value_prefix = $form_state['values'][ $fld_name_prefix ];
+    if (!empty($fld_value_prefix) && strlen($fld_value_prefix) > 20) {
+      form_set_error($fld_name_prefix, t('Please ensure prefix is no more than 20 characters.'));
+    }
+    
+    # Validate File.
+    // File - contents and headers.
+    $file_id = $form_state['values']['file_upload'];
+    // Each line has name, type, scientific name and uniquename.
+    if ($file_id > 0) {
+      $file = file_load($file_id);
+      if ($file) {
+        $file_path = drupal_realpath($file->uri);
+        $handle = fopen($file_path, 'r');
+
+        if ($handle) {
+          $i = 0;
+          while(!feof($handle)) {
+            $cur_line = fgets($handle);
+
+            if ($i == 0) {
+              # Validate headers.
+              $headers = str_getcsv($cur_line, "\t");
+             dpm($headers);
+              if (strtolower($headers[0]) != 'name' 
+                  || strtolower($headers[1]) != 'type'
+                  || strtolower($headers[2]) != 'scientific name'
+                  || strtolower($headers[4]) != 'uniquename') {
+                    
+                form_set_error(0, 'Invalid column header found. Please remove file and upload again.');
+              }
+            }
+            else {
+              # Validate Line - data row.
+              // Germplasm does not exist
+
+            }
+
+            $i++;
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -220,6 +297,22 @@
   public function run() {
     $arguments = $this->arguments['run_args'];
     $file_path = $this->arguments['files'][0]['file_path'];
+
+  }
+
+  /**
+   * Function callback, create population.
+   * 
+   * @param $entry
+   *   Integer, the stock id number of germplasm as the Population Entry.
+   * @param $verb
+   *   Integer, the cvterm id number of a term as the Relationship Verb.
+   * @param $individuals
+   *   File object, file containing germplasm individuals as Population Individuals.
+   * @param $prefix
+   *   String, prefix used when naming germplasm. Default to GERM.
+   */
+  public function createPopulation($entry, $verb, $individuals, $prefix) {
 
   }
 
