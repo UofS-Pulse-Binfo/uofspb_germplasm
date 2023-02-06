@@ -309,7 +309,7 @@
               + data.stock_id 
               + '" style="background-color: ' 
               + bg 
-              + '"><td>@name</td><td>@remove</td></tr>';
+              + '"><td>@name</td><td>@publish</td><td>@remove</td></tr>';
     
             // NAME + ORGANISM:
             // In some cases stocks have no associated entity id,
@@ -325,7 +325,14 @@
           
             name += ' : ' + '<small>' + data.organism + '</small>';
             markup = markup.replace('@name', name);
-    
+            
+            // PUBLISHED or UNPUBLISHED:
+            // If a germplasm is unpublished or has no Tripal Content Type
+            // page setup, inform collection author accordingly.
+            var unpubNote = 'Unpublished Germplasm has no page and may be omitted from view list or exported file.';
+            var publish = (data.entity == '#') ? '<em title="' + unpubNote + '">[unpublished]</em>' : ''; 
+            markup = markup.replace('@publish', publish);
+
             // DELETE FROM COLLECTION:
             // Tag each line with the same stock id used in each row
             // and use this id to construct id of selected row for deletion.

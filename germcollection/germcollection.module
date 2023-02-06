@@ -159,14 +159,12 @@ function germcollection_name_autocomplete($string){
 		foreach($result as $stock) {
 		  $matches[] = array(
 			'id' => $stock->id,
-			'name' => $stock->name . $collection
+			'name' => $stock->name
 		  );
 		}
 	  }
 	}
   }
-
-
 
   drupal_json_output($matches);
 }

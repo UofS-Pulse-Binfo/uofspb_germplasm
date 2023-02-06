@@ -118,59 +118,54 @@ class co_010__germplasm extends ChadoField {
 
     // Since the stock collection is the chado record...
     $stockcollection_id = $entity->chado_record_id;
-
+    $results = germcollection_get_germplasm($stockcollection_id);
+    
     $bundles = chado_query("SELECT tb.label, cb.chado_bundle_id
       FROM tripal_bundle tb LEFT JOIN chado_bundle cb ON cb.bundle_id=tb.id
       WHERE cb.data_table='stock'");
+    
     foreach ($bundles as $r) {
       $table = 'chado_bio_data_'.$r->chado_bundle_id;
       $bundle_tables[] = $table;
       $bundle_labels[$table] = $r->label;
     }
 
-    // Our researchers are very concerned with origin so we're going to add
-    // that to this table if the term exists and more then 50% of germplasm
-    // have the property.
-    $origin_term = chado_get_cvterm(['name' => 'country_of_origin', 'cv_id' => ['name' => 'stock_property']]);
-
-    $origin_accession = 'internal:country_of_origin';
-    $results = chado_query('
-      SELECT s.stock_id, s.name, s.uniquename, o.genus, o.species, prop.value as origin
-      FROM {stock} s
-      LEFT JOIN {organism} o ON o.organism_id=s.organism_id
-      LEFT JOIN {stockprop} prop ON prop.stock_id=s.stock_id AND prop.type_id = :origin_type
-      WHERE s.stock_id IN (SELECT stock_id FROM {stockcollection_stock} WHERE stockcollection_id=:id)
-      ORDER BY s.uniquename ASC
-      ',
-      [':id' => $stockcollection_id, ':origin_type' => $origin_term->cvterm_id]
-    );
- 
-    foreach ($results as $k => $r) {
-
-      // Entity ID
-      foreach ($bundle_tables as $bundle_table) {
-        $entity_id = db_query("SELECT entity_id FROM $bundle_table WHERE record_id=:id",
-          [':id' => $r->stock_id])->fetchField();
-        $bundle_label = $bundle_labels[$bundle_table];
-        if ($entity_id) { break; }
-      }
-
-      // Save the chado data.
-      $entity->{$field_name}['und'][$k]['chado-stockcollection__stock_id'] = $r->stock_id;
-      $entity->{$field_name}['und'][$k]['chado-stockcollection__stockcollection_id'] = $stockcollection_id;
-
-      // Save the value.
-      $entity->{$field_name}['und'][$k]['value'] = [];
-      $entity->{$field_name}['und'][$k]['value']['schema:name'] = $r->name;
-      $entity->{$field_name}['und'][$k]['value']['data:identifier'] = $r->uniquename;
-      $entity->{$field_name}['und'][$k]['value']['rdfs:type'] = $bundle_label;
-      $entity->{$field_name}['und'][$k]['value']['taxrank:0000005'] = $r->genus;
-      $entity->{$field_name}['und'][$k]['value']['taxrank:0000006'] = $r->species;
-      $entity->{$field_name}['und'][$k]['value'][$origin_accession] = ($r->origin) ? $r->origin : '-'; 
-      if (!empty($entity_id)) { $entity->{$field_name}['und'][$k]['value']['schema:url'] = 'bio_data/'.$entity_id; }
-    }
-    // @debug dpm($entity->{$field_name}['und'][0], 'first item from load');
+    $entity->{$field_name}['und'] = [];
     
+    if (count($results) > 0) {
+      foreach ($results as $k => $stock) {
+        list($name, $uniquename, $entity_id, $genus, $species, $origin, $stock_id) = $stock;
+        
+        // Entity ID
+        foreach ($bundle_tables as $bundle_table) {
+          $is_private = 0;
+
+          $entity_id = db_query("SELECT entity_id FROM $bundle_table WHERE record_id=:id",
+            [':id' => $stock_id])->fetchField();
+          $bundle_label = $bundle_labels[$bundle_table];
+          if ($entity_id) { 
+            $entity = entity_load('TripalEntity', [$entity_id]);       
+            dpm($entity->{$entity_id});
+            break; 
+          }
+        }
+
+        // Save the chado data.
+        $entity->{$field_name}['und'][$k]['chado-stockcollection__stock_id'] = $stock_id;
+        $entity->{$field_name}['und'][$k]['chado-stockcollection__stockcollection_id'] = $stockcollection_id;
+
+        // Save the value.
+        $entity->{$field_name}['und'][$k]['value'] = [];
+        $entity->{$field_name}['und'][$k]['value']['schema:name'] = $name;
+        $entity->{$field_name}['und'][$k]['value']['data:identifier'] = $uniquename;
+        $entity->{$field_name}['und'][$k]['value']['rdfs:type'] = $bundle_label;
+        $entity->{$field_name}['und'][$k]['value']['taxrank:0000005'] = $genus;
+        $entity->{$field_name}['und'][$k]['value']['taxrank:0000006'] = $species;
+        $entity->{$field_name}['und'][$k]['value']['internal:country_of_origin'] = ($origin) ? $origin : '-'; 
+        if (!empty($entity_id)) { $entity->{$field_name}['und'][$k]['value']['schema:url'] = 'bio_data/'. $entity_id; }
+      }
+    } 
+    // @debug dpm($entity->{$field_name}['und'][0], 'first item from load');
   }
 
   /**

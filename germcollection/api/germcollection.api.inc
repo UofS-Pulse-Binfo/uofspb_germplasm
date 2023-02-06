@@ -49,7 +49,8 @@ function germcollection_get_germplasm($collection_id) {
         $entity_id, // Entity id number.
         $stock->genus, // Genus.
         $stock->species, // Species.
-        $stock->origin // Country of origin.
+        $stock->origin, // Country of origin.
+        $stock->stock_id // Stock Id number.
       );
     }
   }

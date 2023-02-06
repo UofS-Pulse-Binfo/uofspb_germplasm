@@ -36,7 +36,7 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
     // Get the settings
     $settings = $display['settings'];
 
-    if (sizeof($items)) {
+    if (sizeof($items)) { dpm($items);
       // Collection id number.
       $collection_id = $entity->chado_record_id;
       // Count germplasm in collection.
@@ -55,7 +55,8 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       $search_stock_id = 0;
       $found_stock_id = '';
       $search_result = '';
-      
+      $found_flag = 0;
+
       if ($search != '') {
         preg_match('/\[id:(\d+)\]$/', $search, $match);
         if (isset($match[1]) && $match[1] > 0) {
@@ -63,7 +64,12 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
 
           $stock_ids = array_column($items, 'chado-stockcollection__stock_id');
           $found_stock_id = array_search($search_stock_id, $stock_ids);
-          $search_result = ($found_stock_id === false) ? 'Not found' : '';
+          if ($found_stock_id === FALSE) {
+            $search_result = 'Not found';
+          }
+          else {
+            $found_flag = 1;
+          }
         }
         else {
           $search_result = 'Not found';
@@ -176,7 +182,7 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
 
       // Now only show the elements for the current page.
       $start_item = $current_page * $items_per_page;
-      if ($found_stock_id >= 0 && $found_stock_id != 0) {
+      if ($found_flag == 1) {
         $start_item = $found_stock_id;
         $end_item = $found_stock_id;
         $items_per_page = 1;
