@@ -173,8 +173,11 @@ function uofspb_germplasm_menu() {
  */
 function uofspb_germplasm_form_alter(&$form, &$form_state, $form_id) {
   if (isset($form['importer_class']['#value']) && $form['importer_class']['#value'] == 'GermplasmPopulationImporter') {
+    // Configuration for prefix.
     $default_prefix = variable_get('germplasm_population_importer_default_prefix');
-
+    
+    # FIELD: Prefix gerplasm uniquename.
+    // This is default to GERM.
     $form['file']['fld_text_prefix'] = [
       '#type' => 'textfield',
       '#title' => 'Prefix',
@@ -187,5 +190,10 @@ function uofspb_germplasm_form_alter(&$form, &$form_state, $form_id) {
       ),
       '#id' => 'population-importer-fld-text-prefix'
     ];
+
+    # FIELD: Select existing/previously uploaded file.
+    // This will prevent previously uploaded file from being suggested to user.
+    // Will reqiure re-upload on failed submit due to errors.
+    $form['file']['file_upload_existing'] = [];
   }
 }

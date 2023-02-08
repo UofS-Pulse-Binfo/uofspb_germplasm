@@ -99,7 +99,7 @@
 
     // Do allow importer if not configured.
     $configuration = $this->getConfigurationSettings();
-    if ($configuration == 0) {
+    if ($configuration['verb'] == 0) {
       $l = l(t('Configure Importer'), 'admin/tripal/extension/germplasm_population_importer/configure');
       $form['not_configured'] = [
         '#markup' => '<div class="messages error">
@@ -147,7 +147,7 @@
       // Cvterm id is returned.
       $stock_relationship = chado_select_record('cvterm', 
         ['cvterm_id',  'UPPER(REPLACE(name, \'_\', \' \')) AS name'], 
-        ['cv_id' => ['cv_id' => $configuration]], 
+        ['cv_id' => ['cv_id' => $configuration['verb']]], 
         ['order by' => ['name' => 'asc']]
       );
       
@@ -186,7 +186,7 @@
       # IMAGE: Population load illustration.
       $path = $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'uofspb_germplasm');
       $form['fieldset_relationship_verb']['image_illustration'] = [
-        '#markup' => '<div style="margin-top: 20px"><img src="' . $path . '/theme/images/population-load-combination.gif" style="max-width: 80%" /></div>'
+        '#markup' => '<div style="margin-top: 20px"><img src="' . $path . '/theme/images/population-load-combination.gif" style="max-width: 70%" /></div>'
       ];
 
     // Population Individuals.
@@ -257,36 +257,108 @@
     // Each line has name, type, scientific name and uniquename.
     if ($file_id > 0) {
       $file = file_load($file_id);
-      if ($file) {
+
+      if ($file && $file->filesize > 0) {
         $file_path = drupal_realpath($file->uri);
         $handle = fopen($file_path, 'r');
 
         if ($handle) {
           $i = 0;
           while(!feof($handle)) {
+            // Current line.
             $cur_line = fgets($handle);
 
             if ($i == 0) {
-              # Validate headers.
-              $headers = str_getcsv($cur_line, "\t");
-             dpm($headers);
-              if (strtolower($headers[0]) != 'name' 
-                  || strtolower($headers[1]) != 'type'
-                  || strtolower($headers[2]) != 'scientific name'
-                  || strtolower($headers[4]) != 'uniquename') {
-                    
-                form_set_error(0, 'Invalid column header found. Please remove file and upload again.');
+              # VALIDATE HEADER LINE:
+              if (trim($cur_line) == '') {
+                // Line 0 is not the column header.
+                form_set_error(0, 'Could not find column headers row in line #1.');
+              }
+              else {
+                // 0:Name, 1:Type, 2:Scientific Name (genus + species), 3:Uniquename.
+                $headers = str_getcsv($cur_line, "\t");
+                if (strtolower($headers[0])    != 'name' 
+                    || strtolower($headers[1]) != 'type'
+                    || strtolower($headers[2]) != 'scientific name'
+                    || strtolower($headers[3]) != 'uniquename') {
+                      
+                  form_set_error(0, 'Invalid column header found. Please review column header requirements.');
+                }
               }
             }
             else {
-              # Validate Line - data row.
-              // Germplasm does not exist
+              # VALIDATE DATA ROW:
+              $error_message = 'ERROR: Germplasm in line #:' . ($i + 1) . '. ';
 
+              if (trim($cur_line) == '') {
+                // A data row is empty.
+                form_set_error(0, $error_message . 'Line is an empty row.');
+              }
+              else {
+                // Peform subsequent validation assuming there is a row to check.            
+                $values = str_getcsv($cur_line, "\t");
+                @list($val_name, $val_type, $val_sciname, $val_uniqname) = array_map('trim', $values);
+                
+                # BASIC VALIDATION:
+                // Each column with the exception of uniquename (which is optional)
+                // must have a value. Type and Scientific Name should contain a string value.
+                if ($val_name == '' || $val_type == '' || $val_sciname == '') {
+                  form_set_error(0, $error_message . 'Column(s) does not have a value.');
+                }
+                
+                if (ctype_digit($val_type) || ctype_digit($val_sciname)) {
+                  form_set_error(0, $error_message . 'Invalid numeric value in Type and/or Scientific Name.');
+                }
+
+
+                # TERMS VALIDATION:
+                // Each line, Type is checked to ensure that it exists in chado.cvterm. In the same
+                // way, organism is checked using the genus + species derived from Scientific Name.
+                $result = chado_select_record('cvterm', ['cvterm_id'], ['name' => $val_type]);
+                if (!$result) {
+                  form_set_error(0, $error_message . 'Type does not exist.');
+                }
+                $val_term_id = $result['cvterm_id'];
+
+                preg_match('/^(\w+)\s{1}(.*)/', $val_sciname, $match);
+                $organism = ['genus' => trim($match[1]), 'species' => trim($match[2])];                
+                if ($organism['genus'] && $organism['species']) {
+                  $result = chado_select_record('organism', ['organism_id'], $organism);
+                  if (!$result) {
+                    form_set_error(0, $error_message . 'Organism does not exist.');
+                  }
+                }
+
+
+                # GERMPLASM VALIDATION:
+                // Every uniquename (when provided) is checked to ensure that there is no copy in chado.stock table.
+                // Germplasm+name+Organism combination is unique.
+                if ($val_uniqname) {
+                  $result = chado_select_record('stock', ['stock_id'], ['uniquename' => $val_uniqname]);
+                  if ($result) {
+                    form_set_error(0, $error_message . 'Uniquename is already used by another germplasm.');
+                  }
+                }
+
+                $result = chado_select_record('stock', ['stock_id'], [
+                  'name' => $val_name,
+                  'type_id' => $val_term_id,
+                  'organism_id' => ['genus' => $organism['genus'], 'species' => $organism['species']]
+                ]);
+                if ($result) {
+                  form_set_error(0, $error_message . 'Name+Type+Scientific Name combination is already used by another germplasm.');
+                }
+              }
             }
-
+            
+            // Next line.
             $i++;
           }
         }
+      }
+      else {
+        // Not a valid file or is an empty file.
+        form_set_error(0, 'Not a valid file or file is empty.');
       }
     }
   }
@@ -320,7 +392,11 @@
    * Get configuration settings.
    */
   public function getConfigurationSettings() {
-    $configuration = 'germplasm_population_importer_verb_cv';
-    return variable_get($configuration);
+    // Relationship verb configuruation.
+    $verb_configuration = variable_get('germplasm_population_importer_verb_cv');
+    // Prefix configuration.
+    $prefix_configuration = variable_get('germplasm_population_importer_default_prefix');
+
+    return ['verb' => $verb_configuration, 'prefix' => $prefix_configuration];
   }
 } //end of this class
