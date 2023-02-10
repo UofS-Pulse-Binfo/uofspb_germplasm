@@ -52,7 +52,7 @@
    */
   public static $upload_description = 'Germplasm file should be a tab separated file containing a header with the following colums:<ol>
       <li><strong>Name</strong>: The name of the RIL individual.</li>
-      <li><strong>Type</strong>: The name of the cvterm which should be used for the stock record, must exist.</li>
+      <li><strong>Type</strong>: The vocabulary database name + : + cvterm (ie. schema:F1) which should be used for the stock record, must exist.</li>
       <li><strong>Scientific Name</strong>: The genus + species of the organism to be used for the stock record, must exist.</li>
       <li><strong>Uniquename</strong>: The uniquename to use if you do not want to use the pattern/prefix below.</li>
     </ol>
@@ -120,7 +120,7 @@
       
       # FIELD: Autocomplete search.
       // Search germplasm/stock as the population entry.
-      $form['fieldset_population_entry']['fld_text_autocomplete_germplasm'] = [
+      $form['fieldset_population_entry']['fld_text_population_entry'] = [
         '#type' => 'textfield',   
         '#autocomplete_path' => 'admin/tripal/storage/chado/auto_name/stock',
         '#required' => TRUE,
@@ -129,7 +129,7 @@
         ),
         '#disabled' => $disabled,
         '#required' => TRUE,
-        '#id' => 'population-importer-fld-text-autocomplete-germplasm'
+        '#id' => 'population-importer-fld-text-population-entry'
       ];
 
 
@@ -173,13 +173,13 @@
 
       # FIELD: Radio buttons.
       // Set stock position in the relationship.
-      $form['fieldset_relationship_verb']['fld_radio_position'] = [
+      $form['fieldset_relationship_verb']['fld_radio_stock_position'] = [
         '#type' => 'radios',
-        '#default_value' => 1,
+        '#default_value' => 'evi',
         '#disabled' => $disabled,
         '#options' => [
-          1 => t('Population Entry as SUBJECT and Population Individuals as OBJECT of the relationship.'),
-          2 => t('Population Individuals as SUBJECT and Population Entry as OBJECT of the relationship.')
+          'evi' => t('Population Entry as SUBJECT and Population Individuals as OBJECT of the relationship.'),
+          'ive' => t('Population Individuals as SUBJECT and Population Entry as OBJECT of the relationship.')
         ]
       ];
       
@@ -216,7 +216,7 @@
     parent::formValidate($form, $form_state);
 
     # Validate Population Entry.
-    $fld_name_population_entry = 'fld_text_autocomplete_germplasm';
+    $fld_name_population_entry = 'fld_text_population_entry';
     $fld_value_population_entry = $form_state['values'][ $fld_name_population_entry ];
     
     // Gerplasm Autocomplete Notation: ABC 123 [id: 123]:
@@ -312,13 +312,24 @@
 
 
                 # TERMS VALIDATION:
-                // Each line, Type is checked to ensure that it exists in chado.cvterm. In the same
+                // Each line, Type (db cv:cvterm) is checked to ensure that it exists in chado.cvterm. In the same
                 // way, organism is checked using the genus + species derived from Scientific Name.
-                $result = chado_select_record('cvterm', ['cvterm_id'], ['name' => $val_type]);
-                if (!$result) {
+                preg_match('/^(.+):{1}(.+)$/', $val_type, $match);
+                $term = ['dbcv' => $match[1], 'cvterm' => $match[2]];
+                if ($term['dbcv'] && $term['cvterm']) { 
+                  $result_type = chado_select_record('cvterm', ['cvterm_id'],[
+                    'dbxref_id' => ['db_id' => ['name' => $term['dbcv']]],
+                    'name' => $term['cvterm']
+                  ]);
+
+                  if (!$result_type) {
+                    form_set_error(0, $error_message . 'Type does not exist.');
+                  }
+                }
+                else {
+                  // Not in the format expected, likely could not be found.
                   form_set_error(0, $error_message . 'Type does not exist.');
                 }
-                $val_term_id = $result['cvterm_id'];
 
                 preg_match('/^(\w+)\s{1}(.*)/', $val_sciname, $match);
                 $organism = ['genus' => trim($match[1]), 'species' => trim($match[2])];                
@@ -327,6 +338,10 @@
                   if (!$result) {
                     form_set_error(0, $error_message . 'Organism does not exist.');
                   }
+                }
+                else {
+                  // Not in the format expected, likely could not be found.
+                  form_set_error(0, $error_message . 'Organism does not exist.');
                 }
 
 
@@ -339,14 +354,20 @@
                     form_set_error(0, $error_message . 'Uniquename is already used by another germplasm.');
                   }
                 }
-
-                $result = chado_select_record('stock', ['stock_id'], [
-                  'name' => $val_name,
-                  'type_id' => $val_term_id,
-                  'organism_id' => ['genus' => $organism['genus'], 'species' => $organism['species']]
-                ]);
-                if ($result) {
-                  form_set_error(0, $error_message . 'Name+Type+Scientific Name combination is already used by another germplasm.');
+                
+                // Identical Types across multiple cv may occur therefore
+                // test each instance of a Type for a match. One match would
+                // suffice test that line is invalid.
+                foreach($result_type as $type) {  
+                  $result = chado_select_record('stock', ['stock_id'], [
+                    'name' => $val_name,
+                    'type_id' => $type->cvterm_id,
+                    'organism_id' => ['genus' => $organism['genus'], 'species' => $organism['species']]
+                  ]);
+                  
+                  if ($result) {
+                    form_set_error(0, $error_message . 'Name+Type+Scientific Name combination is already used by another germplasm.');
+                  }
                 }
               }
             }
@@ -367,25 +388,128 @@
   * @see TripalImporter::run()
   */
   public function run() {
+    // All values provided by the user in the Importer's form widgets are
+    // made available to us here by the Class' arguments member variable.
     $arguments = $this->arguments['run_args'];
-    $file_path = $this->arguments['files'][0]['file_path'];
+    
+    // Prefix when not provided will default to prefix 
+    // system configuration.
+    $configuration = $this->getConfigurationSettings();
+    $prefix = ($arguments['fld_radio_stock_prefix']) 
+      ? $arguments['fld_radio_stock_prefix'] 
+      : $configuration['prefix']; 
+    
+    // Form values.
+    $population = [
+      'enty' =>  $arguments['fld_text_population_entry'],
+      'verb'   => $arguments['fld_select_relationship_verb'],
+      'position' => $arguments['fld_radio_stock_position'],
+      'individuals' => $this->arguments['files'][0]['fid'],
+      'prefix' => $prefix
+    ];
 
+    $this->importPopulation($population);
   }
 
   /**
    * Function callback, create population.
    * 
-   * @param $entry
-   *   Integer, the stock id number of germplasm as the Population Entry.
-   * @param $verb
-   *   Integer, the cvterm id number of a term as the Relationship Verb.
-   * @param $individuals
-   *   File object, file containing germplasm individuals as Population Individuals.
-   * @param $prefix
-   *   String, prefix used when naming germplasm. Default to GERM.
+   * @param $population
+   *   Array, with the following keys:
+   *   entry: Form field value for Population Entry field.
+   *   verb : Form field value for Relationship Verb field.
+   *   position: Form field value for Stock Position field.
+   *   individuals: Form file field value for Population Individuals Field.
+   *   prefix: Form field value for Prefix field.
    */
-  public function createPopulation($entry, $verb, $individuals, $prefix) {
+  public function importPopulation($population) {
+    // 1) Recognize that the loader is not hung if running a large file, but is executing
+    // 2) Provides some indication for how long the file will take to load.
+    
+    // Here we'll get the size of the file and tell the TripalImporter how
+    // many "items" we have to process (in this case bytes of the file).
+    $file = file_load($population['individuals']);
+    $this->setTotalItems($file->filesize);
+    $this->setItemsHandled(0);
+    
+    $TRANSACTION = db_transaction();
+    try {
+      if ($file && $file->filesize > 0) {
+        $file_path = drupal_realpath($file->uri);
+        $handle = fopen($file_path, 'r');
+        if ($handle) {
+          $i = 0;
+          $bytes_read = 0;
+          // Fetch the last stock_id auto-increment inserted, increment
+          // the value each time a stock is added. This value is concatenated
+          // to the prefix (when provided) that will make up the uniquename of the stock.
+          // Skip this when file has provided a custom uniquename.
+          $id = chado_select_record('stock', ['stock_id'], [], ['order by' => ['stock_id' => 'DESC'], 'limit' => 1]);
+          $last_id = $id[0]->stock_id;
 
+          while(!feof($handle)) {
+            // Add all individuals in file into chado.stock table
+            // and simultaneously creating the Relationship verb.
+            $cur_line = fgets($handle);
+            
+            if ($i > 0 && trim($cur_line) != '') {
+              $values = str_getcsv($cur_line, "\t");
+              // Skip the header row.
+              @list($val_name, $val_type, $val_sciname, $val_uniqname) = array_map('trim', $values);
+     
+              # Construct uniquename:
+              // If line has no uniquename by using the prefix system configuration
+              // and next sequence id of stock.
+              $uniquename = ($val_uniqname == '') 
+                ? $population['prefix'] . ':' . ($last_id + $i) : $val_uniqname;
+              // Always encode in uppercase form.
+              $uniquename = strtoupper($uniquename);
+
+              # Description:
+              // Tag the stock with brief description of the source plus a timestamp.
+              $description = 'This germplasm was added through the Germplasm Population Importer. ' 
+                . date('l jS \of F Y h:i:s A');  
+
+              # Organism:
+              // Use the genus and species encoded in the Scientific Name to determine the organism.
+              preg_match('/^(\w+)\s{1}(.*)/', $val_sciname, $match);
+              $organism = ['genus' => trim($match[1]), 'species' => trim($match[2])];                
+              $result = chado_select_record('organism', ['organism_id'], $organism);
+              $organism_id = $result[0]->organism_id;
+
+              # Type:
+              // Use the database name and cvterm encoded in Type to determine the stock type.
+              preg_match('/^(.+):{1}(.+)$/', $val_type, $match);
+              $term = ['dbcv' => $match[1], 'cvterm' => $match[2]];
+              $result = chado_select_record('cvterm', ['cvterm_id'],[
+                'dbxref_id' => ['db_id' => ['name' => $term['dbcv']]],
+                'name' => $term['cvterm']
+              ]);
+              $type_id = $result[0]->cvterm_id;
+              
+              // Population individual to insert.
+              $stock = [
+                'name'      => $val_name,
+                'uniquename'  => $uniquename,
+                'organism_id'  => $organism_id,
+                'description' => $description,
+                'type_id'   => $type_id,
+              ];
+
+              $indvidual = chado_insert_record('stock', $stock);
+             
+              # Create Relationship:
+            }
+
+            $i++;
+          }
+        }
+      }
+    }
+    catch(Exception $e) {
+      $TRANSACTION->rollback();
+      exit();
+    }
   }
 
   /**

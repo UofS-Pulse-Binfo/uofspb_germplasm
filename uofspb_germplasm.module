@@ -178,7 +178,7 @@ function uofspb_germplasm_form_alter(&$form, &$form_state, $form_id) {
     
     # FIELD: Prefix gerplasm uniquename.
     // This is default to GERM.
-    $form['file']['fld_text_prefix'] = [
+    $form['file']['fld_text_stock_prefix'] = [
       '#type' => 'textfield',
       '#title' => 'Prefix',
       '#description' => t('Please give a prefix for this germplasm individuals. Unique names for germplasm contained in file will 
@@ -188,7 +188,7 @@ function uofspb_germplasm_form_alter(&$form, &$form_state, $form_id) {
       '#attributes' => array(
         'placeholder' => t($default_prefix)
       ),
-      '#id' => 'population-importer-fld-text-prefix'
+      '#id' => 'population-importer-fld-text-stock-prefix'
     ];
 
     # FIELD: Select existing/previously uploaded file.
