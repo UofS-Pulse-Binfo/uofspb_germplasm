@@ -173,6 +173,8 @@
 
       # FIELD: Radio buttons.
       // Set stock position in the relationship.
+      // evi: entry-verb-individual.
+      // ive: individual-verb-entry.
       $form['fieldset_relationship_verb']['fld_radio_stock_position'] = [
         '#type' => 'radios',
         '#default_value' => 'evi',
@@ -220,22 +222,13 @@
     $fld_value_population_entry = $form_state['values'][ $fld_name_population_entry ];
     
     // Gerplasm Autocomplete Notation: ABC 123 [id: 123]:
-    preg_match('/^.* \[id: (\d*)\]$/', $fld_value_population_entry, $match);
-    if ($match !== FALSE && $match[1] > 0) {
-      // Check if germplasm id do exist.
-      $stock_id = $match[1];
-      $stock = chado_select_record('stock', ['stock_id'], ['stock_id' => $stock_id]);
-      if (!$stock) {
-        // Confirmed, germplasm does not exist.
-        form_set_error($fld_name_population_entry, t('Germplasm does not exist. Please enter a valid germplasm in Population Entry.'));
-      }
-    }
-    else {
-      // Could not establish germplasm id.
-      form_set_error($fld_name_population_entry, t('Please enter a valid germplasm in Population Entry.'));
+    $stock = $this->parseStock($fld_value_population_entry);
+    if (!stock) {
+      form_set_error($fld_name_population_entry, t('Germplasm does not exist. Please enter a valid germplasm in Population Entry.'));
     }
 
     # Validate Relationship Verb.
+    // 0 - Select: is selected for this field.
     $fld_name_relationship_verb = 'fld_select_relationship_verb';
     $fld_value_relationship_verb = $form_state['values'][ $fld_name_relationship_verb ];
     if ($fld_value_relationship_verb == 0) {
@@ -244,11 +237,12 @@
     }
 
     # Validate Prefix (If provided with).
-    // No more than 10 characters for prefix.
-    $fld_name_prefix = 'fld_text_prefix';
+    // No more than 20 characters for prefix.
+    $fld_name_prefix = 'fld_text_stock_prefix';
     $fld_value_prefix = $form_state['values'][ $fld_name_prefix ];
+    dpm($fld_value_prefix);
     if (!empty($fld_value_prefix) && strlen($fld_value_prefix) > 20) {
-      form_set_error($fld_name_prefix, t('Please ensure prefix is no more than 20 characters.'));
+      form_set_error($fld_name_prefix, t('Prefix Error. Please ensure prefix is no more than 20 characters.'));
     }
     
     # Validate File.
@@ -288,6 +282,8 @@
             }
             else {
               # VALIDATE DATA ROW:
+              // Append each error encountered with the line number starting
+              // with the header as line 1.
               $error_message = 'ERROR: Germplasm in line #:' . ($i + 1) . '. ';
 
               if (trim($cur_line) == '') {
@@ -314,37 +310,16 @@
                 # TERMS VALIDATION:
                 // Each line, Type (db cv:cvterm) is checked to ensure that it exists in chado.cvterm. In the same
                 // way, organism is checked using the genus + species derived from Scientific Name.
-                preg_match('/^(.+):{1}(.+)$/', $val_type, $match);
-                $term = ['dbcv' => $match[1], 'cvterm' => $match[2]];
-                if ($term['dbcv'] && $term['cvterm']) { 
-                  $result_type = chado_select_record('cvterm', ['cvterm_id'],[
-                    'dbxref_id' => ['db_id' => ['name' => $term['dbcv']]],
-                    'name' => $term['cvterm']
-                  ]);
-
-                  if (!$result_type) {
-                    form_set_error(0, $error_message . 'Type does not exist.');
-                  }
-                }
-                else {
-                  // Not in the format expected, likely could not be found.
+                $type = $this->parseTerm($val_type);
+                if (!$type) {
                   form_set_error(0, $error_message . 'Type does not exist.');
                 }
 
-                preg_match('/^(\w+)\s{1}(.*)/', $val_sciname, $match);
-                $organism = ['genus' => trim($match[1]), 'species' => trim($match[2])];                
-                if ($organism['genus'] && $organism['species']) {
-                  $result = chado_select_record('organism', ['organism_id'], $organism);
-                  if (!$result) {
-                    form_set_error(0, $error_message . 'Organism does not exist.');
-                  }
-                }
-                else {
-                  // Not in the format expected, likely could not be found.
+                $organism = $this->parseOrganism($val_sciname);
+                if (!$organism) {
                   form_set_error(0, $error_message . 'Organism does not exist.');
                 }
-
-
+                
                 # GERMPLASM VALIDATION:
                 // Every uniquename (when provided) is checked to ensure that there is no copy in chado.stock table.
                 // Germplasm+name+Organism combination is unique.
@@ -355,20 +330,17 @@
                   }
                 }
                 
-                // Identical Types across multiple cv may occur therefore
-                // test each instance of a Type for a match. One match would
-                // suffice test that line is invalid.
-                foreach($result_type as $type) {  
-                  $result = chado_select_record('stock', ['stock_id'], [
-                    'name' => $val_name,
-                    'type_id' => $type->cvterm_id,
-                    'organism_id' => ['genus' => $organism['genus'], 'species' => $organism['species']]
-                  ]);
+                // Stock Name+Type+Scientific Name combination must be unique.
+                $result = chado_select_record('stock', ['stock_id'], [
+                  'name' => $val_name,
+                  'type_id' => $type,
+                  'organism_id' => $organism
+                ]);
                   
-                  if ($result) {
-                    form_set_error(0, $error_message . 'Name+Type+Scientific Name combination is already used by another germplasm.');
-                  }
+                if ($result) {
+                  form_set_error(0, $error_message . 'Name+Type+Scientific Name combination is already used by another germplasm.');
                 }
+                
               }
             }
             
@@ -395,17 +367,21 @@
     // Prefix when not provided will default to prefix 
     // system configuration.
     $configuration = $this->getConfigurationSettings();
-    $prefix = ($arguments['fld_radio_stock_prefix']) 
-      ? $arguments['fld_radio_stock_prefix'] 
+    $prefix = ($arguments['fld_text_stock_prefix']) 
+      ? $arguments['fld_text_stock_prefix'] 
       : $configuration['prefix']; 
     
+    // Isolate population entry stock id given the format
+    // Stock Name [id: Stock ID Number].
+    $population_entry_stock_id = $this->parseStock($arguments['fld_text_population_entry']);
+
     // Form values.
     $population = [
-      'enty' =>  $arguments['fld_text_population_entry'],
-      'verb'   => $arguments['fld_select_relationship_verb'],
-      'position' => $arguments['fld_radio_stock_position'],
-      'individuals' => $this->arguments['files'][0]['fid'],
-      'prefix' => $prefix
+      'entry' =>  $population_entry_stock_id,                  // Stock Id Number.
+      'verb'    => $arguments['fld_select_relationship_verb'], // Cvterm (Type) Id Numnber.
+      'position'  => $arguments['fld_radio_stock_position'],   // EVI or IVE position type.
+      'individuals' => $this->arguments['files'][0]['fid'],    // Individuals File Id.
+      'prefix' => $prefix                                      // Default Prefix.
     ];
 
     $this->importPopulation($population);
@@ -422,7 +398,7 @@
    *   individuals: Form file field value for Population Individuals Field.
    *   prefix: Form field value for Prefix field.
    */
-  public function importPopulation($population) {
+  public function importPopulation(array $population) {
     // 1) Recognize that the loader is not hung if running a large file, but is executing
     // 2) Provides some indication for how long the file will take to load.
     
@@ -472,20 +448,11 @@
 
               # Organism:
               // Use the genus and species encoded in the Scientific Name to determine the organism.
-              preg_match('/^(\w+)\s{1}(.*)/', $val_sciname, $match);
-              $organism = ['genus' => trim($match[1]), 'species' => trim($match[2])];                
-              $result = chado_select_record('organism', ['organism_id'], $organism);
-              $organism_id = $result[0]->organism_id;
+              $organism_id = $this->parseOrganism($val_sciname);
 
               # Type:
               // Use the database name and cvterm encoded in Type to determine the stock type.
-              preg_match('/^(.+):{1}(.+)$/', $val_type, $match);
-              $term = ['dbcv' => $match[1], 'cvterm' => $match[2]];
-              $result = chado_select_record('cvterm', ['cvterm_id'],[
-                'dbxref_id' => ['db_id' => ['name' => $term['dbcv']]],
-                'name' => $term['cvterm']
-              ]);
-              $type_id = $result[0]->cvterm_id;
+              $type_id = $this->parseTerm($val_type);
               
               // Population individual to insert.
               $stock = [
@@ -496,9 +463,28 @@
                 'type_id'   => $type_id,
               ];
 
-              $indvidual = chado_insert_record('stock', $stock);
-             
+              // Save the id of the individual being added 
+              // and use it in the relationship below. 
+              $individual = chado_insert_record('stock', $stock);
+              
               # Create Relationship:
+              $relation = [];
+              // Verb.
+              $relation['type_id'] = $population['verb'];
+
+              // Position.
+              if ($population['position'] == 'evi') {
+                // Entry - Verb - Individual.
+                $relation['subject_id'] = $population['entry'];
+                $relation['object_id'] = $individual['stock_id'];
+              }
+              elseif ($population['position'] == 'ive') {
+                // Individual - Verb - Entry
+                $relation['object_id'] = $individual['stock_id'];
+                $relation['subject_id']  = $population['entry'];
+              }
+              
+              chado_insert_record('stock_relationship', $relation);
             }
 
             $i++;
@@ -514,6 +500,10 @@
 
   /**
    * Get configuration settings.
+   *
+   * @return array
+   *   Assoc. array with keys verb and prefix containing the 
+   *   configuration value of verb and prefix, respectively.
    */
   public function getConfigurationSettings() {
     // Relationship verb configuruation.
@@ -521,6 +511,112 @@
     // Prefix configuration.
     $prefix_configuration = variable_get('germplasm_population_importer_default_prefix');
 
-    return ['verb' => $verb_configuration, 'prefix' => $prefix_configuration];
+    return [
+      'verb' => $verb_configuration, 
+      'prefix' => $prefix_configuration
+    ];
   }
+
+  /**
+   * Parse form values for Stock/Germplasm (Population Entry) and fetch
+   * the matching row in chado.stock table.
+   * 
+   * @param $value
+   *   String, containing the stock name and stock id in 
+   *   the following notation: Stock Name\s[id:\sStock Id Number].
+   *
+   * @return integer
+   *   Stock id number that matched the resolved stock id 
+   *   from the input string.
+   */
+  public function parseStock($value) {
+    $result = '';
+    $table  = 'stock';
+    
+    // Capture the stock id sequence of numbers in brackets.
+    preg_match('/^.*\[id:\s{1}(\d+)\]$/', $value, $match);
+    if ($match !== FALSE && $match[1] > 0) {
+      $values = [
+        'stock_id' => (int) $match[1],
+      ];
+      
+      // Fetch stock that match the stock id enclosed in
+      // the input string form value.
+      $select = chado_select_record($table, ['stock_id'], $values);
+      if ($select) {
+        $result = $select[0]->stock_id;
+      }
+    }
+    
+    return $result;
+  }
+  
+  /**
+   * Parse form values for cv/dbname:cvterm name (Type) and fetch
+   * the matching row in chado.cvterm. ie. SO:F1
+   * 
+   * @param $value
+   *   String, containing the database name and cvterm name in 
+   *   the following notation: CV/Database name:Cvterm name.
+   * 
+   * @return integer
+   *   Cvterm id number that matched the resolved cvterm id
+   *   from the input string.
+   */ 
+  public function parseTerm($value) {
+    $result = '';
+    $table  = 'cvterm';
+
+    // Capture the database name and cvterm name.
+    preg_match('/^(.+):{1}(.+)$/', $value, $match);
+    if ($match !== FALSE && ($match[1] && $match[2])) {
+      $values = [
+        'name' => $match[2],
+        'dbxref_id' => ['db_id' => ['name' => $match[1]]],
+      ];
+
+      // Fetch cvterm that match the dbname and cvterm name
+      // in the input string form value. The dbname will
+      // ensure that a specific term will be returned.
+      $select = chado_select_record($table, ['cvterm_id'], $values);
+      if ($select) {
+        $result = $select[0]->cvterm_id;
+      }
+    }
+
+    return $result;
+  }
+ 
+  /**
+   * Parse form values for Scientific Name (ogranism: genus+species) and
+   * fetch the matching row in chado.organism.
+   * 
+   * @param $value
+   *   String, containing the genus and species in the
+   *   following notation: Genus\sSpecies. ie. Lens culinaris.
+   *
+   */   
+  public function parseOrganism($value) {
+    $result = '';
+    $table  = 'organism';
+
+    // Capture the genus and species from Scientific Name value.
+    preg_match('/^(\w+)\s{1}(.*)/', $value, $match);
+    if ($match !== FALSE && ($match[1] && $match[2])) {
+      $values = [
+        'genus' => $match[1],
+        'species' => $match[2],
+      ];
+
+      // Fetch organism using the genus+species and return
+      // the organism_id number.
+      $select = chado_select_record('organism', ['organism_id'], $values);
+      if ($select) {
+        $result = $select[0]->organism_id;
+      }
+    }
+
+    return $result;
+  }
+
 } //end of this class
