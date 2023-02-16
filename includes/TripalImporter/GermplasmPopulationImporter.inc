@@ -50,7 +50,7 @@
    * Provides information to the user about the file upload.  Typically this
    * may include a description of the file types allowed.
    */
-  public static $upload_description = 'Germplasm file should be a tab separated file containing a header with the following colums:<ol>
+  public static $upload_description = 'Germplasm file should be a tab separated file (.tsv) containing a header with the following colums:<ol>
       <li><strong>Name</strong>: The name of the RIL individual.</li>
       <li><strong>Type</strong>: The vocabulary database name + : + cvterm (ie. schema:F1) which should be used for the stock record, must exist.</li>
       <li><strong>Scientific Name</strong>: The genus + species of the organism to be used for the stock record, must exist.</li>
@@ -123,7 +123,6 @@
       $form['fieldset_population_entry']['fld_text_population_entry'] = [
         '#type' => 'textfield',   
         '#autocomplete_path' => 'admin/tripal/storage/chado/auto_name/stock',
-        '#required' => TRUE,
         '#attributes' => array(
           'placeholder' => t('Germplasm / Stock Name')
         ),
@@ -240,7 +239,6 @@
     // No more than 20 characters for prefix.
     $fld_name_prefix = 'fld_text_stock_prefix';
     $fld_value_prefix = $form_state['values'][ $fld_name_prefix ];
-    dpm($fld_value_prefix);
     if (!empty($fld_value_prefix) && strlen($fld_value_prefix) > 20) {
       form_set_error($fld_name_prefix, t('Prefix Error. Please ensure prefix is no more than 20 characters.'));
     }
@@ -347,6 +345,8 @@
             // Next line.
             $i++;
           }
+
+          fclose($handle);
         }
       }
       else {
@@ -416,6 +416,7 @@
         if ($handle) {
           $i = 0;
           $bytes_read = 0;
+
           // Fetch the last stock_id auto-increment inserted, increment
           // the value each time a stock is added. This value is concatenated
           // to the prefix (when provided) that will make up the uniquename of the stock.
@@ -426,9 +427,16 @@
           while(!feof($handle)) {
             // Add all individuals in file into chado.stock table
             // and simultaneously creating the Relationship verb.
-            $cur_line = fgets($handle);
-            
+            $cur_line = fgets($handle);      
+            $i++;
+      
             if ($i > 0 && trim($cur_line) != '') {
+              // Calculate how many bytes we have read from the file and let the
+              // importer know how many have been processed so it can provide a
+              // progress indicator.
+              $bytes_read += drupal_strlen($cur_line);
+              $this->setItemsHandled($bytes_read);
+
               $values = str_getcsv($cur_line, "\t");
               // Skip the header row.
               @list($val_name, $val_type, $val_sciname, $val_uniqname) = array_map('trim', $values);
@@ -471,7 +479,7 @@
               $relation = [];
               // Verb.
               $relation['type_id'] = $population['verb'];
-
+                
               // Position.
               if ($population['position'] == 'evi') {
                 // Entry - Verb - Individual.
@@ -483,18 +491,20 @@
                 $relation['object_id'] = $individual['stock_id'];
                 $relation['subject_id']  = $population['entry'];
               }
-              
-              chado_insert_record('stock_relationship', $relation);
-            }
 
-            $i++;
+              chado_insert_record('stock_relationship', $relation);
+              unset($individual);
+            }
           }
+
+          fclose($handle);
+          exit(0);
         }
       }
     }
     catch(Exception $e) {
       $TRANSACTION->rollback();
-      exit();
+      exit(1);
     }
   }
 
@@ -618,5 +628,4 @@
 
     return $result;
   }
-
 } //end of this class
