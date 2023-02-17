@@ -47,7 +47,7 @@ function germplasm_population_importer_config_form($form, &$form_state) {
       '#title' => t('Population Entry'),
       '#autocomplete_path' => 'admin/tripal/storage/chado/auto_name/stock',
       '#attributes' => array(
-          'placeholder' => t('Germplasm / Stock Name')
+          'placeholder' => t('Germplasm / Stock Name'),
       ),
     ];
 
@@ -71,11 +71,40 @@ function germplasm_population_importer_config_form($form, &$form_state) {
    
     // Construct population individuals summary table of germplasm.
     if (isset($form_state['values'])) {
-      $individuals_table = theme('table', ['sticky' => FALSE, 'header' => ['Germplasm/Stock Name'], 'rows' => [['a' => 1]]]);
+      // Verb - cvterm used (under the cv configuration).
+      $fld_value_verb = $form_state['values']['fld_select_verb'];
+      // Stock population entry: in ABC [id: Stock Id] Notation.
+      $fld_value_entry = $form_state['values']['fld_autocomplete_entry'];
+      preg_match('/^.*\[id:\s{1}(\d+)\]$/', $fld_value_entry, $match);
+      $fld_value_entry = $match[1];
+      // Stock position of entry in the relation ship. Object or Subject?
+      // pes - population entry is subject and peo - population entry is object.
+      $fld_value_position = $form_state['values']['fld_select_position'];
       
+      // Fetch stocks that are from the other side of the relationship
+      // population individuals.
+      $fld1 = ($fld_value_position == 'pes') ? 'object_id'  : 'subject_id';
+      $fld2 = ($fld_value_position == 'pes') ? 'subject_id' : 'object_id';
+      
+      $query = chado_query("
+        SELECT name, uniquename, description, CONCAT(o.genus, ' ', o.species) AS organism
+        FROM {stock} LEFT JOIN {organism} AS o USING(organism_id) 
+        WHERE stock_id IN (SELECT $fld1 FROM {stock_relationship} WHERE type_id = :verb AND $fld2 = :entry)
+        ORDER BY name ASC 
+      ", [':verb' => $fld_value_verb, ':entry' => $fld_value_entry]);
+     
+      $rows = [];
+      if ($query->rowCount() > 0) {
+        foreach($query as $i => $individual) {
+          $rows[ $i ] = [$individual->name, $individual->uniquename, $individual->description, $individual->organism];
+        }       
+      }
+
+      $header = ['Germplasm/Stock Name', 'Uniquename', 'Description', 'Scientific Name'];
+      $individuals_table = theme('table', ['sticky' => FALSE, 'header' => $header, 'rows' => $rows, 'empty' => '0 germplasm found']);
       $form['fieldset_population_viewer']['summary_table'] = [
         '#type' => 'markup',
-        '#markup' => $individuals_table
+        '#markup' => '<div style="height: 200px; overflow-y: scroll">' . $individuals_table . '</div>',
       ];
 
       $form['fieldset_population_viewer']['#collapsed'] = FALSE;

@@ -222,7 +222,7 @@
     
     // Gerplasm Autocomplete Notation: ABC 123 [id: 123]:
     $stock = $this->parseStock($fld_value_population_entry);
-    if (!stock) {
+    if (!$stock) {
       form_set_error($fld_name_population_entry, t('Germplasm does not exist. Please enter a valid germplasm in Population Entry.'));
     }
 
