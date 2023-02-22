@@ -87,7 +87,7 @@ function germplasm_population_importer_config_form($form, &$form_state) {
       $fld2 = ($fld_value_position == 'pes') ? 'subject_id' : 'object_id';
       
       $query = chado_query("
-        SELECT name, uniquename, description, CONCAT(o.genus, ' ', o.species) AS organism
+        SELECT stock_id, name, uniquename, description, CONCAT(o.genus, ' ', o.species) AS organism
         FROM {stock} LEFT JOIN {organism} AS o USING(organism_id) 
         WHERE stock_id IN (SELECT $fld1 FROM {stock_relationship} WHERE type_id = :verb AND $fld2 = :entry)
         ORDER BY name ASC 
@@ -96,11 +96,11 @@ function germplasm_population_importer_config_form($form, &$form_state) {
       $rows = [];
       if ($query->rowCount() > 0) {
         foreach($query as $i => $individual) {
-          $rows[ $i ] = [$individual->name, $individual->uniquename, $individual->description, $individual->organism];
+          $rows[ $i ] = [($i+1), $individual->name, $individual->uniquename, $individual->description, $individual->organism];
         }       
       }
 
-      $header = ['Germplasm/Stock Name', 'Uniquename', 'Description', 'Scientific Name'];
+      $header = ['#', 'Germplasm/Stock Name', 'Uniquename', 'Description', 'Scientific Name'];
       $individuals_table = theme('table', ['sticky' => FALSE, 'header' => $header, 'rows' => $rows, 'empty' => '0 germplasm found']);
       $form['fieldset_population_viewer']['summary_table'] = [
         '#type' => 'markup',

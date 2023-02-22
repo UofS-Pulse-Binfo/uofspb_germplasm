@@ -127,7 +127,6 @@
           'placeholder' => t('Germplasm / Stock Name')
         ),
         '#disabled' => $disabled,
-        '#required' => TRUE,
         '#id' => 'population-importer-fld-text-population-entry'
       ];
 
@@ -166,7 +165,6 @@
         '#options' => $fld_relationship_options,
         '#disabled' => $disabled,
         '#attributes' => ['style' => ['width: 449px']],
-        '#required' => TRUE,
         '#id' => 'population-importer-fld-select-relationship-verb'
       ];
 
@@ -222,7 +220,7 @@
     
     // Gerplasm Autocomplete Notation: ABC 123 [id: 123]:
     $stock = $this->parseStock($fld_value_population_entry);
-    if (!$stock) {
+    if (!$stock || trim($fld_value_population_entry) == '') {
       form_set_error($fld_name_population_entry, t('Germplasm does not exist. Please enter a valid germplasm in Population Entry.'));
     }
 
@@ -398,7 +396,7 @@
    *   individuals: Form file field value for Population Individuals Field.
    *   prefix: Form field value for Prefix field.
    */
-  public function importPopulation(array $population) {
+  public function importPopulation($population) {
     // 1) Recognize that the loader is not hung if running a large file, but is executing
     // 2) Provides some indication for how long the file will take to load.
     
@@ -408,103 +406,102 @@
     $this->setTotalItems($file->filesize);
     $this->setItemsHandled(0);
     
-    $TRANSACTION = db_transaction();
-    try {
-      if ($file && $file->filesize > 0) {
-        $file_path = drupal_realpath($file->uri);
-        $handle = fopen($file_path, 'r');
-        if ($handle) {
-          $i = 0;
-          $bytes_read = 0;
+    if ($file && $file->filesize > 0) {
+      $file_path = drupal_realpath($file->uri);
+      $handle = fopen($file_path, 'r');
+      if ($handle) {
+        $i = 0;
+        $bytes_read = 0;
 
-          // Fetch the last stock_id auto-increment inserted, increment
-          // the value each time a stock is added. This value is concatenated
-          // to the prefix (when provided) that will make up the uniquename of the stock.
-          // Skip this when file has provided a custom uniquename.
-          $id = chado_select_record('stock', ['stock_id'], [], ['order by' => ['stock_id' => 'DESC'], 'limit' => 1]);
-          $last_id = $id[0]->stock_id;
-
-          while(!feof($handle)) {
-            // Add all individuals in file into chado.stock table
-            // and simultaneously creating the Relationship verb.
-            $cur_line = fgets($handle);      
+        // Fetch the last stock_id auto-increment inserted, increment
+        // the value each time a stock is added. This value is concatenated
+        // to the prefix (when provided) that will make up the uniquename of the stock.
+        // Skip this when file has provided a custom uniquename.
+        $id = chado_select_record('stock', ['stock_id'], [], ['order_by' => ['stock_id' => 'DESC'], 'limit' => 1]);
+        $last_id = $id[0]->stock_id;
+        
+        while($cur_line = fgets($handle)) {
+          // Add all individuals in file into chado.stock table
+          // and simultaneously creating the Relationship verb.
+          if ($i == 0) {
+            // This is the header row.
             $i++;
-      
-            if ($i > 0 && trim($cur_line) != '') {
-              // Calculate how many bytes we have read from the file and let the
-              // importer know how many have been processed so it can provide a
-              // progress indicator.
-              $bytes_read += drupal_strlen($cur_line);
-              $this->setItemsHandled($bytes_read);
-
-              $values = str_getcsv($cur_line, "\t");
-              // Skip the header row.
-              @list($val_name, $val_type, $val_sciname, $val_uniqname) = array_map('trim', $values);
-     
-              # Construct uniquename:
-              // If line has no uniquename by using the prefix system configuration
-              // and next sequence id of stock.
-              $uniquename = ($val_uniqname == '') 
-                ? $population['prefix'] . ':' . ($last_id + $i) : $val_uniqname;
-              // Always encode in uppercase form.
-              $uniquename = strtoupper($uniquename);
-
-              # Description:
-              // Tag the stock with brief description of the source plus a timestamp.
-              $description = 'This germplasm was added through the Germplasm Population Importer. ' 
-                . date('l jS \of F Y h:i:s A');  
-
-              # Organism:
-              // Use the genus and species encoded in the Scientific Name to determine the organism.
-              $organism_id = $this->parseOrganism($val_sciname);
-
-              # Type:
-              // Use the database name and cvterm encoded in Type to determine the stock type.
-              $type_id = $this->parseTerm($val_type);
-              
-              // Population individual to insert.
-              $stock = [
-                'name'      => $val_name,
-                'uniquename'  => $uniquename,
-                'organism_id'  => $organism_id,
-                'description' => $description,
-                'type_id'   => $type_id,
-              ];
-
-              // Save the id of the individual being added 
-              // and use it in the relationship below. 
-              $individual = chado_insert_record('stock', $stock);
-              
-              # Create Relationship:
-              $relation = [];
-              // Verb.
-              $relation['type_id'] = $population['verb'];
-                
-              // Position.
-              if ($population['position'] == 'evi') {
-                // Entry - Verb - Individual.
-                $relation['subject_id'] = $population['entry'];
-                $relation['object_id'] = $individual['stock_id'];
-              }
-              elseif ($population['position'] == 'ive') {
-                // Individual - Verb - Entry
-                $relation['object_id'] = $individual['stock_id'];
-                $relation['subject_id']  = $population['entry'];
-              }
-
-              chado_insert_record('stock_relationship', $relation);
-              unset($individual);
-            }
+            continue;
           }
 
-          fclose($handle);
-          exit(0);
+          // Data rows.  
+          if (trim($cur_line) != '') {
+            // Calculate how many bytes we have read from the file and let the
+            // importer know how many have been processed so it can provide a
+            // progress indicator.
+            $bytes_read += drupal_strlen($cur_line);
+            $this->setItemsHandled($bytes_read);
+            
+            $values = str_getcsv($cur_line, "\t");
+            // Skip the header row.
+            @list($val_name, $val_type, $val_sciname, $val_uniqname) = array_map('trim', $values);
+    
+            # Construct uniquename:
+            // If line has no uniquename by using the prefix system configuration
+            // and next sequence id of stock.
+            $uniquename = ($val_uniqname == '') 
+              ? $population['prefix'] . ':' . ($last_id + $i) : $val_uniqname;
+            // Always encode in uppercase form.
+            $uniquename = strtoupper($uniquename);
+
+            # Description:
+            // Tag the stock with brief description of the source plus a timestamp.
+            $description = 'This germplasm was added through the Germplasm Population Importer. ' 
+              . date('m.d.y g:i a');  
+
+            # Organism:
+            // Use the genus and species encoded in the Scientific Name to determine the organism.
+            $organism_id = $this->parseOrganism($val_sciname);
+
+            # Type:
+            // Use the database name and cvterm encoded in Type to determine the stock type.
+            $type_id = $this->parseTerm($val_type);
+            
+            // Population individual to insert.
+            $stock = [
+              'name'      => $val_name,
+              'uniquename'  => $uniquename,
+              'organism_id'  => $organism_id,
+              'description' => $description,
+              'type_id'   => $type_id,
+            ];
+
+            // Save the id of the individual being added 
+            // and use it in the relationship below. 
+            $individual = chado_insert_record('stock', $stock);
+            
+            # Create Relationship:
+            $relation = [];
+            // Verb.
+            $relation['type_id'] = $population['verb'];
+              
+            // Position.
+            if ($population['position'] == 'evi') {
+              // Entry - Verb - Individual.
+              $relation['subject_id'] = $population['entry'];
+              $relation['object_id'] = $individual['stock_id'];
+            }
+            elseif ($population['position'] == 'ive') {
+              // Individual - Verb - Entry
+              $relation['object_id'] = $population['entry'];
+              $relation['subject_id']  = $individual['stock_id'];
+            }
+
+            chado_insert_record('stock_relationship', $relation);
+            unset($individual);
+
+            $i++;
+          }
         }
+        
+        // Close file.
+        fclose($handle);
       }
-    }
-    catch(Exception $e) {
-      $TRANSACTION->rollback();
-      exit(1);
     }
   }
 
