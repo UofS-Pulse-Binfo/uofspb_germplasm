@@ -104,7 +104,7 @@ function germplasm_population_importer_config_form($form, &$form_state) {
       $individuals_table = theme('table', ['sticky' => FALSE, 'header' => $header, 'rows' => $rows, 'empty' => '0 germplasm found']);
       $form['fieldset_population_viewer']['summary_table'] = [
         '#type' => 'markup',
-        '#markup' => '<div style="height: 200px; overflow-y: scroll">' . $individuals_table . '</div>',
+        '#markup' => '<div style="height: 200px; overflow-y: scroll">Population Size: ' . count($rows) . $individuals_table . '</div>',
       ];
 
       $form['fieldset_population_viewer']['#collapsed'] = FALSE;
