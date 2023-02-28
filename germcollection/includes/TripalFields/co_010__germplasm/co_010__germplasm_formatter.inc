@@ -36,7 +36,7 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
     // Get the settings
     $settings = $display['settings'];
 
-    if (sizeof($items)) { dpm($items);
+    if (sizeof($items)) {
       // Collection id number.
       $collection_id = $entity->chado_record_id;
       // Count germplasm in collection.

@@ -112,7 +112,20 @@ class co_010__germplasm extends ChadoField {
    *
    */
   public function load($entity) {
-    
+    // NOTE:
+    // There are unpublished and published germplasm/stock records in chado.stock.
+    // Widget (create), Formatter (view), Field Instance and Export sections
+    // all use the function germcollection_get_germplasm() (@see API) to fetch 
+    // list of germplasm. This function will exclude any unpublished germplasm 
+    // therby making any list shown/generated in any of the sections mentioned 
+    // consistent across.
+
+    // Widget (create) is also equipped to prevent germplasm collection authors to
+    // prevent adding germplasm that are unpublished type.
+
+    // The Filter (outbound link) provided in this field might show unpublished 
+    // germplasm added prior to this field potentially causing desimilar list.
+
     // We need the field name to ensure we save the data in the correct field!
     $field_name = $this->instance['field_name'];
 
@@ -135,20 +148,6 @@ class co_010__germplasm extends ChadoField {
     if (count($results) > 0) {
       foreach ($results as $k => $stock) {
         list($name, $uniquename, $entity_id, $genus, $species, $origin, $stock_id) = $stock;
-        
-        // Entity ID
-        foreach ($bundle_tables as $bundle_table) {
-          $is_private = 0;
-
-          $entity_id = db_query("SELECT entity_id FROM $bundle_table WHERE record_id=:id",
-            [':id' => $stock_id])->fetchField();
-          $bundle_label = $bundle_labels[$bundle_table];
-          if ($entity_id) { 
-            $entity = entity_load('TripalEntity', [$entity_id]);       
-            dpm($entity->{$entity_id});
-            break; 
-          }
-        }
 
         // Save the chado data.
         $entity->{$field_name}['und'][$k]['chado-stockcollection__stock_id'] = $stock_id;
