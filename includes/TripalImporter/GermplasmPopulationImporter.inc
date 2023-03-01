@@ -450,9 +450,8 @@
             $uniquename = strtoupper($uniquename);
 
             # Description:
-            // Tag the stock with brief description of the source plus a timestamp.
-            $description = 'This germplasm was added through the Germplasm Population Importer. ' 
-              . date('m.d.y g:i a');  
+            // Tag the stock with a brief description. Add text between quotes.
+            $description = '';  
 
             # Organism:
             // Use the genus and species encoded in the Scientific Name to determine the organism.

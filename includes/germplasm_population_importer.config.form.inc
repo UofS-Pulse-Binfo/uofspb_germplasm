@@ -96,15 +96,17 @@ function germplasm_population_importer_config_form($form, &$form_state) {
       $rows = [];
       if ($query->rowCount() > 0) {
         foreach($query as $i => $individual) {
-          $rows[ $i ] = [($i+1), $individual->name, $individual->uniquename, $individual->description, $individual->organism];
+          // Number, Germplasm/Stock Name, Uniquename, Scientific Name (organism) and Description.
+          $rows[ $i ] = [($i+1), $individual->name, $individual->uniquename, $individual->organism, $individual->description];
         }       
       }
-
-      $header = ['#', 'Germplasm/Stock Name', 'Uniquename', 'Description', 'Scientific Name'];
+      
+      // Header - matches the rows above.
+      $header = ['#', 'Germplasm/Stock Name', 'Uniquename', 'Scientific Name', 'Description'];
       $individuals_table = theme('table', ['sticky' => FALSE, 'header' => $header, 'rows' => $rows, 'empty' => '0 germplasm found']);
       $form['fieldset_population_viewer']['summary_table'] = [
         '#type' => 'markup',
-        '#markup' => '<div style="height: 200px; overflow-y: scroll">Population Size: ' . count($rows) . $individuals_table . '</div>',
+        '#markup' => '<div style="height: 200px; overflow-y: scroll"><strong>Population Size: ' . count($rows) . '</strong>' . $individuals_table . '</div>',
       ];
 
       $form['fieldset_population_viewer']['#collapsed'] = FALSE;
