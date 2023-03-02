@@ -150,6 +150,9 @@ function germplasm_population_importer_config_form($form, &$form_state) {
       '#type' => 'textfield',
       '#default_value' => $default_prefix,
       '#description' => t('Use this field value as default germplasm prefix.'),
+      '#attributes' => [
+        'onkeyup' => "this.value = this.value.toUpperCase();"
+      ],
     ];
 
   return system_settings_form($form);

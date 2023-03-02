@@ -185,9 +185,10 @@ function uofspb_germplasm_form_alter(&$form, &$form_state, $form_id) {
       '#disabled' => $disabled,
       '#description' => t('Please give a prefix for this germplasm individuals. Unique names for germplasm contained in file will 
         be this prefix followed by stock id. Unique prefix can help you track this germplasm in the future, and default prefix is ' . $default_prefix),
-      '#attributes' => array(
-        'placeholder' => t($default_prefix)
-      ),
+      '#attributes' => [
+        'placeholder' => t($default_prefix),
+        'onkeyup' => "this.value = this.value.toUpperCase();"
+      ],
       '#id' => 'population-importer-fld-text-stock-prefix'
     ];
 
