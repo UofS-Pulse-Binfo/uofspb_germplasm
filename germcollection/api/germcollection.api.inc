@@ -111,3 +111,57 @@ function germcollection_get_experiment($experiment_id) {
 
   return ($experiment->rowCount() > 0) ? $experiment->fetchObject() : 0;
 }
+
+/**
+ * Get genus + species (scientific name)
+ * 
+ * @return array
+ *   Associative array where the key is organism id number and value
+ *   is combination of genus and species.
+ */
+function germcollection_get_scientific_name() {
+  $names = array();
+  
+  // Query names in chado.organism.
+  $sql = "SELECT organism_id, CONCAT(genus, ' ', species) FROM {organism} ORDER BY genus ASC";
+  $query = chado_query($sql);
+
+  if ($query->rowCount() > 0) {
+    $names = $query->fetchAllKeyed();
+  }
+
+  return $names;
+}
+
+/**
+ * Get stock by name+uniquename+organism.
+ * 
+ * @param $uniquename
+ *   String, uniquename of germplasm - uniquename field of chado.stock table.
+ * @param $name
+ *   String, name of germplasm - name field of chado.stock table.
+ * @param $organism
+ *   String, combination of genus and species of germplasm.
+ *   ie. Lens culinaris.
+ *
+ * @return integer
+ *   Stock id number of the matching germplasm.
+ */
+function germcollection_get_stock_id($uniquename, $name, $organism) {
+  $sql = "
+    SELECT stock_id FROM {stock} AS t1 INNER JOIN {organism} AS t2 USING (organism_id) 
+    WHERE 
+      t1.uniquename = :uniquename AND 
+      t1.name = :name AND 
+      CONCAT(t2.genus, ' ', t2.species) = :organism
+    LIMIT 1
+  ";
+
+  $stock = chado_query($sql, array(
+    ':uniquename' => trim($uniquename),
+    ':name' => trim($name),
+    ':organism' => trim($organism)
+  ));
+
+  return ($stock->rowCount() > 0) ? $stock->fetchField() : 0;
+}
