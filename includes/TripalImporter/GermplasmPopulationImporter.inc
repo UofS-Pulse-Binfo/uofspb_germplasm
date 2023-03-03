@@ -58,6 +58,8 @@
     </ol>
     
     <p>Each row in the file should describe a specific individual to be created and linked to the Population Entry with the specified relationship.</p>
+    <p><strong>NOTE:</strong> This importer will not permit duplicate lines with identical Name + Type + Scientific Name + Uniquename in the file. 
+       A warning will be issued when duplicate line, with the exception Uniquename has been detected and the Importer may proceed.</p>
   ';
 
   /**
@@ -146,7 +148,7 @@
       $stock_relationship = chado_select_record('cvterm', 
         ['cvterm_id',  'UPPER(REPLACE(name, \'_\', \' \')) AS name'], 
         ['cv_id' => ['cv_id' => $configuration['verb']]], 
-        ['order by' => ['name' => 'asc']]
+        ['order_by' => ['name' => 'asc']]
       );
       
       $fld_relationship_options = [];
@@ -251,6 +253,10 @@
       if ($file && $file->filesize > 0) {
         $file_path = drupal_realpath($file->uri);
         $handle = fopen($file_path, 'r');
+        // Temp storage of germplasm name and uniquename to 
+        // catch duplicate line.
+        $temp_lines = [];
+        $temp_uname = [];
 
         if ($handle) {
           $i = 0;
@@ -280,17 +286,18 @@
               # VALIDATE DATA ROW:
               // Append each error encountered with the line number starting
               // with the header as line 1.
-              $error_message = 'ERROR: Germplasm in line #:' . ($i + 1) . '. ';
+              $error_message = 'ERROR: Germplasm %s in line #:' . ($i + 1) . '. ';
 
               if (trim($cur_line) == '') {
                 // A data row is empty.
-                form_set_error(0, $error_message . 'Line is an empty row.');
+                form_set_error(0, sprintf($error_message, '') . 'Line is an empty row.');
               }
               else {
                 // Peform subsequent validation assuming there is a row to check.            
                 $values = str_getcsv($cur_line, "\t");
                 @list($val_name, $val_type, $val_sciname, $val_uniqname) = array_map('trim', $values);
-                
+                $error_message = sprintf($error_message, $val_name);
+
                 # BASIC VALIDATION:
                 // Each column with the exception of uniquename (which is optional)
                 // must have a value. Type and Scientific Name should contain a string value.
@@ -300,6 +307,28 @@
                 
                 if (ctype_digit($val_type) || ctype_digit($val_sciname)) {
                   form_set_error(0, $error_message . 'Invalid numeric value in Type and/or Scientific Name.');
+                }
+                
+
+                # DUPLICATE LINE:
+                // Line name+type+organism+uniquename must be unique regardless of
+                // the case format of the name ie. Germ1 GERM1 or GerM1.
+                // Note: uniquename is always uppercase.
+                $line_text = strtolower($val_name . $val_type . $val_sciname);
+                if (in_array($line_text . $val_uniqname, $temp_lines)) {
+                  // Inspect if this name has same type, ogranism and uniquename. (Exact match)
+                  $duplicate_line = array_search($line_text . $val_uniqname, $temp_lines);
+                  form_set_error(0, $error_message . 'Duplicate in lines: #' . $duplicate_line . ' and #' . ($i + 1));
+                }
+                else {
+                  if (preg_grep("/$line_text.*/", $temp_lines)) {
+                    // Inspect if base germplasm info has duplicate but desimilar uniquenames.
+                    // DO NOT TRIGGER ERROR. Just inform user and proceed (could not stop import at this stage).
+                    drupal_set_message('A duplicate germplasm Name with dissimilar Uniquename has been detected in this file.', 'warning', $repeat = FALSE);
+                  }
+                  
+                  // Record instance.
+                  $temp_lines[ $i + 1 ] = $line_text . $val_uniqname; 
                 }
 
 
@@ -322,7 +351,18 @@
                 if ($val_uniqname) {
                   $result = chado_select_record('stock', ['stock_id'], ['uniquename' => $val_uniqname]);
                   if ($result) {
+                    // A uniquename is already used in database.
                     form_set_error(0, $error_message . 'Uniquename is already used by another germplasm.');
+                  }
+                  else {
+                    if (in_array($val_uniqname, $temp_uname)) {
+                      // Duplicate uniquename in file.
+                      $duplicate_uname = array_search($val_uniqname, $temp_uname);
+                      form_set_error(0, $error_message . 'Duplicate Uniquename in lines: #' . $duplicate_uname . ' and ' . ($i+1));
+                    }
+                    else {
+                      $temp_uname[ $i+1 ] = $val_uniqname;
+                    }
                   }
                 }
                 
@@ -336,7 +376,6 @@
                 if ($result) {
                   form_set_error(0, $error_message . 'Name+Type+Scientific Name combination is already used by another germplasm.');
                 }
-                
               }
             }
             

@@ -22,7 +22,7 @@ function germplasm_population_importer_config_form($form, &$form_state) {
     $stock_relationship = chado_select_record('cvterm', 
       ['cvterm_id',  'UPPER(REPLACE(name, \'_\', \' \')) AS name'], 
       ['cv_id' => ['cv_id' => $default_verb]], 
-      ['order by' => ['name' => 'asc']]
+      ['order_by' => ['name' => 'asc']]
     );
     
     $fld_verb_options = [];
@@ -61,11 +61,17 @@ function germplasm_population_importer_config_form($form, &$form_state) {
       ],
     ];
     
+    // Illustration showing stock 2 positions for population entry and individuals.
+    $path = $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'uofspb_germplasm');
+    $form['fieldset_population_viewer']['image_illustration'] = [
+      '#markup' => '<div style="margin-top: 20px"><img src="' . $path . '/theme/images/population-load-combination.gif" style="max-width: 70%" /></div>'
+    ];
+    
     # FIELD: Submit button. 
     // Fetch the other side of the Relationship.
     $form['fieldset_population_viewer']['fld_button_submit'] = [
       '#type' => 'submit',
-      '#value' => 'Load Population Individuals',
+      '#value' => 'List Population Individuals',
       '#submit' => ['germplasm_population_load_individuals'],
     ]; 
    
@@ -123,7 +129,7 @@ function germplasm_population_importer_config_form($form, &$form_state) {
     # FIELD: Germplasm Population Importer verb controlled vocabulary setting.
     // Create a select option showing all cvs currently available.
     // Set it to default value of the configuration variable.
-    $cvs = chado_select_record('cv', ['cv_id', 'name'], [], ['order by' => ['name' => 'asc']]);
+    $cvs = chado_select_record('cv', ['cv_id', 'name'], [], ['order_by' => ['name' => 'asc']]);
     $fld_cv_options = [];
     $fld_cv_options[0] = '- Select -';
 
