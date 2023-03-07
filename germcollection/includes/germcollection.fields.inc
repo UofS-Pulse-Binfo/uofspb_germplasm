@@ -52,7 +52,7 @@ function germcollection_bundle_fields_info($entity_type, $bundle) {
     $fields[$field_name] = array(
       'field_name' => $field_name,
       'type' => $field_type,
-      'cardinality' => 1,
+      'cardinality' => -1,
       'locked' => FALSE,
       'storage' => array(
         'type' => 'field_chado_storage',

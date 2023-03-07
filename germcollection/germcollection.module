@@ -18,23 +18,66 @@ function germcollection_menu() {
 		[':table' => 'stockcollection'])->fetchField();
 	$bundle_name = 'bio_data_' . $bundle_id;
 
+	// AUTOCOMPLETE and AJAX PATH:
 	$items['ajax/tripal/autocomplete/germplasm-collection'] = [
-		'page callback' => 'germcollection_name_autocomplete',
-		// @todo figure out what permission this should be. Maybe view germcollection?
-		'access arguments' => ["view $bundle_name"],
-		'type' => MENU_CALLBACK
+	  'page callback' => 'germcollection_name_autocomplete',
+	  // @todo figure out what permission this should be. Maybe view germcollection?
+	  'access arguments' => ["view $bundle_name"],
+	  'type' => MENU_CALLBACK
 	];
+
+	$items['ajax/tripal/autocomplete-stockname/%'] = array(
+	  'page callback' => 'germcollection_name_autocomplete',
+	  'access arguments' => array('access germcollection'),
+	  'type' => MENU_CALLBACK
+	);
+
+	$items['ajax/tripal/stockprop'] = array(
+	  'page callback' => 'germpcollection_stockprop',
+	  'type' => MENU_CALLBACK,
+	  'access arguments' => array('access germcollection'),
+	);  
+	//
     
     // Create a file for germplasm collection download.
 	$items['download-germplasm-collection/%'] = array(
 	  'title' => 'Download Germplasm Collection',
 	  'page arguments' => array(1),
 	  'page callback' => 'germcollection_download_file',
-	  'access arguments' => array("access germcollection"),
+	  'access arguments' => array('access germcollection'),
 	  'type' => MENU_CALLBACK
 	);
 
 	return $items;
+}
+
+/**
+ * Fetch row of a stock/germplasm by stock_id.
+ * 
+ * @return object
+ *   Stock id number, name, organism (genus + species) and entity id (when available). 
+ */
+function germpcollection_stockprop() {
+  $params = drupal_get_query_parameters();
+  $id = (int) strip_tags($params['id']);
+  $stockprop = array();
+
+  if ($id > 0) {
+	$sql = "SELECT stock_id, name, CONCAT(genus, ' ', species) AS organism, stock.type_id
+	FROM {stock} LEFT JOIN {organism} USING(organism_id)
+    WHERE stock_id = :id LIMIT 1";
+    
+	$germplasm = chado_query($sql, array(':id' => $id));
+	if ($germplasm->rowCount() > 0) {
+	  $stockprop = $germplasm->fetchObject();
+	  // Tripal entity prop.
+	  $stockprop->entity = germcollection_get_entity_id($id, $stockprop->type_id);
+      // Drop type_id as it is no longer required.
+	  unset($stockprop->type_id);
+	}
+  }
+
+  drupal_json_output($stockprop);
 }
 
 /**
@@ -52,15 +95,44 @@ function germcollection_permission() {
  * Implements auto-complete callback.
  */
 function germcollection_name_autocomplete($string){
-	$matches = [];
+  $matches = [];
+  // @see hook_menu: this value can autocomplete germplasm collection name
+  // or germplasm name (by organism).  
+  $arg2 = arg(2);
 
-	$results = chado_select_record('stockcollection',
-		['name'], ['name' => $string], ['regex_columns' => ['name']]);
-	foreach ($results as $r) {
-		$matches[$r->name] = $r->name;
+  // Autocomplete germplasm collection name.
+  if ($arg2 == 'autocomplete') {
+    $results = chado_select_record('stockcollection',
+	  ['name'], ['name' => $string], ['regex_columns' => ['name']]);
+    foreach ($results as $r) {
+	  $matches[$r->name] = $r->name;
+    }
+  }
+
+  // Autocomplete germplasm name using the chado autocomplete stock
+  // notation Germplasm Name [id:Germplasm ID Number] as the value
+  // returned when a selection has been made.
+  if ($arg2 == 'autocomplete-stockname') {
+	$organism = strip_tags(arg(3));
+    
+    if (is_numeric($organism) && (int) $organism > 0 && strlen($string) >= 2) {
+	  $sql = "SELECT name, CONCAT(name, ' [id:', stock_id, ']') AS id FROM {stock} 
+	    WHERE LOWER(name) LIKE :name AND organism_id = :organism LIMIT 20";
+	  
+	  $result = chado_query($sql, array(':name' => '%' . strtolower($string) . '%', ':organism' => $organism));
+
+	  if ($result->rowCount() > 0) {
+		foreach($result as $stock) {
+		  $matches[] = array(
+			'id' => $stock->id,
+			'name' => $stock->name
+		  );
+		}
+	  } 
 	}
+  }
 
- 	drupal_json_output($matches);
+  drupal_json_output($matches);
 }
 
 /**
@@ -113,4 +185,32 @@ function germcollection_download_file($query_string) {
   else {
     die('Experiment and collection not found');
   }
+}
+  
+/**
+ * Implements hook_form_fied_ui_field_edit_form_alter().
+ * This is to ensure that germplasm collection field will contain
+ * one instance of the germplasm picker/entry form.
+ */
+function germcollection_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+  if ($form['#field']['type'] == 'co_010__germplasm') {
+	$form['field']['cardinality']['#options'] = array(1 => 1);
+	$form['field']['cardinality']['#default_value'] = 1;
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function germcollection_theme($existing, $type, $theme, $path) {
+  $items = array();
+  
+  // Style germplasm collection view.
+  $items['germcollection_collection_view'] = array(
+    'template' => 'germcollection_collection_view',
+    'path' => $path . '/theme',
+    'variables' => array()
+  );
+
+  return $items;
 }
