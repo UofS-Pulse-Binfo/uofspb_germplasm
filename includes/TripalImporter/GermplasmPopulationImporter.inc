@@ -50,13 +50,14 @@
    * Provides information to the user about the file upload.  Typically this
    * may include a description of the file types allowed.
    */
-  public static $upload_description = 'Germplasm file should be a tab separated file (.tsv) containing a header with the following colums:<ol>
+  public static $upload_description = '
+    Germplasm file should be a <strong>TAB Separated Values</strong> file (.tsv) containing a header with the following colums:
+    <ol>
       <li><strong>Name</strong>: The name of the RIL individual.</li>
       <li><strong>Type</strong>: The vocabulary database name + : + cvterm (ie. schema:F1) which should be used for the stock record, must exist.</li>
       <li><strong>Scientific Name</strong>: The genus + species of the organism to be used for the stock record, must exist.</li>
-      <li><strong>Uniquename</strong>: The uniquename to use if you do not want to use the pattern/prefix below.</li>
+      <li><strong>Uniquename</strong>: The uniquename to use if you do not want to use the pattern/prefix below. Custom value for this column must be unique for every line.</li>
     </ol>
-    
     <p>Each row in the file should describe a specific individual to be created and linked to the Population Entry with the specified relationship.</p>
     <p><strong>NOTE:</strong> This importer will not permit duplicate lines with identical Name + Type + Scientific Name + Uniquename in the file. 
        A warning will be issued when duplicate line, with the exception Uniquename has been detected and the Importer may proceed.</p>
@@ -84,7 +85,7 @@
     // Enable all field elements to work and let configration 
     // check below decide should fields be disabled.
     $disabled = FALSE;
-
+    
     # INFO:
     $form['info'] = [
       '#type' => 'item',
@@ -203,7 +204,7 @@
     // Submit button.
     // # FIELD: Submit
     // This button is provided by Tripal Importer.
-    
+
     return $form;
   }
 

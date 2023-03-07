@@ -169,7 +169,8 @@ function uofspb_germplasm_menu() {
 /**
  * Implements hook_form_alter().
  * Hook will insert a form field to Tripal Importer file fieldset
- * in Germplasm Population Importer.
+ * in Germplasm Population Importer and append file description with
+ * a sample Germplasm Importer Template file.
  */
 function uofspb_germplasm_form_alter(&$form, &$form_state, $form_id) {
   if (isset($form['importer_class']['#value']) && $form['importer_class']['#value'] == 'GermplasmPopulationImporter') {
@@ -196,5 +197,10 @@ function uofspb_germplasm_form_alter(&$form, &$form_state, $form_id) {
     // This will prevent previously uploaded file from being suggested to user.
     // Will reqiure re-upload on failed submit due to errors.
     $form['file']['file_upload_existing'] = [];
+
+    # MARKUP: provide an example template file (.tsv).
+    $file = 'GermplasmPopulationImporterTemplateFile.tsv.zip';
+    $path = $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'uofspb_germplasm') . '/includes/';
+    $form['file']['#description'] .= l(t('Download Germplasm Population Importer Template File'), $path . $file, ['attributes' => ['target' => '_blank']]) . '<br /><br />';
   }
 }
