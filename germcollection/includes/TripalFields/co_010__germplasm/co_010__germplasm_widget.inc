@@ -249,7 +249,7 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
                     if ($is_published == '#') {
                       // A unpublished germplasm in file.
                       $failed = t('Germplasm collection file has germplasm that is unpublished. LINE# ' . ($i + 1) . ' ' . $value[1] 
-                        . ' Please remove file and upload again.');  
+                        . ' Please remove file and upload again or contact KP if you require this germplasm into this collection.');  
                       form_set_error('germcollection_bulk_file', $failed);
                     }
                   }
