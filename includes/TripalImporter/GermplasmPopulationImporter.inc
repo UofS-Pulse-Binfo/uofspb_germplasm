@@ -258,6 +258,7 @@
         // catch duplicate line.
         $temp_lines = [];
         $temp_uname = [];
+        $duplicate  = [];
 
         if ($handle) {
           $i = 0;
@@ -323,9 +324,9 @@
                 }
                 else {
                   if (preg_grep("/$line_text.*/", $temp_lines)) {
-                    // Inspect if base germplasm info has duplicate but desimilar uniquenames.
-                    // DO NOT TRIGGER ERROR. Just inform user and proceed (could not stop import at this stage).
-                    drupal_set_message('A duplicate germplasm Name with dissimilar Uniquename has been detected in this file.', 'warning', $repeat = FALSE);
+                    $duplicate[] = $val_name;
+                    // Warning issued at the end of the file to capture all duplicated lines and report
+                    // to user. Importer may proceed.
                   }
                   
                   // Record instance.
@@ -382,6 +383,13 @@
             
             // Next line.
             $i++;
+          }
+
+          if (count($duplicate) > 0) {
+            $all_duplicate = implode(', ', array_unique($duplicate));
+            // Inspect if base germplasm info has duplicate but desimilar uniquenames.
+            // DO NOT TRIGGER ERROR. Just inform user and proceed (could not stop import at this stage).
+            drupal_set_message('A duplicate germplasm Name with dissimilar Uniquename has been detected in this file. (Name: ' . $all_duplicate . ')' , 'warning', $repeat = FALSE);
           }
 
           fclose($handle);
