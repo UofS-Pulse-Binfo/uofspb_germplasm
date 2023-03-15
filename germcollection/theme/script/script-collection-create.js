@@ -296,50 +296,57 @@
         },
         success: function(data) {
           if (data.length != 0) {
-            // Saving germplasm to collection...
-            // Insert into collection field.
-            stockCollection(id, 'insert');
+            if (data.entity == '#') {
+              // Router/Menu will return entity id or a pound sign when a stock
+              // is published or unpublished, respectively.
+              alert('Could not add unpublished germplasm ' + data.name + '. Please contact KP if you require this germplasm into this collection.');
+            }
+            else {
+              // Saving germplasm to collection...
+              // Insert into collection field.
+              stockCollection(id, 'insert');
+              
+              // Post row into the frontend.
+              var table = $('#germcollection-collection-table table');  
+              // Create an alternating bg colour for each row.
+              var bg = (table.find('tr').length % 2) ? '#FBFBFB' : '#F7F7F7';
+              // Germplasm table row - id using the stock id for quick reference.
+              var markup = '<tr id="germcollection-' 
+                + data.stock_id 
+                + '" style="background-color: ' 
+                + bg 
+                + '"><td>@name</td><td>@remove</td></tr>';
+      
+              // NAME + ORGANISM:
+              // In some cases stocks have no associated entity id,
+              // show stock as plain text when this is true.
+              var name =
+                '<a href="' 
+                  + host 
+                  + Drupal.settings.germcollectionPath.biodata 
+                  + data.entity 
+                  +'" target="_blank">' 
+                  + data.name 
+                  + '</a>';
             
-            // Post row into the frontend.
-            var table = $('#germcollection-collection-table table');  
-            // Create an alternating bg colour for each row.
-            var bg = (table.find('tr').length % 2) ? '#FBFBFB' : '#F7F7F7';
-            // Germplasm table row - id using the stock id for quick reference.
-            var markup = '<tr id="germcollection-' 
-              + data.stock_id 
-              + '" style="background-color: ' 
-              + bg 
-              + '"><td>@name</td><td>@remove</td></tr>';
-    
-            // NAME + ORGANISM:
-            // In some cases stocks have no associated entity id,
-            // show stock as plain text when this is true.
-            var name = (data.entity == '#') ? data.name :
-              '<a href="' 
-                + host 
-                + Drupal.settings.germcollectionPath.biodata 
-                + data.entity 
-                +'" target="_blank">' 
-                + data.name 
-                + '</a>';
-          
-            name += ' : ' + '<small>' + data.organism + '</small>';
-            markup = markup.replace('@name', name);
-    
-            // DELETE FROM COLLECTION:
-            // Tag each line with the same stock id used in each row
-            // and use this id to construct id of selected row for deletion.
-            var remove = '<a href="#" class="germcollection-remove stock-' 
-              + data.stock_id 
-              + '">&#x2715;</a>';
-            
-            markup = markup.replace('@remove', remove);
-    
-            // Add row.
-            table.prepend(markup);
+              name += ' : ' + '<small>' + data.organism + '</small>';
+              markup = markup.replace('@name', name);
 
-            // Increment gerplasm count.
-            stockCount('increment');
+              // DELETE FROM COLLECTION:
+              // Tag each line with the same stock id used in each row
+              // and use this id to construct id of selected row for deletion.
+              var remove = '<a href="#" class="germcollection-remove stock-' 
+                + data.stock_id 
+                + '">&#x2715;</a>';
+              
+              markup = markup.replace('@remove', remove);
+      
+              // Add row.
+              table.prepend(markup);
+
+              // Increment gerplasm count.
+              stockCount('increment');
+            }
           }
         },
         error: function() {

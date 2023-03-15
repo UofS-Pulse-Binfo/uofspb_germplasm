@@ -15,12 +15,20 @@
 ?>
 
 <div id="germcollection-collection-view-container">
-  <form method="post">
+  <form id="germcollection-form" method="post">
     <div id="germcollection-page-fields">
       <?php 
         // Field select # of germplasm per page.
         print drupal_render($variables['fld_no_per_page']); 
+
+        // Field search box.
+        print drupal_render($variables['fld_search']); 
       ?>
+
+      <div id="germcollection-search-submit">
+        &nbsp;
+        <small title="Stock name/Germplasm not found"><?php print $variables['txt_search_result']; ?></small>
+      </div>
     </div>
     
     <div id="germcollection-page-context">
@@ -28,7 +36,7 @@
         // Quick summary count of germplasm in a collection and
         // outbound link to search germplasm where the collection will 
         // be pre-selected on page load.
-        print $variables['germplasm_count'] . ' Germplasm | ' . $variables['context_links']; 
+        print 'Collection: ' . $variables['germplasm_count'] . ' [ ' . $variables['context_links'] . ' ]'; 
       ?>
     </div>
 

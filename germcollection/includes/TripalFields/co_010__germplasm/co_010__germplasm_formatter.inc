@@ -46,6 +46,36 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       $params = (isset($_POST['germcollection-item-per-page'])) 
         ? (int) $_POST['germcollection-item-per-page'] : 0;
       
+      // Search a specific germplasm in a collection.
+      $search = (isset($_POST['germcollection-search'])) 
+        ? strip_tags($_POST['germcollection-search']) : '';
+        
+      // Extract id of germplasm to search since the search box
+      // formats the autocomplete selection to stock name [id: stock id]
+      $search_stock_id = 0;
+      $found_stock_id = '';
+      $search_result = '';
+      $found_flag = 0;
+
+      if ($search != '') {
+        preg_match('/\[id:(\d+)\]$/', $search, $match);
+        if (isset($match[1]) && $match[1] > 0) {
+          $search_stock_id = $match[1];
+
+          $stock_ids = array_column($items, 'chado-stockcollection__stock_id');
+          $found_stock_id = array_search($search_stock_id, $stock_ids);
+          if ($found_stock_id === FALSE) {
+            $search_result = 'Not found';
+          }
+          else {
+            $found_flag = 1;
+          }
+        }
+        else {
+          $search_result = 'Not found';
+        }
+      }  
+
       if ($params && $params >= 1 && $params <= 3) {
         // Cache # of germplasm value selected to make it available
         // thoughout every page in the pager.
@@ -98,12 +128,43 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
           'name' => 'germcollection-item-per-page'
         ],
       ];
+
+      # FIELD: search box text field.
+      // Search is available when items shown per page
+      // is all items.
+      $fld_search = [
+        '#type' => 'textfield',
+        '#id' => 'germcollection-fld-textfield-search',
+        '#attributes' => [
+          'placeholder' => 'Stock Name', 
+          'name' => 'germcollection-search'
+        ],
+        '#disabled' => TRUE
+      ];
       
+      if ($per_page > 1) {
+        $fld_search['#attributes']['disabled'] = 'disabled';
+      }
+      
+      // Download link - export list to a csv file.
+      // Identical to project collection, this link is available only with
+      // access germcollection permission set.
+      if(user_is_logged_in() && user_access('access germcollection')) {
+        $download_link = l(t('Download'), 'download-germplasm-collection/' . base64_encode('collection=' . $collection_id),
+          ['attributes' => ['target' => '_blank']]
+        );
+      }
+
       // Outbound link to search germplasm with collection search
       // criterial pre-selected.
       $link =  $GLOBALS['base_url'] . '/search/germplasm/all?collection=' . $collection_id;
-      $filter_link = l(t('Filter Collection'), $link, ['attributes' => ['target' => '_blank']]);
+      $filter_link = l(t('Filter'), $link, ['attributes' => ['target' => '_blank']]);
       
+      // Germplasm count as link to reload all germplasm in a collection
+      // in one clickable link.
+      $link =  $GLOBALS['base_url'] . '/germplasm-collection/' . $entity->chado_record->uniquename;
+      $count_link = l(t($collection_count . ' Germplasm'), $link);
+
       // Construct germplasm summary table.
       $collection_table = [
         '#theme' => 'table',
@@ -121,6 +182,13 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
 
       // Now only show the elements for the current page.
       $start_item = $current_page * $items_per_page;
+      if ($found_flag == 1) {
+        $start_item = $found_stock_id;
+        $end_item = $found_stock_id;
+        $items_per_page = 1;
+        $total_pages = 0;
+      }
+
       $end_item = $start_item + ($items_per_page - 1);
       for ($key = $start_item; $key <= $end_item; $key++) {
         if (isset($items[$key])) {
@@ -139,7 +207,7 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
 
           // Compile the table row.
           $row = [
-            ($key + 1),
+            ($found_stock_id != '') ? 1 : ($key + 1),
             $name,
             $accession,
             $i['value']['rdfs:type'],
@@ -168,17 +236,28 @@ class co_010__germplasm_formatter extends ChadoFieldFormatter {
       // and germplasm summary table.
       $field_markup = theme('germcollection_collection_view', array(
         'fld_no_per_page' => $fld_items_per_page,
-        'context_links' => $filter_link,
-        'germplasm_count' => $collection_count,
+        'fld_search' => $fld_search,
+        'txt_search_result' => $search_result,
+        'context_links' => $download_link . ' | ' . $filter_link,
+        'germplasm_count' => $count_link,
         'collection_table' => $collection_table,
       ));
 
       $field_theme_dir = drupal_get_path('module', 'germcollection') . '/theme/'; 
+      $host = url($GLOBALS['base_url'], ['absolute' => true]);
+      // Settings:
+      drupal_add_js(['germcollection' => [
+        'autocomplete' => '/ajax/tripal/autocomplete-germcollection/' . $collection_id . '/',
+        'host' => $host . '/' 
+      ]], ['type' => 'setting']);
+
       $element[0] = [
         '#type' => 'markup',
         '#markup' => $field_markup . $pager,
         '#attached' => [
           'css' => [$field_theme_dir . 'style/style-collection-view.css'],
+          'js' => [$field_theme_dir . 'script/script-collection-view.js'],
+          'library' => [['system', 'ui.autocomplete']],
         ]
       ];
     }

@@ -232,15 +232,28 @@ class co_010__germplasm_widget extends ChadoFieldWidget {
                 else {
                   // 0:uniquename, 1:name, 2:scientific name (genus + sepecies).
                   $value = str_getcsv($cur_line, "\t");
-                  $exits = germcollection_get_stock_id($value[0], $value[1], $value[2]);
+                  $found_stock_id = germcollection_get_stock_id($value[0], $value[1], $value[2]);
 
-                  if ($exits == 0) {
+                  if ($found_stock_id == 0) {
                     // Germplasm does not exists.
                     $failed = t('Germplasm collection file has germplasm that does not exist. LINE# ' . ($i + 1) . ' ' . $value[1] 
                       . ' Please remove file and upload again.');  
                     form_set_error('germcollection_bulk_file', $failed);
                   }
-                
+                  else {
+                    // Id found - stock exists but cross-check if the same
+                    // is published germplasm or not.  
+                    $found_type_id = germcollection_get_stock_type_id($value[0], $value[1], $value[2]);
+                    $is_published = germcollection_get_entity_id($found_stock_id, $found_type_id);
+
+                    if ($is_published == '#') {
+                      // A unpublished germplasm in file.
+                      $failed = t('Germplasm collection file has germplasm that is unpublished. LINE# ' . ($i + 1) . ' ' . $value[1] 
+                        . ' Please remove file and upload again or contact KP if you require this germplasm into this collection.');  
+                      form_set_error('germcollection_bulk_file', $failed);
+                    }
+                  }
+                                    
                   $i++;
                 }
               }
