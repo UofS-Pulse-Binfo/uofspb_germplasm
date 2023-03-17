@@ -30,8 +30,8 @@ function germcollection_get_germplasm($collection_id) {
   $args = array();
   
   if ($origin_term) {
-    $clause['join'] = 'LEFT JOIN {stockprop} prop ON prop.stock_id=s.stock_id';
-    $clause['where'] = 'prop.type_id = :origin_type AND';
+    $clause['join'] = 'LEFT JOIN {stockprop} prop ON prop.stock_id=s.stock_id AND prop.type_id = :origin_type';
+    $clause['where'] = '';
     $args[':origin_type'] = $origin_term->cvterm_id;
   }
   
@@ -49,7 +49,8 @@ function germcollection_get_germplasm($collection_id) {
         $entity_id, // Entity id number.
         $stock->genus, // Genus.
         $stock->species, // Species.
-        $stock->origin // Country of origin.
+        $stock->origin, // Country of origin.
+        $stock->stock_id // Stock Id number.
       );
     }
   }
@@ -134,6 +135,25 @@ function germcollection_get_scientific_name() {
 }
 
 /**
+ * Get stock collection information.
+ * 
+ * @param id
+ *   Integer, stock collection id number. 
+ * 
+ * @return array
+ *   Content type data row of the matching stock collection (id, name, shortname)
+ */
+function germcollection_get_collection($id) {  
+  // Query stock collection in chado.stockcollection.
+  $sql = "SELECT stockcollection_id, name, uniquename 
+    FROM {stockcollection} WHERE stockcollection_id = :id LIMIT 1";
+  $collection = chado_query($sql, array(':id' => $id));
+
+  // stockcollection: stockcollection_id, name, uniquename, type_id.
+  return ($collection->rowCount() > 0) ? $collection->fetchObject() : 0;
+}
+
+/**
  * Get stock by name+uniquename+organism.
  * 
  * @param $uniquename
@@ -150,6 +170,39 @@ function germcollection_get_scientific_name() {
 function germcollection_get_stock_id($uniquename, $name, $organism) {
   $sql = "
     SELECT stock_id FROM {stock} AS t1 INNER JOIN {organism} AS t2 USING (organism_id) 
+    WHERE 
+      t1.uniquename = :uniquename AND 
+      t1.name = :name AND 
+      CONCAT(t2.genus, ' ', t2.species) = :organism
+    LIMIT 1
+  ";
+
+  $stock = chado_query($sql, array(
+    ':uniquename' => trim($uniquename),
+    ':name' => trim($name),
+    ':organism' => trim($organism)
+  ));
+
+  return ($stock->rowCount() > 0) ? $stock->fetchField() : 0;
+}
+
+/**
+ * Get stock type_id by name+uniquename+organism.
+ * 
+ * @param $uniquename
+ *   String, uniquename of germplasm - uniquename field of chado.stock table.
+ * @param $name
+ *   String, name of germplasm - name field of chado.stock table.
+ * @param $organism
+ *   String, combination of genus and species of germplasm.
+ *   ie. Lens culinaris.
+ *
+ * @return integer
+ *   Stock type id number of the matching germplasm.
+ */
+function germcollection_get_stock_type_id($uniquename, $name, $organism) {
+  $sql = "
+    SELECT t1.type_id FROM {stock} AS t1 INNER JOIN {organism} AS t2 USING (organism_id) 
     WHERE 
       t1.uniquename = :uniquename AND 
       t1.name = :name AND 

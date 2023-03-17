@@ -32,6 +32,13 @@ function germcollection_menu() {
 	  'type' => MENU_CALLBACK
 	);
 
+	$items['ajax/tripal/autocomplete-germcollection/%'] = array(
+	  'page callback' => 'germcollection_name_autocomplete',
+	  'access arguments' => array('access germcollection'),
+	  'type' => MENU_CALLBACK
+	);
+  
+
 	$items['ajax/tripal/stockprop'] = array(
 	  'page callback' => 'germpcollection_stockprop',
 	  'type' => MENU_CALLBACK,
@@ -109,6 +116,7 @@ function germcollection_name_autocomplete($string){
     }
   }
 
+  // Search field in create collection: Filter by organism.
   // Autocomplete germplasm name using the chado autocomplete stock
   // notation Germplasm Name [id:Germplasm ID Number] as the value
   // returned when a selection has been made.
@@ -132,6 +140,32 @@ function germcollection_name_autocomplete($string){
 	}
   }
 
+  // Search field in view collection: Filter by collection (find in a collection).
+  // Autocomplete germplasm name using the chado autocomplete stock
+  // notation Germplasm Name [id:Germplasm ID Number] as the value
+  // returned when a selection has been made.
+  if ($arg2 == 'autocomplete-germcollection') {
+	$collection = strip_tags(arg(3));
+    
+	if (is_numeric($collection) && (int) $collection > 0 && strlen($string) >= 2) {
+	  $sql = "SELECT name, CONCAT(name, ' [id:', stock_id, ']') AS id FROM {stock} 
+	  WHERE LOWER(name) LIKE :name AND stock_id IN (
+		SELECT stock_id FROM {stockcollection_stock} WHERE stockcollection_id = :id
+	  ) LIMIT 20";
+      
+      $result = chado_query($sql, array(':name' => '%' . strtolower($string) . '%', ':id' => $collection));
+	  
+	  if($result->rowCount() > 0) {
+		foreach($result as $stock) {
+		  $matches[] = array(
+			'id' => $stock->id,
+			'name' => $stock->name
+		  );
+		}
+	  }
+	}
+  }
+
   drupal_json_output($matches);
 }
 
@@ -144,18 +178,34 @@ function germcollection_download_file($query_string) {
   parse_str(base64_decode($query_string), $values);
 
   $germplasm = germcollection_get_germplasm($values['collection']);
-  $experiment = germcollection_get_experiment($values['experiment']);
+  $collection = germcollection_get_collection($values['collection']);
 
-  if ($experiment && count($germplasm) > 0) {
-	$filename = 'germplasm-collection-' . $experiment->project_id . '-' . date('Ymd') . '-' . time() . '.csv';
+  // When experiment is provided, include the project information
+  // into the final csv file as a metadata to the stock collection
+  // in addition to the name of the stock collection.
+  $experiment_name = ''; 
+  if (isset($values['experiment']) && $values['experiment'] > 0) {
+	$experiment = germcollection_get_experiment($values['experiment']);
+	$experiment_name = $experiment->name;
+  }
+  
+  // Append collection name in the filename of the final csv file.
+  $fname = str_replace(' ', '_', strtolower($collection->name));
+  
+  if ($collection && count($germplasm) > 0) {
+	$filename = 'germplasm-collection-' . $fname . '-' . date('Ymd') . '-' . time() . '.csv';
     $path = 'public://';
 	$tmp_file = file_create_url($path . $filename);
     $FILE = fopen(drupal_realpath($path) . '/' . $filename, 'w') or die('Unable to read temporary file.');
 	
 	// Add the project/experiment name in the first line of the file
 	// as a comment marked by # character.
-	fwrite($FILE, '# Germplasm Collection: ' . $experiment->name . "\n");
-	fwrite($FILE, "# knowpulse.usask.ca \n");
+	fwrite($FILE, "# Source: knowpulse.usask.ca \n");
+	fwrite($FILE, '# Germplasm Collection: ' . $collection->name . "\n");
+	if ($experiment_name != '') {
+	  fwrite($FILE, '# Experiment: ' . $experiment_name . "\n");
+	}
+
 	// Column headers.
 	fputcsv($FILE, array('Name', 'Accession', 'Source Species', 'Origin'));
 	// Write each germplasm.
@@ -183,7 +233,7 @@ function germcollection_download_file($query_string) {
 	file_transfer($path . $filename, $http_headers); 
   }
   else {
-    die('Experiment and collection not found');
+    die('Collection not found');
   }
 }
   

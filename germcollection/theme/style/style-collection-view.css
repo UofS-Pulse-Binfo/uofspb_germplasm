@@ -12,6 +12,10 @@
   width: 50%;
 }
 
+#germcollection-page-fields div {
+  float: left
+}
+
 #germcollection-page-context {
   float: left;
   margin-top: 1em;
@@ -19,7 +23,7 @@
   width: 50%;
 }
 
-#germcollection-page-context a:last-child {
+#germcollection-page-context a[target=_blank] {
   background: url(../images/infographics-new-window.gif) right center no-repeat;
   padding-right: 15px;
 }
@@ -41,4 +45,46 @@
   transition: background-color 0.9s ease-out;
 
   border-left: 2px solid #314355;
+}
+
+#germcollection-fld-textfield-search {
+  border: 1px solid #ccc;
+  color: #333333;
+  font-size: 1em;
+  font-weight: 200;
+  margin-top: 0;
+  margin-left: 10px;
+  padding: 4px;
+  width: 124px;
+}
+
+#germcollection-search-submit {
+  background: url('../images/icon-lens.png') no-repeat 5px 2px;
+  cursor: pointer;
+  height: 30px;
+  min-width: 40px;
+}
+
+#germcollection-search-submit small {
+  display: inline-block;
+  font-size: 11px;
+  font-family: "Lucida Grande", "Lucida Sans Unicode", sans-serif;
+  line-height: 25px;
+  margin-left: 25px;
+}
+
+/* Autocomplete */
+.germcollection-autocomplete-inactive { 
+  background: url(../images/throbber-inactive.png) no-repeat right center; 
+}
+
+.ui-autocomplete-loading { 
+  background: url(../images/throbber-active.gif) no-repeat right center; 
+}
+
+.ui-menu-item a {
+  color: #000000;
+  font-family: "Lucida Grande", "Lucida Sans Unicode", sans-serif;
+  font-size: 0.9em;
+  line-height: 1.538em;
 }
