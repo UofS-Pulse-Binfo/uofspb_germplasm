@@ -1859,12 +1859,12 @@
             ],
             "type": "library",
             "autoload": {
-                "psr-4": {
-                    "StatonLab\\TripalTestSuite\\": "src/"
-                },
                 "files": [
                     "src/Helpers/helpers.php"
-                ]
+                ],
+                "psr-4": {
+                    "StatonLab\\TripalTestSuite\\": "src/"
+                }
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
@@ -1880,6 +1880,10 @@
                     "email": "bcondon@utk.edu"
                 }
             ],
+            "support": {
+                "issues": "https://github.com/tripal/TripalTestSuite/issues",
+                "source": "https://github.com/tripal/TripalTestSuite/tree/1.6.1"
+            },
             "time": "2019-04-09T18:52:51+00:00"
         },
         {
@@ -2558,5 +2562,5 @@
     "prefer-lowest": false,
     "platform": [],
     "platform-dev": [],
-    "plugin-api-version": "2.3.0"
+    "plugin-api-version": "2.2.0"
 }

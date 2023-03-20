@@ -88,4 +88,11 @@ function uofspb_germplasm_enable(){
     ),
   );
   chado_create_custom_table($table, $schema, TRUE, NULL, FALSE);
+
+  // Create a settings/configuration variable used by
+  // Germplasm Population Importer to limit/filter relationship verb
+  // field to specific controlled vocabulary.
+  variable_set('germplasm_population_importer_verb_cv', 0);
+  // Default prefix used in germplasm names.
+  variable_set('germplasm_population_importer_default_prefix', 'GERM');
 }

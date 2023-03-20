@@ -148,3 +148,59 @@ function uofspb_germplasm_ontology_list(){
 
   return $ontologies;
 }
+
+/**
+ * Implements hook_menu().
+ */
+function uofspb_germplasm_menu() {
+  // Configuration page for Germplasm Importer Page.
+  $items['admin/tripal/extension/germplasm_population_importer/configure'] = array(
+    'title' => t('Germplasm Population Importer Configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('germplasm_population_importer_config_form'),
+    'access arguments' => array('administer tripal'),
+    'file' => 'includes/germplasm_population_importer.config.form.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_form_alter().
+ * Hook will insert a form field to Tripal Importer file fieldset
+ * in Germplasm Population Importer and append file description with
+ * a sample Germplasm Importer Template file.
+ */
+function uofspb_germplasm_form_alter(&$form, &$form_state, $form_id) {
+  if (isset($form['importer_class']['#value']) && $form['importer_class']['#value'] == 'GermplasmPopulationImporter') {
+    // Configuration for prefix.
+    $default_prefix = variable_get('germplasm_population_importer_default_prefix');
+    $disabled = ($default_prefix) ? FALSE: TRUE;
+
+    # FIELD: Prefix gerplasm uniquename.
+    // This is default to GERM.
+    $form['file']['fld_text_stock_prefix'] = [
+      '#type' => 'textfield',
+      '#title' => 'Prefix',
+      '#disabled' => $disabled,
+      '#description' => t('Please give a prefix for this germplasm individuals. Unique names for germplasm contained in file will 
+        be this prefix followed by stock id. Unique prefix can help you track this germplasm in the future, and default prefix is ' . $default_prefix),
+      '#attributes' => [
+        'placeholder' => t($default_prefix),
+        'onkeyup' => "this.value = this.value.toUpperCase();"
+      ],
+      '#id' => 'population-importer-fld-text-stock-prefix'
+    ];
+
+    # FIELD: Select existing/previously uploaded file.
+    // This will prevent previously uploaded file from being suggested to user.
+    // Will reqiure re-upload on failed submit due to errors.
+    $form['file']['file_upload_existing'] = [];
+
+    # MARKUP: provide an example template file (.tsv).
+    $file = 'GermplasmPopulationImporterTemplateFile.tsv.zip';
+    $path = $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'uofspb_germplasm') . '/includes/';
+    $form['file']['#description'] .= l(t('Download Germplasm Population Importer Template File'), $path . $file, ['attributes' => ['target' => '_blank']]) . '<br /><br />';
+  }
+}
