@@ -135,7 +135,7 @@ class GermplasmPopulationImportingTest extends TripalTestCase {
       // Assert stock inserted name matched.
       $this->assertEquals($germ[0]->name, $val_name, 'Stock inserted name does not match name in file.');
       // Uniquename matches expected uniquename generated using default prefix configuration.
-      $this->assertEquals($germ[0]->uniquename, $configurations['prefix'] . ':' . $germ[0]->stock_id, 
+      $this->assertEquals($germ[0]->uniquename, $configurations['prefix'] . $germ[0]->stock_id, 
         'Stock inserted uniquename is not in the expected value.');
     
       $stocks_inserted[ $germ[0]->stock_id ] = $germ[0]->stock_id;
