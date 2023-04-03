@@ -28,17 +28,22 @@ class GermplasmPopulationImportingTest extends TripalTestCase {
     $population_importer = new \GermplasmPopulationImporter();
     
     // CONFIGURATIONS:
-    // After install. By default, the module will set the default verm to empty string and prefix to GERM.
+    // After install. By default, the module will set the default verb to 0,  default db to 0 and prefix to GERM.
     $configurations = $population_importer->getConfigurationSettings();
-    $this->assertEquals($configurations['verb'], 0, 'Test default verb must be empty string on module install.');
+    $this->assertEquals($configurations['verb'], 0, 'Test default verb must be 0 on module install.');
     $this->assertEquals($configurations['prefix'], 'GERM', 'Test default prefix configuration does not match the term GERM.');
+    $this->assertEquals($configurations['db'], 0, 'Test default db must be 0 on module install.');
     
+
     // Set the default verb to a term:
     // Prepare to use the importer.
     // @see seeder class.
     variable_set('germplasm_population_importer_verb_cv', $data['cv_verb_id']);
+    variable_set('germplasm_population_importer_db', $data['database']);
+
     $configurations = $population_importer->getConfigurationSettings();
-    $this->assertEquals($configurations['verb'], $data['cv_verb_id'], 'Test default verb must be empty string on module install.');
+    $this->assertEquals($configurations['verb'], $data['cv_verb_id'], 'Test verb cv must match database entry.');
+    $this->assertEquals($configurations['db'], $data['database'], 'Test database must must match database entry.');
     $this->assertEquals($configurations['prefix'], 'GERM', 'Test default prefix configuration does not match the term GERM.');
 
     // PARSE GERMPLASM NAME:
@@ -98,6 +103,7 @@ class GermplasmPopulationImportingTest extends TripalTestCase {
       'position' => 'evi', // Entry Verb Indv.
       'individuals' => $file->fid,
       'prefix' => $configurations['prefix'],
+      'db' => $configurations['db'],
     ];
 
     $population_importer->importPopulation($population);
@@ -119,7 +125,7 @@ class GermplasmPopulationImportingTest extends TripalTestCase {
       $type_id = $population_importer->parseTerm($val_type);
       $organism_id = $population_importer->parseOrganism($val_sciname);
 
-      $germ = chado_select_record('stock', ['stock_id', 'name', 'uniquename'], [
+      $germ = chado_select_record('stock', ['stock_id', 'name', 'uniquename', 'dbxref_id'], [
         'name' => $val_name,
         'type_id' => $type_id,
         'organism_id' => $organism_id
@@ -133,6 +139,12 @@ class GermplasmPopulationImportingTest extends TripalTestCase {
         'Stock inserted uniquename is not in the expected value.');
     
       $stocks_inserted[ $germ[0]->stock_id ] = $germ[0]->stock_id;
+
+      // Dbxref:
+      // Dbxref.db_id matches the db_id configuration and accession is the uniquename generated.
+      $dbxref = chado_select_record('dbxref', ['db_id', 'accession'], ['dbxref_id' => $germ[0]->dbxref_id]);
+      $this->assertEquals($germ[0]->uniquename, $dbxref[0]->accession, 'Stock inserted dbxref does not match a record in chado.dbxref.');
+      $this->assertEquals($configurations['db'], $dbxref[0]->db_id, 'Stock inserted dbxref.db_id does not match a record in chado.db.');        
     }
 
     fclose($handle);
@@ -167,6 +179,7 @@ class GermplasmPopulationImportingTest extends TripalTestCase {
       'position' => 'ive', // Indv. Verb Entry.
       'individuals' => $file->fid,
       'prefix' => $configurations['prefix'],
+      'db' => $configurations['db'],
     ];
 
     $population_importer->importPopulation($population);
@@ -188,7 +201,7 @@ class GermplasmPopulationImportingTest extends TripalTestCase {
       $type_id = $population_importer->parseTerm($val_type);
       $organism_id = $population_importer->parseOrganism($val_sciname);
 
-      $germ = chado_select_record('stock', ['stock_id', 'name', 'uniquename'], [
+      $germ = chado_select_record('stock', ['stock_id', 'name', 'uniquename', 'dbxref_id'], [
         'name' => $val_name,
         'type_id' => $type_id,
         'organism_id' => $organism_id
@@ -201,6 +214,12 @@ class GermplasmPopulationImportingTest extends TripalTestCase {
       $this->assertEquals($germ[0]->uniquename, $val_uniqname, 'Stock inserted uniquename is not in the expected value.');
     
       $stocks_inserted[ $germ[0]->stock_id ] = $germ[0]->stock_id;
+
+      // Dbxref:
+      // Dbxref.db_id matches the db_id configuration and accession is the uniquename generated.
+      $dbxref = chado_select_record('dbxref', ['db_id', 'accession'], ['dbxref_id' => $germ[0]->dbxref_id]);
+      $this->assertEquals($germ[0]->uniquename, $dbxref[0]->accession, 'Stock inserted dbxref does not match a record in chado.dbxref.');
+      $this->assertEquals($configurations['db'], $dbxref[0]->db_id, 'Stock inserted dbxref.db_id does not match a record in chado.db.');
     }
 
     fclose($handle);

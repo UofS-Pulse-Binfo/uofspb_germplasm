@@ -126,6 +126,25 @@ function germplasm_population_importer_config_form($form, &$form_state) {
     '#collapsible' => FALSE,
   ];
   
+    # FIELD: Database identifier used in dbxref_id column when inserting stocks
+    // into chado.stock table.
+    $fld_db_options = [];
+    $dbs = tripal_get_db_select_options();
+    $fld_db_options = [0 => '- Select -'] + $dbs;
+
+    // Configuration name, set during install/enable to 0.
+    $config_db = 'germplasm_population_importer_db';
+    // Default/current value of the configuration.
+    $default_db = variable_get($config_db);
+
+    $form['fieldset_importer_configuration'][ $config_db ] = [
+      '#type' => 'select',
+      '#options' => $fld_db_options,
+      '#default_value' => $default_db,
+      '#description' => t('Germplasm Population Importer uses Database for secondary identifier. Set this field to
+        the database name where your germplasm resides.'),
+    ];
+
     # FIELD: Germplasm Population Importer verb controlled vocabulary setting.
     // Create a select option showing all cvs currently available.
     // Set it to default value of the configuration variable.
@@ -155,7 +174,8 @@ function germplasm_population_importer_config_form($form, &$form_state) {
     $form['fieldset_importer_configuration'][ $config_prefix ] = [
       '#type' => 'textfield',
       '#default_value' => $default_prefix,
-      '#description' => t('Use this field value as default germplasm prefix.'),
+      '#description' => t('Use this field value as default germplasm prefix. If special characters are part of your prefix naming scheme, 
+        please include it here (i.e., GERM: or GERM# for GERM:123 or GERM#123).'),
       '#attributes' => [
         'onkeyup' => "this.value = this.value.toUpperCase();"
       ],
