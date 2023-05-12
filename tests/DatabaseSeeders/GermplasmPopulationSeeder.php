@@ -8,6 +8,10 @@ use \Exception;
 class GermplasmPopulationSeeder extends Seeder {
   public function up() {
     $data = [];
+    
+    // Add a database.
+    $db = chado_insert_record('db', ['name' => 'TestDB', 'description' => 'Test Database']);
+    $data['database'] = $db['db_id'];
 
     // Add cv - stock_relationship.
     // This will be used for relationship verb configuration.

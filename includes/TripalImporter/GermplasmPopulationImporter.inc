@@ -102,7 +102,7 @@
 
     // Do allow importer if not configured.
     $configuration = $this->getConfigurationSettings();
-    if ($configuration['verb'] == 0) {
+    if (empty($configuration['verb']) || empty($configuration['db'])) {
       $l = l(t('Configure Importer'), 'admin/tripal/extension/germplasm_population_importer/configure');
       $form['not_configured'] = [
         '#markup' => '<div class="messages error">
@@ -427,7 +427,8 @@
       'verb'    => $arguments['fld_select_relationship_verb'], // Cvterm (Type) Id Numnber.
       'position'  => $arguments['fld_radio_stock_position'],   // EVI or IVE position type.
       'individuals' => $this->arguments['files'][0]['fid'],    // Individuals File Id.
-      'prefix' => $prefix                                      // Default Prefix.
+      'prefix' => $prefix,                                     // Default Prefix.
+      'db' => $configuration['db'],                            // Default Database
     ];
 
     $this->importPopulation($population);
@@ -493,7 +494,7 @@
             // If line has no uniquename by using the prefix system configuration
             // and next sequence id of stock.
             $uniquename = ($val_uniqname == '') 
-              ? $population['prefix'] . ':' . ($last_id + $i) : $val_uniqname;
+              ? $population['prefix'] . ($last_id + $i) : $val_uniqname;
             // Always encode in uppercase form.
             $uniquename = strtoupper($uniquename);
 
@@ -510,6 +511,14 @@
             $type_id = $this->parseTerm($val_type);
             
             // Population individual to insert.
+            // Insert dbxref entry matching the uniquename of the stock, dbxref_id 
+            // generated will be the value for dbxref_id FK in chado.stock table.
+            // This entry will be stored in the default Database name set in configuration.
+            // 1. DBXREF:
+            $dbxref_values = ['db_id' => $population['db'], 'accession' => $uniquename];
+            $dbxref_id = chado_insert_record('dbxref', $dbxref_values);
+            
+            // 2. STOCK:
             $stock = [
               'name'      => $val_name,
               'uniquename'  => $uniquename,
@@ -517,6 +526,10 @@
               'description' => $description,
               'type_id'   => $type_id,
             ];
+
+            if ($dbxref_id) {
+              $stock['dbxref_id'] = $dbxref_values;
+            }
 
             // Save the id of the individual being added 
             // and use it in the relationship below. 
@@ -564,10 +577,13 @@
     $verb_configuration = variable_get('germplasm_population_importer_verb_cv');
     // Prefix configuration.
     $prefix_configuration = variable_get('germplasm_population_importer_default_prefix');
+    // Db configuration.
+    $db_configuration = variable_get('germplasm_population_importer_db');
 
     return [
       'verb' => $verb_configuration, 
-      'prefix' => $prefix_configuration
+      'prefix' => $prefix_configuration,
+      'db' => $db_configuration,
     ];
   }
 
